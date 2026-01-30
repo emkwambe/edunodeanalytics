@@ -1,0 +1,228 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==============================================
+   EduNode Analytics - Global Styles
+   Design System: "Cyber Ocean"
+   ============================================== */
+
+@layer base {
+  :root {
+    /* EduNode Brand Colors */
+    --edunode-indigo: 99 102 241;
+    --edunode-cyan: 6 182 212;
+    --edunode-emerald: 16 185 129;
+
+    /* Status Indicators */
+    --status-on-track: 16 185 129;
+    --status-at-risk: 245 158 11;
+    --status-critical: 239 68 68;
+
+    /* Background & Surface Colors */
+    --background: 15 23 42;
+    --background-elevated: 30 41 59;
+    --surface: 51 65 85;
+    --surface-hover: 71 85 105;
+
+    /* Text Colors */
+    --foreground: 248 250 252;
+    --foreground-muted: 148 163 184;
+    --foreground-subtle: 100 116 139;
+
+    /* Border Colors */
+    --border: 51 65 85;
+    --border-focus: 99 102 241;
+
+    /* Shadcn/ui compatible variables */
+    --card: 30 41 59;
+    --card-foreground: 248 250 252;
+    --popover: 30 41 59;
+    --popover-foreground: 248 250 252;
+    --primary: 99 102 241;
+    --primary-foreground: 255 255 255;
+    --secondary: 6 182 212;
+    --secondary-foreground: 255 255 255;
+    --muted: 51 65 85;
+    --muted-foreground: 148 163 184;
+    --accent: 16 185 129;
+    --accent-foreground: 255 255 255;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --ring: 99 102 241;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-slate-700;
+  }
+
+  body {
+    @apply bg-slate-900 text-slate-50 antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  /* Glassmorphism Card System */
+  .glass-card {
+    @apply relative overflow-hidden rounded-xl border border-slate-700/50;
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-card::before {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    background: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.05) 0%,
+      rgba(6, 182, 212, 0.05) 50%,
+      rgba(16, 185, 129, 0.05) 100%
+    );
+  }
+
+  /* Status Badge Components */
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .status-on-track {
+    @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/30;
+  }
+
+  .status-at-risk {
+    @apply bg-amber-500/20 text-amber-400 border border-amber-500/30;
+  }
+
+  .status-critical {
+    @apply bg-red-500/20 text-red-400 border border-red-500/30;
+  }
+
+  /* Data Grid System */
+  .dashboard-grid {
+    @apply grid gap-6;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .grid-col-span-4 {
+    @apply col-span-12 md:col-span-6 lg:col-span-4;
+  }
+
+  .grid-col-span-6 {
+    @apply col-span-12 lg:col-span-6;
+  }
+
+  .grid-col-span-8 {
+    @apply col-span-12 lg:col-span-8;
+  }
+
+  .grid-col-span-12 {
+    @apply col-span-12;
+  }
+
+  /* Metric Card */
+  .metric-card {
+    @apply glass-card p-6 transition-all duration-300 hover:shadow-glass hover:border-slate-600/50;
+  }
+
+  .metric-value {
+    @apply text-3xl font-bold tracking-tight;
+    background: linear-gradient(135deg, #6366f1, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Navigation */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 transition-all duration-200;
+  }
+
+  .nav-item:hover {
+    @apply bg-slate-800/50 text-slate-200;
+  }
+
+  .nav-item.active {
+    @apply bg-indigo-500/10 text-indigo-400 border-l-2 border-indigo-500;
+  }
+
+  /* Form Inputs */
+  .input-field {
+    @apply w-full px-4 py-2.5 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-100 placeholder:text-slate-500;
+    @apply focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500;
+    @apply transition-all duration-200;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium;
+    @apply bg-indigo-500 text-white hover:bg-indigo-600;
+    @apply focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-slate-900;
+    @apply transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium;
+    @apply bg-slate-700 text-slate-200 hover:bg-slate-600;
+    @apply focus:outline-none focus:ring-2 focus:ring-slate-500/50 focus:ring-offset-2 focus:ring-offset-slate-900;
+    @apply transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium;
+    @apply text-slate-400 hover:text-slate-200 hover:bg-slate-800/50;
+    @apply focus:outline-none focus:ring-2 focus:ring-slate-500/50;
+    @apply transition-all duration-200;
+  }
+
+  /* Chart Container */
+  .chart-container {
+    @apply glass-card p-6;
+  }
+
+  .chart-header {
+    @apply flex items-center justify-between mb-4;
+  }
+
+  .chart-title {
+    @apply text-lg font-semibold text-slate-100;
+  }
+
+  .chart-subtitle {
+    @apply text-sm text-slate-400;
+  }
+}
+
+@layer utilities {
+  /* Text Gradient Utilities */
+  .text-gradient-primary {
+    background: linear-gradient(135deg, #6366f1, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-accent {
+    background: linear-gradient(135deg, #06b6d4, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Hide scrollbar but allow scroll */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Custom focus ring */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-slate-900;
+  }
+}

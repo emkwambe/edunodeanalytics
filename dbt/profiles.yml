@@ -1,0 +1,30 @@
+# ==============================================
+# EduNode Analytics - dbt Profiles (BigQuery)
+# ==============================================
+
+edunode:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('GOOGLE_CLOUD_PROJECT_ID') }}"
+      dataset: "{{ env_var('DBT_DATASET', 'edunode_dev') }}"
+      threads: 4
+      timeout_seconds: 300
+      location: US
+      priority: interactive
+      retries: 1
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+
+    prod:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('GOOGLE_CLOUD_PROJECT_ID') }}"
+      dataset: "{{ env_var('DBT_DATASET', 'edunode_prod') }}"
+      threads: 8
+      timeout_seconds: 300
+      location: US
+      priority: batch
+      retries: 3
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"

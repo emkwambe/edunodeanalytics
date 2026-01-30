@@ -1,0 +1,69 @@
+version: 2
+
+sources:
+  - name: sis_raw
+    description: "Raw SIS data from Clever/ClassLink sync"
+    database: "{{ env_var('GOOGLE_CLOUD_PROJECT_ID') }}"
+    schema: "{{ var('tenant_id') }}_raw"
+    tables:
+      - name: students
+        description: "Student demographics and enrollment"
+        identifier: sis_students
+        columns:
+          - name: id
+            description: "Primary key"
+            tests:
+              - unique
+              - not_null
+          - name: sis_id
+            description: "SIS system ID"
+          - name: _tenant_id
+            description: "Tenant isolation key"
+
+      - name: attendance
+        description: "Daily attendance records"
+        identifier: sis_attendance
+        columns:
+          - name: id
+            description: "Primary key"
+            tests:
+              - unique
+              - not_null
+          - name: student_id
+            description: "Foreign key to students"
+          - name: attendance_date
+            description: "Date of attendance record"
+
+      - name: staff
+        description: "Staff/teacher records"
+        identifier: sis_staff
+        columns:
+          - name: id
+            description: "Primary key"
+
+      - name: sections
+        description: "Class sections and rosters"
+        identifier: sis_sections
+
+      - name: enrollments
+        description: "Section enrollments"
+        identifier: sis_enrollments
+
+  - name: assessments_raw
+    description: "Assessment data from various vendors"
+    database: "{{ env_var('GOOGLE_CLOUD_PROJECT_ID') }}"
+    schema: "{{ var('tenant_id') }}_raw"
+    tables:
+      - name: scores
+        description: "Assessment scores (NWEA, iReady, etc.)"
+        identifier: assessment_scores
+        columns:
+          - name: id
+            description: "Primary key"
+            tests:
+              - unique
+              - not_null
+          - name: student_id
+            description: "Foreign key to students"
+          - name: test_date
+            description: "Date of assessment"

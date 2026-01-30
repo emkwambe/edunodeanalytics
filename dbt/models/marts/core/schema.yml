@@ -1,0 +1,121 @@
+version: 2
+
+models:
+  - name: student_master_fact
+    description: |
+      The unified student fact table joining Demographics, Attendance, and Assessment data.
+
+      **Grain:** One row per student per snapshot_date
+
+      **Key Metrics:**
+      - Chronic Absenteeism: Students with < 90% attendance rate
+      - Academic Growth Percentile: Composite of reading and math SGP
+      - Risk Level: On-Track, At-Risk, or Critical classification
+
+      **Refresh:** Daily
+
+      **Usage:**
+      ```sql
+      -- Get chronic absence rate by grade
+      SELECT grade_level, AVG(CASE WHEN is_chronically_absent THEN 1 ELSE 0 END) as chronic_rate
+      FROM student_master_fact
+      WHERE snapshot_date = CURRENT_DATE()
+      GROUP BY grade_level
+      ```
+    columns:
+      - name: snapshot_date
+        description: "Date of this fact record snapshot"
+        tests:
+          - not_null
+
+      - name: student_id
+        description: "Primary student identifier"
+        tests:
+          - not_null
+
+      - name: tenant_id
+        description: "School/tenant identifier for data isolation"
+        tests:
+          - not_null
+
+      - name: school_id
+        description: "School identifier"
+        tests:
+          - not_null
+
+      - name: grade_level
+        description: "Student's current grade level (K-12)"
+
+      - name: attendance_rate
+        description: "YTD attendance rate as decimal (0.0 - 1.0)"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+
+      - name: is_chronically_absent
+        description: "True if attendance_rate < 90% (configurable threshold)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+
+      - name: attendance_tier
+        description: "Attendance classification: on_track (>=95%), at_risk (90-95%), critical (<90%)"
+        tests:
+          - accepted_values:
+              values: ['on_track', 'at_risk', 'critical', 'no_data']
+
+      - name: reading_growth_percentile
+        description: "Student Growth Percentile for reading (1-99)"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 99
+              where: "reading_growth_percentile IS NOT NULL"
+
+      - name: math_growth_percentile
+        description: "Student Growth Percentile for math (1-99)"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 99
+              where: "math_growth_percentile IS NOT NULL"
+
+      - name: composite_growth_percentile
+        description: "Average of reading and math growth percentiles"
+
+      - name: growth_tier
+        description: "Growth classification: on_track (>=50th), at_risk (25-49th), critical (<25th)"
+        tests:
+          - accepted_values:
+              values: ['on_track', 'at_risk', 'critical', 'no_data']
+
+      - name: risk_level
+        description: "Overall student risk classification combining attendance and academic factors"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['on_track', 'at_risk', 'critical']
+
+      - name: risk_score
+        description: "Numeric risk score (0-100), higher = more at risk"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
+      - name: has_iep
+        description: "Student has an Individualized Education Program"
+        meta:
+          ferpa_protected: true
+
+      - name: is_english_learner
+        description: "Student is classified as an English Learner"
+        meta:
+          ferpa_protected: true
+
+      - name: is_economically_disadvantaged
+        description: "Student qualifies for free/reduced lunch"
+        meta:
+          ferpa_protected: true
