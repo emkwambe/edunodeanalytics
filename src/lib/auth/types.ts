@@ -13,6 +13,10 @@ export type SchoolRole =
   | 'data_manager'    // Read all + data export
   | 'viewer';         // Read-only dashboard access
 
+// External stakeholder roles
+export type AuthorizerRole =
+  | 'authorizer';     // Charter authorizer - read-only compliance/renewal view
+
 // Platform-level roles (EduNode staff)
 export type PlatformRole =
   | 'platform_admin'  // Full system access
@@ -20,7 +24,7 @@ export type PlatformRole =
   | 'sales';          // Demo/trial management
 
 // Combined role type
-export type UserRole = SchoolRole | PlatformRole;
+export type UserRole = SchoolRole | AuthorizerRole | PlatformRole;
 
 // Permission actions
 export type Permission =
@@ -37,7 +41,9 @@ export type Permission =
   | 'billing:manage'
   | 'reports:generate'
   | 'reports:schedule'
-  | 'authorizer:view'; // Read-only access for charter authorizers
+  | 'authorizer:view'      // Read-only access for charter authorizers
+  | 'authorizer:export'    // Export evidence pack for renewal
+  | 'authorizer:benchmark'; // View state/district benchmark comparisons
 
 // Role-permission mapping
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
@@ -84,6 +90,15 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   viewer: [
     'dashboard:view',
+  ],
+
+  // Authorizer roles (external stakeholders)
+  authorizer: [
+    'authorizer:view',
+    'authorizer:export',
+    'authorizer:benchmark',
+    'dashboard:view',
+    'reports:generate',
   ],
 
   // Platform roles
