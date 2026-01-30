@@ -1,4 +1,4 @@
-import { auth, currentUser } from '@clerk/nextjs';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { headers } from 'next/headers';
 import {
   type Permission,
@@ -21,7 +21,7 @@ import { getSchoolBySlug } from '@/lib/db/queries/schools';
  * Get the current user's context including school membership and permissions
  */
 export async function getUserContext(): Promise<UserContext | null> {
-  const { userId, sessionClaims } = auth();
+  const { userId, sessionClaims } = await auth();
 
   if (!userId) {
     return null;
@@ -33,7 +33,7 @@ export async function getUserContext(): Promise<UserContext | null> {
   }
 
   // Get tenant slug from headers (set by middleware)
-  const headersList = headers();
+  const headersList = await headers();
   const currentTenantSlug = headersList.get('x-tenant-slug');
   const userRole = (sessionClaims?.role as UserRole) || 'viewer';
 
@@ -161,8 +161,8 @@ export async function hasFeatureAccess(
 /**
  * Get the current tenant's school ID (for data queries)
  */
-export function getCurrentTenantSlug(): string | null {
-  const headersList = headers();
+export async function getCurrentTenantSlug(): Promise<string | null> {
+  const headersList = await headers();
   return headersList.get('x-tenant-slug');
 }
 
