@@ -17,7 +17,7 @@ import type {
  * Get user by Clerk user ID
  */
 export async function getUserByClerkId(clerkUserId: string): Promise<User | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('users')
@@ -39,7 +39,7 @@ export async function getUserByClerkId(clerkUserId: string): Promise<User | null
  * Get user by email
  */
 export async function getUserByEmail(email: string): Promise<User | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('users')
@@ -95,7 +95,7 @@ export async function upsertUser(
  * Get user's school memberships
  */
 export async function getUserMemberships(userId: string): Promise<SchoolMembership[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('school_memberships')
@@ -119,7 +119,7 @@ export async function getUserSchoolMembership(
   userId: string,
   schoolId: string
 ): Promise<SchoolMembership | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('school_memberships')
@@ -170,7 +170,7 @@ export async function updateUserSchoolRole(
   schoolId: string,
   role: SchoolMembership['role']
 ): Promise<SchoolMembership | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('school_memberships')
@@ -198,7 +198,7 @@ export async function removeUserFromSchool(
   userId: string,
   schoolId: string
 ): Promise<boolean> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { error } = await supabase
     .from('school_memberships')
@@ -221,7 +221,7 @@ export async function removeUserFromSchool(
  * Get all staff members for a school
  */
 export async function getSchoolStaff(schoolId: string) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('school_memberships')
@@ -262,7 +262,7 @@ export async function updateUserPreferences(
   userId: string,
   preferences: Record<string, unknown>
 ): Promise<User | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('users')

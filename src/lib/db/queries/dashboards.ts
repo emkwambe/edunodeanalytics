@@ -17,7 +17,7 @@ import type {
 export async function getSchoolDashboards(
   schoolId: string
 ): Promise<DashboardConfig[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('dashboard_configs')
@@ -42,7 +42,7 @@ export async function getUserDashboards(
   userId: string,
   schoolId: string
 ): Promise<DashboardConfig[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('dashboard_configs')
@@ -66,7 +66,7 @@ export async function getDashboardBySlug(
   schoolId: string,
   slug: string
 ): Promise<DashboardConfig | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('dashboard_configs')
@@ -90,7 +90,7 @@ export async function getDashboardBySlug(
 export async function getDefaultDashboard(
   schoolId: string
 ): Promise<DashboardConfig | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('dashboard_configs')
@@ -114,7 +114,7 @@ export async function getDefaultDashboard(
 export async function createDashboard(
   dashboard: DashboardConfigInsert
 ): Promise<DashboardConfig | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   // Generate slug from name if not provided
   const slug =
@@ -148,7 +148,7 @@ export async function updateDashboard(
   id: string,
   updates: DashboardConfigUpdate
 ): Promise<DashboardConfig | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('dashboard_configs')
@@ -192,7 +192,7 @@ export async function updateDashboardWidgets(
  * Delete a dashboard
  */
 export async function deleteDashboard(id: string): Promise<boolean> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { error } = await supabase
     .from('dashboard_configs')
@@ -214,7 +214,7 @@ export async function setDefaultDashboard(
   schoolId: string,
   dashboardId: string
 ): Promise<boolean> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   // Unset existing default
   await supabase
@@ -245,7 +245,7 @@ export async function cloneDashboard(
   newName: string,
   userId?: string
 ): Promise<DashboardConfig | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   // Get original dashboard
   const { data: original, error: fetchError } = await supabase

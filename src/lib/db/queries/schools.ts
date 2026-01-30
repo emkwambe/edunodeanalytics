@@ -12,7 +12,7 @@ import { getCurrentTenantSlug } from '@/lib/auth/rbac';
  * Get school by slug (most common query pattern)
  */
 export async function getSchoolBySlug(slug: string): Promise<School | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('schools')
@@ -33,7 +33,7 @@ export async function getSchoolBySlug(slug: string): Promise<School | null> {
  * Get school by ID
  */
 export async function getSchoolById(id: string): Promise<School | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('schools')
@@ -87,7 +87,7 @@ export async function getSchoolBranding(slug: string) {
  * Get all schools a user has access to
  */
 export async function getSchoolsForUser(userId: string): Promise<School[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('school_memberships')
@@ -134,7 +134,7 @@ export async function updateSchool(
   id: string,
   updates: SchoolUpdate
 ): Promise<School | null> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('schools')
@@ -172,7 +172,7 @@ export async function getSchoolSubscription(slug: string) {
  * Get schools for an authorizer (read-only portal)
  */
 export async function getSchoolsByAuthorizer(authorizerId: string): Promise<School[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('schools')
