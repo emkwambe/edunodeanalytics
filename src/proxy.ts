@@ -24,8 +24,20 @@ const isPublicRoute = createRouteMatcher([
 const isAuthOnlyRoute = createRouteMatcher([
   '/onboarding(.*)',
   '/select-school(.*)',
+  '/unauthorized(.*)',
   '/api/user(.*)',
 ]);
+
+// Demo schools available for all authenticated users (development mode)
+const DEMO_SCHOOLS = [
+  'academy-charter',
+  'academy-tomorrow',
+  'innovation-prep',
+  'stem-scholars',
+];
+
+// Check if we're in development/demo mode
+const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
@@ -78,12 +90,24 @@ export default clerkMiddleware(async (auth, req) => {
   // Platform admins can access any school
   const isPlatformAdmin = userRole === 'platform_admin';
 
-  if (!isPlatformAdmin && !userSchools.includes(schoolSlug)) {
-    // User doesn't have access to this school
-    console.warn(
-      `[RBAC] User ${userId} attempted to access ${schoolSlug} without permission`
-    );
-    return NextResponse.redirect(new URL('/unauthorized', req.url));
+  // In demo mode, allow access to demo schools for all authenticated users
+  const isDemoSchool = DEMO_SCHOOLS.includes(schoolSlug);
+  const hasSchoolAccess = userSchools.includes(schoolSlug);
+
+  if (!isPlatformAdmin && !hasSchoolAccess) {
+    // Check if this is a demo school and we're in demo mode
+    if (isDemoMode && isDemoSchool) {
+      console.log(
+        `[RBAC] Demo mode: Allowing user ${userId} access to demo school ${schoolSlug}`
+      );
+      // Allow access in demo mode
+    } else {
+      // User doesn't have access to this school
+      console.warn(
+        `[RBAC] User ${userId} attempted to access ${schoolSlug} without permission`
+      );
+      return NextResponse.redirect(new URL('/unauthorized', req.url));
+    }
   }
 
   // Add tenant context to headers for downstream use
