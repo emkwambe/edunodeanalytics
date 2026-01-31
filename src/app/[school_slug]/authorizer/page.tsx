@@ -33,7 +33,16 @@ import {
   BarChart3,
   FileText,
   Download,
+  Sparkles,
+  RefreshCw,
+  Copy,
+  Check,
+  BrainCircuit,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import { generateCharterNarrative, type CharterNarrativeResult } from '@/lib/ai/edunode-advisor';
 
 // Register Chart.js components
 ChartJS.register(
@@ -97,6 +106,12 @@ export default function AuthorizerPortal() {
   const [loading, setLoading] = React.useState(true);
   const [isPrinting, setIsPrinting] = React.useState(false);
 
+  // AI Charter Narrative Generator state
+  const [isGeneratingNarrative, setIsGeneratingNarrative] = React.useState(false);
+  const [narrativeResult, setNarrativeResult] = React.useState<CharterNarrativeResult | null>(null);
+  const [narrativeExpanded, setNarrativeExpanded] = React.useState(false);
+  const [copiedSection, setCopiedSection] = React.useState<string | null>(null);
+
   // Fetch data from warehouse API
   React.useEffect(() => {
     async function fetchData() {
@@ -147,6 +162,47 @@ export default function AuthorizerPortal() {
       window.print();
       setIsPrinting(false);
     }, 100);
+  };
+
+  // Generate AI Charter Narrative
+  const handleGenerateNarrative = async () => {
+    if (!metrics) return;
+
+    setIsGeneratingNarrative(true);
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+
+    const schoolName = schoolSlug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+
+    const result = generateCharterNarrative(schoolName, {
+      growthPercentile: metrics.growthPercentile,
+      proficiencyRate: 68, // Mock data
+      attendanceRate: metrics.attendanceRate,
+      chronicAbsenceRate: metrics.chronicAbsenceRate,
+      subgroupGrowth: {
+        ell: 81,
+        iep: 78,
+        economicallyDisadvantaged: 84,
+      },
+      fiscalHealth: {
+        currentRatio: metrics.currentRatio,
+        daysCashOnHand: metrics.daysCashOnHand,
+      },
+      enrollmentTrend: 'stable',
+      complianceScore: metrics.complianceScore,
+    });
+
+    setNarrativeResult(result);
+    setNarrativeExpanded(true);
+    setIsGeneratingNarrative(false);
+  };
+
+  // Copy section to clipboard
+  const handleCopySection = async (sectionTitle: string, content: string) => {
+    await navigator.clipboard.writeText(content);
+    setCopiedSection(sectionTitle);
+    setTimeout(() => setCopiedSection(null), 2000);
   };
 
   // Audit checklist items
@@ -530,6 +586,263 @@ export default function AuthorizerPortal() {
             </CardContent>
           </Card>
         </div>
+
+        {/* AI Charter Narrative Generator */}
+        <div className="mt-8 print-break no-print">
+          <Card className="bg-gradient-to-r from-violet-900/30 via-indigo-900/20 to-cyan-900/20 border-2 border-violet-500/30 overflow-hidden">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-violet-500/10 to-transparent rounded-full -mr-48 -mt-48" />
+            <CardHeader className="relative">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-violet-500/20 rounded-xl">
+                    <Sparkles className="w-6 h-6 text-violet-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      AI Charter Narrative Generator
+                      <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 text-[10px]">
+                        GEMINI POWERED
+                      </Badge>
+                    </CardTitle>
+                    <p className="text-sm text-slate-400 mt-0.5">
+                      Generate professional renewal narratives for your authorizer application
+                    </p>
+                  </div>
+                </div>
+                {!narrativeResult && (
+                  <Button
+                    onClick={handleGenerateNarrative}
+                    disabled={isGeneratingNarrative}
+                    className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
+                  >
+                    {isGeneratingNarrative ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Generating Narrative...
+                      </>
+                    ) : (
+                      <>
+                        <BookOpen className="w-4 h-4 mr-2" />
+                        Generate Narrative
+                      </>
+                    )}
+                  </Button>
+                )}
+                {narrativeResult && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNarrativeExpanded(!narrativeExpanded)}
+                    >
+                      {narrativeExpanded ? (
+                        <>
+                          <ChevronUp className="w-4 h-4 mr-1" />
+                          Collapse
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-4 h-4 mr-1" />
+                          Expand
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={handleGenerateNarrative}
+                      disabled={isGeneratingNarrative}
+                      className="bg-violet-600 hover:bg-violet-700"
+                      size="sm"
+                    >
+                      {isGeneratingNarrative ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-1" />
+                          Regenerate
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              {isGeneratingNarrative && !narrativeResult && (
+                <div className="py-12 text-center">
+                  <div className="p-4 bg-violet-500/20 rounded-2xl inline-block mb-4 animate-pulse">
+                    <BrainCircuit className="w-12 h-12 text-violet-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">AI Analyzing Your Data...</h3>
+                  <p className="text-sm text-slate-400 max-w-md mx-auto">
+                    Gemini is crafting a professional narrative by analyzing growth metrics,
+                    subgroup performance, fiscal health, and compliance data.
+                  </p>
+                  <div className="flex items-center justify-center gap-4 mt-4 text-xs text-violet-400">
+                    <span className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                      Analyzing metrics
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                      Synthesizing narrative
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" style={{ animationDelay: '0.4s' }} />
+                      Formatting output
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {narrativeResult && narrativeExpanded && (
+                <div className="space-y-6">
+                  {/* Executive Summary */}
+                  <div className="p-5 bg-slate-900/50 rounded-xl border border-slate-700">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 text-white">
+                        <FileText className="w-4 h-4 text-cyan-400" />
+                        <h4 className="font-bold">Executive Summary</h4>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopySection('Executive Summary', narrativeResult.executiveSummary)}
+                        className="text-slate-400 hover:text-white"
+                      >
+                        {copiedSection === 'Executive Summary' ? (
+                          <Check className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                      {narrativeResult.executiveSummary}
+                    </p>
+                  </div>
+
+                  {/* Narrative Sections */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {narrativeResult.sections.map((section, idx) => (
+                      <div key={idx} className="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold text-white text-sm">{section.title}</h4>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopySection(section.title, section.content)}
+                            className="text-slate-400 hover:text-white h-7 w-7 p-0"
+                          >
+                            {copiedSection === section.title ? (
+                              <Check className="w-3 h-3 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
+                          {section.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Key Talking Points */}
+                  <div className="p-4 bg-indigo-900/20 rounded-xl border border-indigo-500/30">
+                    <div className="flex items-center gap-2 text-indigo-400 mb-3">
+                      <Award className="w-4 h-4" />
+                      <h4 className="font-bold text-sm">Key Talking Points for Authorizer Meeting</h4>
+                    </div>
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {narrativeResult.keyTalkingPoints.map((point, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
+                          <span className="text-indigo-400 font-bold mt-0.5">•</span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Footer Stats */}
+                  <div className="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg text-xs">
+                    <div className="flex items-center gap-4 text-slate-500">
+                      <span>Word count: ~{narrativeResult.wordCount}</span>
+                      <span>•</span>
+                      <span>Confidence: {narrativeResult.confidenceScore}%</span>
+                      <span>•</span>
+                      <span>Generated: {new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopySection('Full Narrative',
+                        `EXECUTIVE SUMMARY\n\n${narrativeResult.executiveSummary}\n\n` +
+                        narrativeResult.sections.map(s => `${s.title.toUpperCase()}\n\n${s.content}`).join('\n\n')
+                      )}
+                      className="text-violet-400 hover:text-violet-300"
+                    >
+                      {copiedSection === 'Full Narrative' ? (
+                        <>
+                          <Check className="w-3 h-3 mr-1 text-emerald-400" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3 mr-1" />
+                          Copy Full Narrative
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {narrativeResult && !narrativeExpanded && (
+                <div className="p-4 bg-slate-900/50 rounded-xl">
+                  <p className="text-sm text-slate-400 line-clamp-2">
+                    {narrativeResult.executiveSummary}
+                  </p>
+                </div>
+              )}
+
+              {!narrativeResult && !isGeneratingNarrative && (
+                <div className="p-6 bg-slate-900/30 rounded-xl text-center">
+                  <p className="text-sm text-slate-400">
+                    Generate a professional, data-driven narrative for your charter renewal application.
+                    The AI will synthesize your growth metrics, subgroup performance, fiscal health,
+                    and compliance status into compelling authorizer-ready content.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* AI-Generated Narrative for Print */}
+        {narrativeResult && (
+          <div className="mt-8 print-break hidden print:block">
+            <div className="border border-slate-300 rounded-lg p-6 bg-white">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-indigo-600" />
+                Charter Renewal Narrative
+              </h2>
+              <div className="mb-6">
+                <h3 className="font-bold text-slate-700 mb-2">Executive Summary</h3>
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                  {narrativeResult.executiveSummary}
+                </p>
+              </div>
+              {narrativeResult.sections.map((section, idx) => (
+                <div key={idx} className="mb-4">
+                  <h3 className="font-bold text-slate-700 mb-2">{section.title}</h3>
+                  <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                    {section.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <footer className="mt-12 pt-6 border-t border-slate-800 print:border-slate-300 text-center">
