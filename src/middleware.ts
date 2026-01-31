@@ -37,6 +37,7 @@ const DEMO_SCHOOLS = [
 ];
 
 // Check if we're in development/demo mode
+// In dev mode, allow all authenticated users to access any school
 const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
 
 export default clerkMiddleware(async (auth, req) => {
@@ -95,12 +96,17 @@ export default clerkMiddleware(async (auth, req) => {
   const hasSchoolAccess = userSchools.includes(schoolSlug);
 
   if (!isPlatformAdmin && !hasSchoolAccess) {
-    // Check if this is a demo school and we're in demo mode
-    if (isDemoMode && isDemoSchool) {
+    // In development mode, allow all authenticated users to access demo schools
+    if (isDemoMode) {
       console.log(
-        `[RBAC] Demo mode: Allowing user ${userId} access to demo school ${schoolSlug}`
+        `[RBAC] Dev mode: Allowing user ${userId} access to school ${schoolSlug}`
       );
-      // Allow access in demo mode
+      // Allow access in dev mode for any school
+    } else if (isDemoSchool) {
+      // In production demo mode, only allow demo schools
+      console.log(
+        `[RBAC] Demo school: Allowing user ${userId} access to demo school ${schoolSlug}`
+      );
     } else {
       // User doesn't have access to this school
       console.warn(
