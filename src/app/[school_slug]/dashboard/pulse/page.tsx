@@ -65,7 +65,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
         title="Instructional Pulse"
         description="Real-time formative assessment mastery and early warning indicators"
         breadcrumbs={[
-          { label: 'Dashboard', href: `/${params.school_slug}/dashboard` },
+          { label: 'Dashboard', href: `/${school_slug}/dashboard` },
           { label: 'Instructional Pulse' },
         ]}
         actions={
@@ -170,7 +170,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
                 className="w-full"
                 asChild
               >
-                <a href={`/${params.school_slug}/dashboard/students?filter=at_risk`}>
+                <a href={`/${school_slug}/dashboard/students?filter=at_risk`}>
                   View All At-Risk Students
                 </a>
               </Button>
@@ -192,7 +192,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
               </p>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <a href={`/${params.school_slug}/dashboard/students?filter=critical`}>
+              <a href={`/${school_slug}/dashboard/students?filter=critical`}>
                 View All
               </a>
             </Button>

@@ -95,15 +95,15 @@ export default function ImpactAnalyticsPage() {
 
   // Get student data from seed
   const schoolSeed = getSchoolSeed(school_slug);
-  const students = schoolSeed.students;
+  const students = schoolSeed?.students ?? [];
 
   // Transform students into scatter data points
   const studentDataPoints: StudentDataPoint[] = students.map((s) => ({
     x: s.attendanceRate * 100,
-    y: s.mathGrowthPercentile, // Using math growth as proxy
+    y: s.math.growthPercentile, // Using math growth as proxy
     name: `${s.firstName} ${s.lastName}`,
     grade: s.gradeLevel,
-    zone: classifyStudent(s.attendanceRate * 100, s.mathGrowthPercentile),
+    zone: classifyStudent(s.attendanceRate * 100, s.math.growthPercentile),
   }));
 
   // Filter by selected zone

@@ -22,7 +22,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getSchoolSeed, type StudentSeed } from '@/lib/data/seed-data';
+import { getSchoolSeed, type StudentSeedData } from '@/lib/data/seed-data';
 import { cn } from '@/lib/utils';
 import {
   ArrowLeft,
@@ -70,10 +70,10 @@ interface AdvisorInsight {
   action?: string;
 }
 
-function generateAdvisorInsights(student: StudentSeed): AdvisorInsight[] {
+function generateAdvisorInsights(student: StudentSeedData): AdvisorInsight[] {
   const insights: AdvisorInsight[] = [];
   const attendancePercent = student.attendanceRate * 100;
-  const avgGrowth = (student.readingGrowthPercentile + student.mathGrowthPercentile) / 2;
+  const avgGrowth = (student.reading.growthPercentile + student.math.growthPercentile) / 2;
 
   // Confounding Analysis
   if (attendancePercent < THRESHOLDS.chronicAbsence && avgGrowth < THRESHOLDS.lowGrowth) {
@@ -105,7 +105,7 @@ function generateAdvisorInsights(student: StudentSeed): AdvisorInsight[] {
   }
 
   // IEP Consideration
-  if (student.hasIEP) {
+  if (student.hasIep) {
     insights.push({
       type: 'warning',
       title: 'IEP Accommodation Active',
@@ -114,7 +114,7 @@ function generateAdvisorInsights(student: StudentSeed): AdvisorInsight[] {
   }
 
   // ELL Consideration
-  if (student.isELL) {
+  if (student.isEnglishLearner) {
     insights.push({
       type: 'warning',
       title: 'ELL Student',
@@ -158,14 +158,15 @@ export default function Student360DeepDivePage() {
 
   // Get student data from seed
   const schoolSeed = getSchoolSeed(school_slug);
-  const student = schoolSeed.students.find((s) => s.studentId === student_id) || schoolSeed.students[0];
+  const students = schoolSeed?.students ?? [];
+  const student = students.find((s) => s.id === student_id) || students[0];
 
   // Generate advisor insights
-  const advisorInsights = generateAdvisorInsights(student);
+  const advisorInsights = student ? generateAdvisorInsights(student) : [];
 
   // Generate mock growth trajectory data
   const weeks = Array.from({ length: 12 }, (_, i) => `Week ${i + 1}`);
-  const baseGrowth = student.mathGrowthPercentile;
+  const baseGrowth = student?.math?.growthPercentile ?? 50;
   const growthTrajectory = weeks.map((_, i) => {
     const variance = Math.sin(i * 0.5) * 5 + Math.random() * 3;
     return Math.max(10, Math.min(99, baseGrowth + variance + i * 0.5));
@@ -232,8 +233,8 @@ export default function Student360DeepDivePage() {
     },
   };
 
-  const avgGrowth = (student.readingGrowthPercentile + student.mathGrowthPercentile) / 2;
-  const attendancePercent = student.attendanceRate * 100;
+  const avgGrowth = student ? (student.reading.growthPercentile + student.math.growthPercentile) / 2 : 50;
+  const attendancePercent = student ? student.attendanceRate * 100 : 95;
 
   return (
     <>
@@ -249,8 +250,8 @@ export default function Student360DeepDivePage() {
       </div>
 
       <PageHeader
-        title={`${student.firstName} ${student.lastName}`}
-        description={`Grade ${student.gradeLevel} | Student ID: ${student.studentId}`}
+        title={`${student?.firstName ?? 'Unknown'} ${student?.lastName ?? 'Student'}`}
+        description={`Grade ${student?.gradeLevel ?? 'N/A'} | Student ID: ${student?.id ?? 'N/A'}`}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm">
@@ -267,19 +268,19 @@ export default function Student360DeepDivePage() {
 
       {/* Student Tags */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {student.hasIEP && (
+        {student?.hasIep && (
           <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30">IEP</Badge>
         )}
-        {student.isELL && (
+        {student?.isEnglishLearner && (
           <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">ELL</Badge>
         )}
-        {student.is504 && (
+        {student?.has504Plan && (
           <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30">504</Badge>
         )}
-        {student.riskLevel === 'critical' && (
+        {student?.riskLevel === 'critical' && (
           <Badge variant="destructive">Critical Risk</Badge>
         )}
-        {student.riskLevel === 'at_risk' && (
+        {student?.riskLevel === 'at_risk' && (
           <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">At Risk</Badge>
         )}
       </div>
@@ -339,7 +340,7 @@ export default function Student360DeepDivePage() {
                 {attendancePercent.toFixed(1)}%
               </div>
               <div className="text-xs text-slate-500 mt-1">
-                {Math.round((1 - student.attendanceRate) * 180)} days absent YTD
+                {Math.round((1 - (student?.attendanceRate ?? 0.95)) * 180)} days absent YTD
               </div>
             </CardContent>
           </Card>
@@ -373,16 +374,16 @@ export default function Student360DeepDivePage() {
               <div className="flex items-baseline gap-4">
                 <div>
                   <div className="text-2xl font-bold text-white">
-                    {student.readingPercentile}<span className="text-sm text-slate-500">th</span>
+                    {student?.reading?.nationalPercentile ?? 'N/A'}<span className="text-sm text-slate-500">th</span>
                   </div>
                   <div className="text-[10px] text-slate-500 uppercase">Proficiency</div>
                 </div>
                 <div>
                   <div className={cn(
                     'text-2xl font-bold',
-                    student.readingGrowthPercentile >= 60 ? 'text-emerald-400' : 'text-amber-400'
+                    (student?.reading?.growthPercentile ?? 0) >= 60 ? 'text-emerald-400' : 'text-amber-400'
                   )}>
-                    {student.readingGrowthPercentile}<span className="text-sm text-slate-500">th</span>
+                    {student?.reading?.growthPercentile ?? 'N/A'}<span className="text-sm text-slate-500">th</span>
                   </div>
                   <div className="text-[10px] text-slate-500 uppercase">Growth</div>
                 </div>
@@ -399,16 +400,16 @@ export default function Student360DeepDivePage() {
               <div className="flex items-baseline gap-4">
                 <div>
                   <div className="text-2xl font-bold text-white">
-                    {student.mathPercentile}<span className="text-sm text-slate-500">th</span>
+                    {student?.math?.nationalPercentile ?? 'N/A'}<span className="text-sm text-slate-500">th</span>
                   </div>
                   <div className="text-[10px] text-slate-500 uppercase">Proficiency</div>
                 </div>
                 <div>
                   <div className={cn(
                     'text-2xl font-bold',
-                    student.mathGrowthPercentile >= 60 ? 'text-emerald-400' : 'text-amber-400'
+                    (student?.math?.growthPercentile ?? 0) >= 60 ? 'text-emerald-400' : 'text-amber-400'
                   )}>
-                    {student.mathGrowthPercentile}<span className="text-sm text-slate-500">th</span>
+                    {student?.math?.growthPercentile ?? 'N/A'}<span className="text-sm text-slate-500">th</span>
                   </div>
                   <div className="text-[10px] text-slate-500 uppercase">Growth</div>
                 </div>
@@ -449,7 +450,7 @@ export default function Student360DeepDivePage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Intervention History</CardTitle>
-            <Badge className="bg-slate-700">MTSS Tier {student.riskLevel === 'critical' ? '3' : student.riskLevel === 'at_risk' ? '2' : '1'}</Badge>
+            <Badge className="bg-slate-700">MTSS Tier {student?.riskLevel === 'critical' ? '3' : student?.riskLevel === 'at_risk' ? '2' : '1'}</Badge>
           </div>
         </CardHeader>
         <CardContent>

@@ -11,7 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getSchoolSeed, type StudentSeed } from '@/lib/data/seed-data';
+import { getSchoolSeed, type StudentSeedData } from '@/lib/data/seed-data';
 import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
@@ -74,7 +74,7 @@ function getInterventionStatus(lastDataEntry: Date): 'fresh' | 'warning' | 'stal
   return 'stale';
 }
 
-function generateMockInterventions(students: StudentSeed[]): Intervention[] {
+function generateMockInterventions(students: StudentSeedData[]): Intervention[] {
   const interventionTypes = [
     'Small Group Reading',
     'Math Tutoring',
@@ -92,7 +92,7 @@ function generateMockInterventions(students: StudentSeed[]): Intervention[] {
 
     return {
       id: `int-${idx}`,
-      studentId: student.studentId,
+      studentId: student.id,
       studentName: `${student.firstName} ${student.lastName}`,
       grade: student.gradeLevel,
       tier: student.riskLevel === 'critical' ? 3 : 2,
@@ -115,9 +115,10 @@ export default function InterventionsPage() {
 
   // Get student data and generate interventions
   const schoolSeed = getSchoolSeed(school_slug);
+  const students = schoolSeed?.students ?? [];
   const interventions = React.useMemo(
-    () => generateMockInterventions(schoolSeed.students),
-    [schoolSeed.students]
+    () => generateMockInterventions(students),
+    [students]
   );
 
   // Filter interventions
