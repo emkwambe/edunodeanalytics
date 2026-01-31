@@ -21,6 +21,25 @@ import {
 } from 'lucide-react';
 
 /**
+ * Client-only wrapper to prevent hydration mismatch with Clerk components
+ */
+function ClientOnly({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="w-8 h-8 rounded-full bg-slate-700 animate-pulse" />
+    );
+  }
+
+  return <>{children}</>;
+}
+
+/**
  * Dashboard Sidebar Navigation
  *
  * Responsive navigation with collapsible state
@@ -206,14 +225,16 @@ export function Sidebar({
             collapsed && 'justify-center px-2'
           )}
         >
-          <UserButton
-            afterSignOutUrl="/"
-            appearance={{
-              elements: {
-                avatarBox: 'w-8 h-8',
-              },
-            }}
-          />
+          <ClientOnly>
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  avatarBox: 'w-8 h-8',
+                },
+              }}
+            />
+          </ClientOnly>
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-200 truncate">
@@ -254,7 +275,9 @@ export function MobileNav({
       </Link>
 
       <div className="flex items-center gap-2">
-        <UserButton afterSignOutUrl="/" />
+        <ClientOnly>
+          <UserButton afterSignOutUrl="/" />
+        </ClientOnly>
         <Button
           variant="ghost"
           size="icon"

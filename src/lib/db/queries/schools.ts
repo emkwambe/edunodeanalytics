@@ -8,6 +8,56 @@ import { getCurrentTenantSlug } from '@/lib/auth/rbac';
  * Data access layer for school/tenant operations
  */
 
+// Demo schools for development mode
+const DEMO_SCHOOLS: Record<string, Partial<School>> = {
+  'academy-charter': {
+    id: 'demo-academy-charter',
+    name: 'Academy Charter School',
+    slug: 'academy-charter',
+    is_active: true,
+    primary_color: '#6366f1',
+    secondary_color: '#06b6d4',
+    accent_color: '#10b981',
+    subscription_tier: 'professional',
+    subscription_status: 'active',
+  },
+  'academy-tomorrow': {
+    id: 'demo-academy-tomorrow',
+    name: 'Academy of Tomorrow',
+    slug: 'academy-tomorrow',
+    is_active: true,
+    primary_color: '#8b5cf6',
+    secondary_color: '#06b6d4',
+    accent_color: '#10b981',
+    subscription_tier: 'professional',
+    subscription_status: 'active',
+  },
+  'innovation-prep': {
+    id: 'demo-innovation-prep',
+    name: 'Innovation Prep Academy',
+    slug: 'innovation-prep',
+    is_active: true,
+    primary_color: '#0ea5e9',
+    secondary_color: '#06b6d4',
+    accent_color: '#10b981',
+    subscription_tier: 'professional',
+    subscription_status: 'active',
+  },
+  'stem-scholars': {
+    id: 'demo-stem-scholars',
+    name: 'STEM Scholars Charter',
+    slug: 'stem-scholars',
+    is_active: true,
+    primary_color: '#10b981',
+    secondary_color: '#06b6d4',
+    accent_color: '#6366f1',
+    subscription_tier: 'professional',
+    subscription_status: 'active',
+  },
+};
+
+const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
+
 /**
  * Get school by slug (most common query pattern)
  */
@@ -22,6 +72,10 @@ export async function getSchoolBySlug(slug: string): Promise<School | null> {
     .single();
 
   if (error) {
+    // In demo mode, return demo school data if available
+    if (isDemoMode && DEMO_SCHOOLS[slug]) {
+      return DEMO_SCHOOLS[slug] as School;
+    }
     console.error('[DB] Error fetching school by slug:', error);
     return null;
   }
