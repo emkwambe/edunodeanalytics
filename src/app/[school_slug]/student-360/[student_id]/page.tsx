@@ -24,6 +24,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getSchoolSeed, type StudentSeedData } from '@/lib/data/seed-data';
 import { cn } from '@/lib/utils';
+import { ConfoundingRiskBanner } from '@/components/banners/confounding-risk-banner';
+import { useStudent360Audit } from '@/lib/hooks/use-ferpa-audit';
 import {
   ArrowLeft,
   BrainCircuit,
@@ -156,6 +158,9 @@ export default function Student360DeepDivePage() {
   const school_slug = params.school_slug as string;
   const student_id = params.student_id as string;
 
+  // FERPA Audit: Log this page view for compliance
+  useStudent360Audit(student_id, school_slug);
+
   // Get student data from seed
   const schoolSeed = getSchoolSeed(school_slug);
   const students = schoolSeed?.students ?? [];
@@ -248,6 +253,15 @@ export default function Student360DeepDivePage() {
           Back to Student 360
         </Link>
       </div>
+
+      {/* High Confounding Risk Banner */}
+      {student && (
+        <ConfoundingRiskBanner
+          studentName={`${student.firstName} ${student.lastName}`}
+          attendancePercent={attendancePercent}
+          growthPercentile={avgGrowth}
+        />
+      )}
 
       <PageHeader
         title={`${student?.firstName ?? 'Unknown'} ${student?.lastName ?? 'Student'}`}
