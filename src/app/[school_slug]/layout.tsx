@@ -12,14 +12,15 @@ import { getSchoolBySlug, getSchoolBranding } from '@/lib/db/queries/schools';
 
 interface TenantLayoutProps {
   children: React.ReactNode;
-  params: { school_slug: string };
+  params: Promise<{ school_slug: string }>;
 }
 
 export default async function TenantLayout({
   children,
   params,
 }: TenantLayoutProps) {
-  const { school_slug } = params;
+  // In Next.js 15+, params is a Promise
+  const { school_slug } = await params;
 
   // Fetch school branding
   const branding = await getSchoolBranding(school_slug);
@@ -50,9 +51,10 @@ export default async function TenantLayout({
 export async function generateMetadata({
   params,
 }: {
-  params: { school_slug: string };
+  params: Promise<{ school_slug: string }>;
 }) {
-  const branding = await getSchoolBranding(params.school_slug);
+  const { school_slug } = await params;
+  const branding = await getSchoolBranding(school_slug);
 
   return {
     title: {

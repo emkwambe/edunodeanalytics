@@ -62,6 +62,11 @@ const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_
  * Get school by slug (most common query pattern)
  */
 export async function getSchoolBySlug(slug: string): Promise<School | null> {
+  // In demo mode, check demo schools first to avoid unnecessary DB calls
+  if (isDemoMode && DEMO_SCHOOLS[slug]) {
+    return DEMO_SCHOOLS[slug] as School;
+  }
+
   const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
@@ -72,11 +77,10 @@ export async function getSchoolBySlug(slug: string): Promise<School | null> {
     .single();
 
   if (error) {
-    // In demo mode, return demo school data if available
-    if (isDemoMode && DEMO_SCHOOLS[slug]) {
-      return DEMO_SCHOOLS[slug] as School;
+    // Only log error in non-demo mode or if it's not a "not found" error
+    if (!isDemoMode || error.code !== 'PGRST116') {
+      console.error('[DB] Error fetching school by slug:', slug, error);
     }
-    console.error('[DB] Error fetching school by slug:', error);
     return null;
   }
 
