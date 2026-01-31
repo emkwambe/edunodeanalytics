@@ -32,10 +32,12 @@ import { Activity, BookOpen, Target, AlertCircle } from 'lucide-react';
  */
 
 interface PulsePageProps {
-  params: { school_slug: string };
+  params: Promise<{ school_slug: string }>;
 }
 
 export default async function PulsePage({ params }: PulsePageProps) {
+  // In Next.js 15+, params is a Promise
+  const { school_slug } = await params;
   const data = generateMockDashboardData();
 
   // Get critical students for alert section

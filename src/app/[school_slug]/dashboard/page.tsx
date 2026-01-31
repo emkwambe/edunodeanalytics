@@ -26,11 +26,12 @@ import { Users, Calendar, AlertTriangle, TrendingUp, Download, RefreshCw } from 
  */
 
 interface DashboardPageProps {
-  params: { school_slug: string };
+  params: Promise<{ school_slug: string }>;
 }
 
 export default async function DashboardPage({ params }: DashboardPageProps) {
-  const { school_slug } = params;
+  // In Next.js 15+, params is a Promise
+  const { school_slug } = await params;
 
   // Fetch data from BigQuery provider (uses strategic seed data)
   const [metricsResult, attendanceResult, riskResult] = await Promise.all([
