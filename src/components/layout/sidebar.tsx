@@ -18,6 +18,9 @@ import {
   Activity,
   GraduationCap,
   Building2,
+  Target,
+  Dna,
+  Shield,
 } from 'lucide-react';
 
 /**
@@ -86,6 +89,18 @@ export function Sidebar({
       icon: <Users className="w-5 h-5" />,
     },
     {
+      label: 'MTSS Interventions',
+      href: `/${schoolSlug}/interventions`,
+      icon: <Target className="w-5 h-5" />,
+      badge: 'New',
+    },
+    {
+      label: 'Impact Analyzer',
+      href: `/${schoolSlug}/analytics/impact`,
+      icon: <Dna className="w-5 h-5" />,
+      badge: 'New',
+    },
+    {
       label: 'Attendance',
       href: `/${schoolSlug}/dashboard/attendance`,
       icon: <Calendar className="w-5 h-5" />,
@@ -96,14 +111,14 @@ export function Sidebar({
       icon: <GraduationCap className="w-5 h-5" />,
     },
     {
+      label: 'Authorizer Portal',
+      href: `/${schoolSlug}/authorizer`,
+      icon: <Shield className="w-5 h-5" />,
+    },
+    {
       label: 'Reports',
       href: `/${schoolSlug}/dashboard/reports`,
       icon: <FileText className="w-5 h-5" />,
-    },
-    {
-      label: 'Analytics',
-      href: `/${schoolSlug}/dashboard/analytics`,
-      icon: <BarChart3 className="w-5 h-5" />,
     },
   ];
 
