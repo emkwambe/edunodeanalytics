@@ -30,28 +30,46 @@ export interface FerpaAuditEvent {
 
 /**
  * Log a FERPA audit event to the backend
- * In production, this would POST to an API endpoint that writes to Supabase
+ * Writes to Supabase public.ferpa_audit_log table via API
  */
 async function logFerpaEvent(event: FerpaAuditEvent): Promise<void> {
-  // In production: POST to /api/ferpa-audit
-  // For demo: Log to console with structured format
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[FERPA AUDIT]', {
-      type: event.eventType,
-      student: event.studentId,
-      school: event.schoolSlug,
-      user: event.userId,
-      role: event.userRole,
-      timestamp: event.timestamp.toISOString(),
-    });
-  }
+  // Always log to console for debugging
+  console.log('[FERPA AUDIT]', {
+    action: 'FERPA_ACCESS_STUDENT',
+    type: event.eventType,
+    student: event.studentId,
+    school: event.schoolSlug,
+    user: event.userId,
+    role: event.userRole,
+    timestamp: event.timestamp.toISOString(),
+  });
 
-  // Production implementation would be:
-  // await fetch('/api/ferpa-audit', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(event),
-  // });
+  // In production, write to Supabase via API
+  try {
+    const response = await fetch('/api/ferpa-audit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'FERPA_ACCESS_STUDENT',
+        event_type: event.eventType,
+        student_id: event.studentId,
+        school_slug: event.schoolSlug,
+        user_id: event.userId,
+        user_role: event.userRole,
+        user_email: event.userEmail,
+        timestamp: event.timestamp.toISOString(),
+        user_agent: event.userAgent,
+        additional_context: event.additionalContext,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn('[FERPA] Failed to log audit event:', response.status);
+    }
+  } catch (error) {
+    // Silently fail - audit logging should not break the app
+    console.warn('[FERPA] Error logging audit event:', error);
+  }
 }
 
 /**

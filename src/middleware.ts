@@ -116,6 +116,37 @@ export default clerkMiddleware(async (auth, req) => {
     }
   }
 
+  // RBAC: Restrict Authorizer role to specific routes
+  const isAuthorizerRole = userRole === 'authorizer';
+  const subRoute = pathParts.length > 1 ? pathParts[1] : '';
+
+  // Authorizer-restricted routes (they can ONLY access /authorizer)
+  const restrictedRoutesForAuthorizer = [
+    'interventions',
+    'settings',
+    'student-360',
+    'dashboard/students',
+  ];
+
+  if (isAuthorizerRole && restrictedRoutesForAuthorizer.some((r) => subRoute.startsWith(r))) {
+    console.warn(
+      `[RBAC] Authorizer ${userId} attempted to access restricted route: ${path}`
+    );
+    // Redirect authorizers to their allowed portal
+    return NextResponse.redirect(new URL(`/${schoolSlug}/authorizer`, req.url));
+  }
+
+  // Ensure authorizers can only see the authorizer portal
+  if (isAuthorizerRole && subRoute !== 'authorizer' && subRoute !== '') {
+    // Allow dashboard overview but redirect other routes
+    if (subRoute !== 'dashboard' && !subRoute.startsWith('analytics')) {
+      console.log(
+        `[RBAC] Redirecting authorizer ${userId} from ${subRoute} to authorizer portal`
+      );
+      return NextResponse.redirect(new URL(`/${schoolSlug}/authorizer`, req.url));
+    }
+  }
+
   // Add tenant context to headers for downstream use
   const response = NextResponse.next();
   response.headers.set('x-tenant-slug', schoolSlug);

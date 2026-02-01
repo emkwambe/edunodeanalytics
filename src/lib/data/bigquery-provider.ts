@@ -1,12 +1,20 @@
 /**
- * EduNode Analytics - BigQuery Mock Provider
- * ==========================================
+ * EduNode Analytics - BigQuery Provider
+ * =====================================
  *
- * Provides data access layer that mimics BigQuery queries.
- * In production, replace with actual BigQuery client.
+ * Production-grade BigQuery integration with automatic fallback to seed data.
+ * Implements the "Live Data Switch" pattern for seamless development/production transitions.
  *
- * Current implementation uses in-memory seed data with
- * "Independent Excellence" strategic narrative.
+ * Key Features:
+ * - Automatic credential detection via GOOGLE_APPLICATION_CREDENTIALS
+ * - Statistical integrity guardrails (n-size validation)
+ * - Query result caching for performance (5-minute TTL)
+ * - Fallback to seed data when BigQuery is unavailable
+ *
+ * Statistical Integrity:
+ * - Minimum n-size = 10 for school-level inference
+ * - Minimum n-size = 5 for subgroup analysis
+ * - Returns "Insufficient n-size for inference" instead of misleading zeros
  */
 
 import {
@@ -17,6 +25,73 @@ import {
   type SchoolMetrics,
 } from './seed-data';
 import type { Student360Data } from '@/components/dashboard/student-360-card';
+
+// =============================================================================
+// BIGQUERY CONFIGURATION & LIVE SWITCH
+// =============================================================================
+
+const IS_BIGQUERY_ENABLED = !!(
+  process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+  process.env.BIGQUERY_PROJECT_ID
+);
+
+const BIGQUERY_PROJECT_ID = process.env.BIGQUERY_PROJECT_ID || 'edunode-analytics';
+const BIGQUERY_DATASET = process.env.BIGQUERY_DATASET || 'edunode_warehouse';
+
+// Statistical integrity thresholds
+const STATISTICAL_THRESHOLDS = {
+  minimumNSize: 10,
+  minimumSubgroupSize: 5,
+  confidenceLevel: 0.95,
+};
+
+// BigQuery client instance (lazy loaded)
+let bigQueryClientInstance: unknown = null;
+
+/**
+ * Initialize BigQuery client with credential detection
+ */
+async function initBigQueryClient(): Promise<unknown | null> {
+  if (!IS_BIGQUERY_ENABLED) {
+    console.log('[BigQuery] Live data disabled - using seed data');
+    return null;
+  }
+
+  if (bigQueryClientInstance) {
+    return bigQueryClientInstance;
+  }
+
+  try {
+    const { BigQuery } = await import('@google-cloud/bigquery');
+    bigQueryClientInstance = new BigQuery({
+      projectId: BIGQUERY_PROJECT_ID,
+    });
+    console.log(`[BigQuery] Client initialized for project: ${BIGQUERY_PROJECT_ID}`);
+    return bigQueryClientInstance;
+  } catch (error) {
+    console.warn('[BigQuery] Failed to initialize - falling back to seed data:', error);
+    return null;
+  }
+}
+
+/**
+ * Validate statistical significance and return appropriate message
+ */
+function validateNSize(
+  count: number,
+  threshold: number = STATISTICAL_THRESHOLDS.minimumNSize
+): { isValid: boolean; message: string | null } {
+  if (count === 0) {
+    return { isValid: false, message: 'No data available for this query' };
+  }
+  if (count < threshold) {
+    return {
+      isValid: false,
+      message: `Insufficient n-size for inference (n=${count}, required=${threshold})`,
+    };
+  }
+  return { isValid: true, message: null };
+}
 
 // =============================================================================
 // TYPES
@@ -70,6 +145,57 @@ export interface RenewalRadarMetrics {
 class BigQueryProvider {
   private cache: Map<string, { data: unknown; timestamp: number }> = new Map();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  /**
+   * Check if BigQuery is available and connected
+   */
+  async isLiveDataAvailable(): Promise<boolean> {
+    const client = await initBigQueryClient();
+    return client !== null;
+  }
+
+  /**
+   * Get cached result if available and not expired
+   */
+  private getCachedResult<T>(key: string): T | null {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.data as T;
+    }
+    return null;
+  }
+
+  /**
+   * Store result in cache
+   */
+  private setCachedResult(key: string, data: unknown): void {
+    this.cache.set(key, { data, timestamp: Date.now() });
+  }
+
+  /**
+   * Execute BigQuery query with fallback
+   */
+  private async executeQuery<T>(
+    query: string,
+    params: Record<string, unknown>,
+    fallbackFn: () => T
+  ): Promise<{ data: T; isLive: boolean }> {
+    const client = await initBigQueryClient();
+
+    if (client && typeof (client as { query: unknown }).query === 'function') {
+      try {
+        const [rows] = await (client as { query: (opts: { query: string; params: Record<string, unknown> }) => Promise<[unknown[]]> }).query({
+          query,
+          params,
+        });
+        return { data: rows as T, isLive: true };
+      } catch (error) {
+        console.warn('[BigQuery] Query failed, using fallback:', error);
+      }
+    }
+
+    return { data: fallbackFn(), isLive: false };
+  }
 
   /**
    * Get school metrics for dashboard overview
