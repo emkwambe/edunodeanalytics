@@ -62,6 +62,8 @@ export interface StudentSeedData {
   homeroomTeacher: string;
   reading: AssessmentScores;
   math: AssessmentScores;
+  /** Purpose-Driven Intelligence metrics */
+  purposeDriven?: PurposeDrivenMetrics;
 }
 
 export interface AssessmentScores {
@@ -71,6 +73,50 @@ export interface AssessmentScores {
   growthPoints: number;
   growthPercentile: number;
   nationalPercentile: number;
+}
+
+// =============================================================================
+// PURPOSE-DRIVEN INTELLIGENCE EXTENSIONS
+// =============================================================================
+
+export interface AssessmentHistory {
+  date: Date;
+  score: number;
+  subject: 'reading' | 'math';
+  assessmentType: 'formative' | 'interim' | 'benchmark';
+}
+
+export interface InterventionSession {
+  id: string;
+  date: Date;
+  durationMinutes: number;
+  interventionType: string;
+  subject: 'reading' | 'math' | 'behavior' | 'attendance';
+  engagementScore?: number;
+  notes?: string;
+}
+
+export interface MobilityRecord {
+  enrollmentDate: Date;
+  previousSchool?: string;
+  exitDate?: Date;
+  newSchool?: string;
+  daysEnrolled: number;
+}
+
+export interface PurposeDrivenMetrics {
+  /** Assessment score history for volatility calculation */
+  assessmentHistory: AssessmentHistory[];
+  /** Intervention sessions for dosage tracking */
+  interventionSessions: InterventionSession[];
+  /** Mobility/enrollment records */
+  mobilityRecord: MobilityRecord;
+  /** Last data update timestamp */
+  lastDataUpdate: Date;
+  /** Target intervention minutes per 21-day window */
+  targetInterventionMinutes: number;
+  /** Expected growth (RIT points) per 9-week window */
+  expectedGrowthPoints: number;
 }
 
 // =============================================================================
@@ -199,6 +245,100 @@ function generateNweaScores(
   };
 }
 
+function generatePurposeDrivenMetrics(
+  rng: SeededRandom,
+  reading: AssessmentScores,
+  math: AssessmentScores,
+  riskLevel: 'on_track' | 'at_risk' | 'critical',
+  hasIep: boolean
+): PurposeDrivenMetrics {
+  const now = new Date();
+  const schoolYearStart = new Date(now.getFullYear(), 7, 15); // Aug 15
+
+  // Generate assessment history with some volatility
+  const assessmentHistory: AssessmentHistory[] = [];
+  const volatilityFactor = riskLevel === 'critical' ? 8 : riskLevel === 'at_risk' ? 5 : 2;
+
+  // Reading assessments
+  const readingScores = [
+    { date: new Date(schoolYearStart.getTime() + 14 * 24 * 60 * 60 * 1000), score: reading.fallRit },
+    { date: new Date(schoolYearStart.getTime() + 45 * 24 * 60 * 60 * 1000), score: reading.fallRit + rng.nextInt(-volatilityFactor, volatilityFactor + 2) },
+    { date: new Date(schoolYearStart.getTime() + 75 * 24 * 60 * 60 * 1000), score: reading.fallRit + rng.nextInt(0, volatilityFactor + 3) },
+    { date: new Date(schoolYearStart.getTime() + 105 * 24 * 60 * 60 * 1000), score: reading.winterRit - rng.nextInt(0, 2) },
+    { date: new Date(schoolYearStart.getTime() + 120 * 24 * 60 * 60 * 1000), score: reading.winterRit },
+  ];
+
+  readingScores.forEach((s) => {
+    assessmentHistory.push({
+      date: s.date,
+      score: s.score,
+      subject: 'reading',
+      assessmentType: s.date.getTime() === schoolYearStart.getTime() + 14 * 24 * 60 * 60 * 1000 ? 'benchmark' : 'formative',
+    });
+  });
+
+  // Math assessments
+  const mathScores = [
+    { date: new Date(schoolYearStart.getTime() + 14 * 24 * 60 * 60 * 1000), score: math.fallRit },
+    { date: new Date(schoolYearStart.getTime() + 50 * 24 * 60 * 60 * 1000), score: math.fallRit + rng.nextInt(-volatilityFactor, volatilityFactor + 1) },
+    { date: new Date(schoolYearStart.getTime() + 80 * 24 * 60 * 60 * 1000), score: math.fallRit + rng.nextInt(1, volatilityFactor + 2) },
+    { date: new Date(schoolYearStart.getTime() + 110 * 24 * 60 * 60 * 1000), score: math.winterRit - rng.nextInt(0, 3) },
+    { date: new Date(schoolYearStart.getTime() + 120 * 24 * 60 * 60 * 1000), score: math.winterRit },
+  ];
+
+  mathScores.forEach((s) => {
+    assessmentHistory.push({
+      date: s.date,
+      score: s.score,
+      subject: 'math',
+      assessmentType: s.date.getTime() === schoolYearStart.getTime() + 14 * 24 * 60 * 60 * 1000 ? 'benchmark' : 'formative',
+    });
+  });
+
+  // Generate intervention sessions for at-risk and critical students
+  const interventionSessions: InterventionSession[] = [];
+  const targetMinutes = hasIep ? 600 : riskLevel === 'critical' ? 450 : riskLevel === 'at_risk' ? 300 : 0;
+
+  if (targetMinutes > 0) {
+    const numSessions = rng.nextInt(8, 18);
+    const interventionTypes = ['Small Group Reading', 'Math Tutoring', 'Phonics Intervention', 'Fluency Practice'];
+    const subjects: Array<'reading' | 'math'> = ['reading', 'math'];
+
+    for (let i = 0; i < numSessions; i++) {
+      const sessionDate = new Date(schoolYearStart.getTime() + (30 + i * 5) * 24 * 60 * 60 * 1000);
+      interventionSessions.push({
+        id: `int_${rng.nextInt(10000, 99999)}`,
+        date: sessionDate,
+        durationMinutes: rng.nextInt(20, 45),
+        interventionType: rng.pick(interventionTypes),
+        subject: rng.pick(subjects),
+        engagementScore: rng.nextInt(60, 100),
+      });
+    }
+  }
+
+  // Mobility record
+  const enrollmentDate = new Date(schoolYearStart.getTime() - rng.nextInt(0, 30) * 24 * 60 * 60 * 1000);
+  const daysEnrolled = Math.floor((now.getTime() - enrollmentDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  // Last data update (simulate some staleness for demo)
+  const stalenessFactor = rng.nextInt(0, 14);
+  const lastDataUpdate = new Date(now.getTime() - stalenessFactor * 24 * 60 * 60 * 1000);
+
+  return {
+    assessmentHistory,
+    interventionSessions,
+    mobilityRecord: {
+      enrollmentDate,
+      daysEnrolled,
+      previousSchool: rng.next() < 0.15 ? 'Previous District School' : undefined,
+    },
+    lastDataUpdate,
+    targetInterventionMinutes: targetMinutes,
+    expectedGrowthPoints: Math.round((reading.projectedSpringRit - reading.fallRit) / 3), // Per 9-week window
+  };
+}
+
 function generateStudent(
   rng: SeededRandom,
   schoolId: string,
@@ -247,6 +387,9 @@ function generateStudent(
   const mathProficiency = proficiency + rng.nextInt(-10, 10);
   const mathGrowth = growth + rng.nextInt(-10, 10);
 
+  const readingScores = generateNweaScores(rng, grade, proficiency, growth);
+  const mathScores = generateNweaScores(rng, grade, mathProficiency, mathGrowth);
+
   return {
     id: `stu_${schoolId.slice(0, 4)}_${index.toString().padStart(4, '0')}`,
     firstName,
@@ -265,8 +408,9 @@ function generateStudent(
     has504Plan,
     isEnglishLearner: isEll,
     homeroomTeacher: rng.pick(TEACHERS),
-    reading: generateNweaScores(rng, grade, proficiency, growth),
-    math: generateNweaScores(rng, grade, mathProficiency, mathGrowth),
+    reading: readingScores,
+    math: mathScores,
+    purposeDriven: generatePurposeDrivenMetrics(rng, readingScores, mathScores, riskLevel, hasIep),
   };
 }
 

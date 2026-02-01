@@ -139,7 +139,7 @@ export function MasteryCurveChart({
               : item.label;
           },
           label: (context) => {
-            const value = context.parsed.y.toFixed(1);
+            const value = context.parsed.y?.toFixed(1) ?? '0';
             return `${context.dataset.label}: ${value}% mastery`;
           },
         },

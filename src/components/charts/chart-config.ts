@@ -137,7 +137,6 @@ export const defaultChartOptions: ChartOptions<'line'> = {
     x: {
       grid: {
         color: EDUNODE_COLORS.slate[800],
-        drawBorder: false,
       },
       ticks: {
         color: EDUNODE_COLORS.slate[500],
@@ -150,7 +149,6 @@ export const defaultChartOptions: ChartOptions<'line'> = {
     y: {
       grid: {
         color: EDUNODE_COLORS.slate[800],
-        drawBorder: false,
       },
       ticks: {
         color: EDUNODE_COLORS.slate[500],

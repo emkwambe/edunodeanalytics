@@ -131,12 +131,13 @@ export function DashboardGrid({ children, className }: DashboardGridProps) {
  */
 interface GridItemProps {
   children: React.ReactNode;
-  span?: 4 | 6 | 8 | 12;
+  span?: 3 | 4 | 6 | 8 | 12;
   className?: string;
 }
 
 export function GridItem({ children, span = 6, className }: GridItemProps) {
   const spanClasses = {
+    3: 'grid-col-span-3',
     4: 'grid-col-span-4',
     6: 'grid-col-span-6',
     8: 'grid-col-span-8',

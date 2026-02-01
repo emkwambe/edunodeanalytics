@@ -42,7 +42,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { generateCharterNarrative, type CharterNarrativeResult } from '@/lib/ai/edunode-advisor';
+import { generateCharterNarrative, type CharterNarrative } from '@/lib/ai/edunode-advisor';
 
 // Register Chart.js components
 ChartJS.register(
@@ -108,7 +108,7 @@ export default function AuthorizerPortal() {
 
   // AI Charter Narrative Generator state
   const [isGeneratingNarrative, setIsGeneratingNarrative] = React.useState(false);
-  const [narrativeResult, setNarrativeResult] = React.useState<CharterNarrativeResult | null>(null);
+  const [narrativeResult, setNarrativeResult] = React.useState<CharterNarrative | null>(null);
   const [narrativeExpanded, setNarrativeExpanded] = React.useState(false);
   const [copiedSection, setCopiedSection] = React.useState<string | null>(null);
 
@@ -176,21 +176,11 @@ export default function AuthorizerPortal() {
     const schoolName = schoolSlug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 
     const result = generateCharterNarrative(schoolName, {
-      growthPercentile: metrics.growthPercentile,
+      avgGrowth: metrics.growthPercentile,
       proficiencyRate: 68, // Mock data
-      attendanceRate: metrics.attendanceRate,
       chronicAbsenceRate: metrics.chronicAbsenceRate,
-      subgroupGrowth: {
-        ell: 81,
-        iep: 78,
-        economicallyDisadvantaged: 84,
-      },
-      fiscalHealth: {
-        currentRatio: metrics.currentRatio,
-        daysCashOnHand: metrics.daysCashOnHand,
-      },
-      enrollmentTrend: 'stable',
-      complianceScore: metrics.complianceScore,
+      subgroupGap: 5, // Mock: 5% gap between subgroups
+      yearOverYearChange: 3, // Mock: 3% improvement year over year
     });
 
     setNarrativeResult(result);
@@ -519,7 +509,7 @@ export default function AuthorizerPortal() {
                         {item.name}
                       </span>
                       {item.status === 'passed' && (
-                        <Badge variant="success" size="sm">
+                        <Badge variant="accent" size="sm">
                           <CheckCircle2 className="w-3 h-3 mr-1" />
                           Passed
                         </Badge>
@@ -531,7 +521,7 @@ export default function AuthorizerPortal() {
                         </Badge>
                       )}
                       {item.status === 'failed' && (
-                        <Badge variant="danger" size="sm">
+                        <Badge variant="destructive" size="sm">
                           <XCircle className="w-3 h-3 mr-1" />
                           Failed
                         </Badge>
@@ -723,38 +713,81 @@ export default function AuthorizerPortal() {
 
                   {/* Narrative Sections */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {narrativeResult.sections.map((section, idx) => (
-                      <div key={idx} className="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-bold text-white text-sm">{section.title}</h4>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleCopySection(section.title, section.content)}
-                            className="text-slate-400 hover:text-white h-7 w-7 p-0"
-                          >
-                            {copiedSection === section.title ? (
-                              <Check className="w-3 h-3 text-emerald-400" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                          </Button>
-                        </div>
-                        <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
-                          {section.content}
-                        </p>
+                    {/* Growth Evidence */}
+                    <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-bold text-white text-sm">Growth Evidence</h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopySection('Growth Evidence', narrativeResult.growthEvidence)}
+                          className="text-slate-400 hover:text-white h-7 w-7 p-0"
+                        >
+                          {copiedSection === 'Growth Evidence' ? (
+                            <Check className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </Button>
                       </div>
-                    ))}
+                      <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
+                        {narrativeResult.growthEvidence}
+                      </p>
+                    </div>
+
+                    {/* Subgroup Parity */}
+                    <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-bold text-white text-sm">Subgroup Parity</h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopySection('Subgroup Parity', narrativeResult.subgroupParity)}
+                          className="text-slate-400 hover:text-white h-7 w-7 p-0"
+                        >
+                          {copiedSection === 'Subgroup Parity' ? (
+                            <Check className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
+                        {narrativeResult.subgroupParity}
+                      </p>
+                    </div>
+
+                    {/* Renewal Recommendation */}
+                    <div className="p-4 bg-emerald-900/20 rounded-xl border border-emerald-500/30 md:col-span-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-bold text-emerald-400 text-sm">Renewal Recommendation</h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopySection('Renewal Recommendation', narrativeResult.renewalRecommendation)}
+                          className="text-slate-400 hover:text-white h-7 w-7 p-0"
+                        >
+                          {copiedSection === 'Renewal Recommendation' ? (
+                            <Check className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">
+                        {narrativeResult.renewalRecommendation}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Key Talking Points */}
+                  {/* Key Highlights */}
                   <div className="p-4 bg-indigo-900/20 rounded-xl border border-indigo-500/30">
                     <div className="flex items-center gap-2 text-indigo-400 mb-3">
                       <Award className="w-4 h-4" />
-                      <h4 className="font-bold text-sm">Key Talking Points for Authorizer Meeting</h4>
+                      <h4 className="font-bold text-sm">Key Highlights for Authorizer Meeting</h4>
                     </div>
                     <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {narrativeResult.keyTalkingPoints.map((point, idx) => (
+                      {narrativeResult.keyHighlights.map((point, idx) => (
                         <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
                           <span className="text-indigo-400 font-bold mt-0.5">•</span>
                           <span>{point}</span>
@@ -766,10 +799,6 @@ export default function AuthorizerPortal() {
                   {/* Footer Stats */}
                   <div className="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg text-xs">
                     <div className="flex items-center gap-4 text-slate-500">
-                      <span>Word count: ~{narrativeResult.wordCount}</span>
-                      <span>•</span>
-                      <span>Confidence: {narrativeResult.confidenceScore}%</span>
-                      <span>•</span>
                       <span>Generated: {new Date().toLocaleTimeString()}</span>
                     </div>
                     <Button
@@ -777,7 +806,9 @@ export default function AuthorizerPortal() {
                       size="sm"
                       onClick={() => handleCopySection('Full Narrative',
                         `EXECUTIVE SUMMARY\n\n${narrativeResult.executiveSummary}\n\n` +
-                        narrativeResult.sections.map(s => `${s.title.toUpperCase()}\n\n${s.content}`).join('\n\n')
+                        `GROWTH EVIDENCE\n\n${narrativeResult.growthEvidence}\n\n` +
+                        `SUBGROUP PARITY\n\n${narrativeResult.subgroupParity}\n\n` +
+                        `RENEWAL RECOMMENDATION\n\n${narrativeResult.renewalRecommendation}`
                       )}
                       className="text-violet-400 hover:text-violet-300"
                     >
@@ -832,14 +863,24 @@ export default function AuthorizerPortal() {
                   {narrativeResult.executiveSummary}
                 </p>
               </div>
-              {narrativeResult.sections.map((section, idx) => (
-                <div key={idx} className="mb-4">
-                  <h3 className="font-bold text-slate-700 mb-2">{section.title}</h3>
-                  <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
-                    {section.content}
-                  </p>
-                </div>
-              ))}
+              <div className="mb-4">
+                <h3 className="font-bold text-slate-700 mb-2">Growth Evidence</h3>
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                  {narrativeResult.growthEvidence}
+                </p>
+              </div>
+              <div className="mb-4">
+                <h3 className="font-bold text-slate-700 mb-2">Subgroup Parity</h3>
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                  {narrativeResult.subgroupParity}
+                </p>
+              </div>
+              <div className="mb-4">
+                <h3 className="font-bold text-emerald-700 mb-2">Renewal Recommendation</h3>
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                  {narrativeResult.renewalRecommendation}
+                </p>
+              </div>
             </div>
           </div>
         )}

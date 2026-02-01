@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Custom 404 Not Found Page
  * =========================

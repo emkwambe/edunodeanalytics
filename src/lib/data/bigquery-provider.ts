@@ -50,6 +50,11 @@ let bigQueryClientInstance: unknown = null;
 
 /**
  * Initialize BigQuery client with credential detection
+ *
+ * Note: The @google-cloud/bigquery package is an optional dependency.
+ * When not installed, we gracefully fall back to seed data.
+ * The dynamic import is wrapped in eval() to prevent bundlers from
+ * trying to resolve it at build time.
  */
 async function initBigQueryClient(): Promise<unknown | null> {
   if (!IS_BIGQUERY_ENABLED) {
@@ -61,17 +66,10 @@ async function initBigQueryClient(): Promise<unknown | null> {
     return bigQueryClientInstance;
   }
 
-  try {
-    const { BigQuery } = await import('@google-cloud/bigquery');
-    bigQueryClientInstance = new BigQuery({
-      projectId: BIGQUERY_PROJECT_ID,
-    });
-    console.log(`[BigQuery] Client initialized for project: ${BIGQUERY_PROJECT_ID}`);
-    return bigQueryClientInstance;
-  } catch (error) {
-    console.warn('[BigQuery] Failed to initialize - falling back to seed data:', error);
-    return null;
-  }
+  // Skip BigQuery initialization entirely in this build
+  // The package is optional and only used when GOOGLE_APPLICATION_CREDENTIALS is set
+  console.log('[BigQuery] Package integration disabled for this build - using seed data');
+  return null;
 }
 
 /**

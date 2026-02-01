@@ -1,19 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
-import { Plus_Jakarta_Sans, Outfit } from 'next/font/google';
 import './globals.css';
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const outfit = Outfit({
-  subsets: ['latin'],
-  variable: '--font-display',
-  display: 'swap',
-});
+// CSS font variables are set in globals.css using system font stack
+// This avoids font loading issues in restricted network environments
 
 export const metadata: Metadata = {
   title: {
@@ -74,7 +64,6 @@ export default function RootLayout({
     >
       <html
         lang="en"
-        className={`${plusJakartaSans.variable} ${outfit.variable}`}
         suppressHydrationWarning
       >
         <body className="min-h-screen bg-slate-900 font-sans antialiased">

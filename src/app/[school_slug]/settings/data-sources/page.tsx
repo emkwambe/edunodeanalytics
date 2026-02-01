@@ -12,8 +12,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   harmonizeLMSSchema,
-  type SchemaHarmonizationResult,
-  type FieldMapping,
+  type SchemaMapping,
 } from '@/lib/ai/edunode-advisor';
 import {
   Database,
@@ -112,8 +111,8 @@ export default function DataSourcesPage() {
   const [selectedPlatform, setSelectedPlatform] = React.useState<LMSPlatform | null>(null);
   const [customFields, setCustomFields] = React.useState<string>('');
   const [isHarmonizing, setIsHarmonizing] = React.useState(false);
-  const [harmonizationResult, setHarmonizationResult] = React.useState<SchemaHarmonizationResult | null>(null);
-  const [editedMappings, setEditedMappings] = React.useState<FieldMapping[]>([]);
+  const [harmonizationResult, setHarmonizationResult] = React.useState<SchemaMapping[] | null>(null);
+  const [editedMappings, setEditedMappings] = React.useState<SchemaMapping[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
 
   const handleSelectPlatform = (platformId: LMSPlatform) => {
@@ -140,22 +139,25 @@ export default function DataSourcesPage() {
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // Get AI harmonization result
-    const result = harmonizeLMSSchema(selectedPlatform, sourceFields);
+    const sourceCategories = sourceFields.map((field) => ({
+      name: field,
+      system: selectedPlatform || 'custom',
+    }));
+    const result = harmonizeLMSSchema(sourceCategories);
     setHarmonizationResult(result);
-    setEditedMappings(result.mappings);
+    setEditedMappings(result);
 
     setIsHarmonizing(false);
   };
 
-  const handleMappingChange = (index: number, targetField: string) => {
+  const handleMappingChange = (index: number, mappedCategory: string) => {
     setEditedMappings((prev) =>
       prev.map((m, i) =>
         i === index
           ? {
               ...m,
-              targetField,
-              confidence: m.sourceField === targetField ? 100 : 80,
-              aiSuggested: false,
+              mappedCategory,
+              confidence: m.sourceCategory === mappedCategory ? 100 : 80,
             }
           : m
       )
@@ -177,7 +179,7 @@ export default function DataSourcesPage() {
 
   const allMappingsConfirmed = editedMappings.every((m) => m.confidence === 100);
   const requiredFieldsMapped = EDUNODE_SCHEMA.filter((f) => f.required).every((f) =>
-    editedMappings.some((m) => m.targetField === f.field && m.confidence >= 70)
+    editedMappings.some((m) => m.mappedCategory === f.field && m.confidence >= 70)
   );
 
   return (
@@ -358,7 +360,7 @@ export default function DataSourcesPage() {
                       <div>
                         <div className="text-sm text-slate-400">AI Confidence Score</div>
                         <div className="text-2xl font-black text-white">
-                          {harmonizationResult.overallConfidence}%
+                          {Math.round(harmonizationResult.reduce((sum, m) => sum + m.confidence, 0) / harmonizationResult.length)}%
                         </div>
                       </div>
                     </div>
@@ -425,9 +427,9 @@ export default function DataSourcesPage() {
                       >
                         <div className="col-span-4 flex items-center gap-2">
                           <code className="px-2 py-1 bg-slate-800 rounded text-sm text-slate-300 font-mono">
-                            {mapping.sourceField}
+                            {mapping.sourceCategory}
                           </code>
-                          {mapping.aiSuggested && (
+                          {mapping.confidence >= 80 && (
                             <Sparkles className="w-3 h-3 text-violet-400" />
                           )}
                         </div>
@@ -436,7 +438,7 @@ export default function DataSourcesPage() {
                         </div>
                         <div className="col-span-4">
                           <select
-                            value={mapping.targetField}
+                            value={mapping.mappedCategory}
                             onChange={(e) => handleMappingChange(index, e.target.value)}
                             className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
                           >
@@ -491,25 +493,25 @@ export default function DataSourcesPage() {
                       <p className="text-xs text-slate-300">
                         The following required fields need mappings:{' '}
                         {EDUNODE_SCHEMA.filter((f) => f.required)
-                          .filter((f) => !editedMappings.some((m) => m.targetField === f.field && m.confidence >= 70))
+                          .filter((f) => !editedMappings.some((m) => m.mappedCategory === f.field && m.confidence >= 70))
                           .map((f) => f.field)
                           .join(', ')}
                       </p>
                     </div>
                   )}
 
-                  {/* AI Suggestions */}
-                  {harmonizationResult.suggestions.length > 0 && (
+                  {/* AI Rationale Summary */}
+                  {harmonizationResult.some(m => m.rationale) && (
                     <div className="mt-4 p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-xl">
                       <div className="flex items-center gap-2 text-indigo-400 mb-2">
                         <BrainCircuit className="w-4 h-4" />
-                        <span className="font-bold text-sm">AI Suggestions</span>
+                        <span className="font-bold text-sm">AI Mapping Rationale</span>
                       </div>
                       <ul className="space-y-1">
-                        {harmonizationResult.suggestions.map((suggestion, idx) => (
+                        {harmonizationResult.filter(m => m.confidence < 90).slice(0, 3).map((mapping, idx) => (
                           <li key={idx} className="text-xs text-slate-300 flex items-start gap-2">
                             <span className="text-indigo-400">•</span>
-                            <span>{suggestion}</span>
+                            <span>{mapping.sourceCategory} → {mapping.mappedCategory}: {mapping.rationale}</span>
                           </li>
                         ))}
                       </ul>

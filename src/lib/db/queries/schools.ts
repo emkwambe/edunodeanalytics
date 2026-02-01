@@ -18,7 +18,7 @@ const DEMO_SCHOOLS: Record<string, Partial<School>> = {
     primary_color: '#6366f1',
     secondary_color: '#06b6d4',
     accent_color: '#10b981',
-    subscription_tier: 'professional',
+    subscription_tier: 'pro',
     subscription_status: 'active',
   },
   'academy-tomorrow': {
@@ -29,7 +29,7 @@ const DEMO_SCHOOLS: Record<string, Partial<School>> = {
     primary_color: '#8b5cf6',
     secondary_color: '#06b6d4',
     accent_color: '#10b981',
-    subscription_tier: 'professional',
+    subscription_tier: 'pro',
     subscription_status: 'active',
   },
   'innovation-prep': {
@@ -40,7 +40,7 @@ const DEMO_SCHOOLS: Record<string, Partial<School>> = {
     primary_color: '#0ea5e9',
     secondary_color: '#06b6d4',
     accent_color: '#10b981',
-    subscription_tier: 'professional',
+    subscription_tier: 'pro',
     subscription_status: 'active',
   },
   'stem-scholars': {
@@ -51,7 +51,7 @@ const DEMO_SCHOOLS: Record<string, Partial<School>> = {
     primary_color: '#10b981',
     secondary_color: '#06b6d4',
     accent_color: '#6366f1',
-    subscription_tier: 'professional',
+    subscription_tier: 'pro',
     subscription_status: 'active',
   },
 };
@@ -111,7 +111,7 @@ export async function getSchoolById(id: string): Promise<School | null> {
  * Get the current tenant's school (from middleware context)
  */
 export async function getCurrentSchool(): Promise<School | null> {
-  const slug = getCurrentTenantSlug();
+  const slug = await getCurrentTenantSlug();
   if (!slug) return null;
   return getSchoolBySlug(slug);
 }

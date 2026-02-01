@@ -39,6 +39,12 @@ const nextConfig = {
   // Strict mode for React
   reactStrictMode: true,
 
+  // Turbopack configuration (Next.js 16+ default)
+  turbopack: {},
+
+  // External packages (server-side only, optional dependencies)
+  serverExternalPackages: ['@google-cloud/bigquery'],
+
   // Output configuration for Vercel deployment
   output: 'standalone',
 

@@ -5,6 +5,7 @@ import type {
   UserUpdate,
   SchoolMembership,
   SchoolMembershipInsert,
+  Json,
 } from '@/lib/database.types';
 
 /**
@@ -267,7 +268,7 @@ export async function updateUserPreferences(
   const { data, error } = await supabase
     .from('users')
     .update({
-      preferences,
+      preferences: preferences as Json,
       updated_at: new Date().toISOString(),
     })
     .eq('id', userId)

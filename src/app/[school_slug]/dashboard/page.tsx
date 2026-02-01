@@ -134,7 +134,6 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
               subtitle={`${(metrics.chronicAbsenceRate * 100).toFixed(1)}% of students`}
               icon={<AlertTriangle className="w-5 h-5" />}
               variant="danger"
-              href={`/${school_slug}/dashboard/students?filter=chronic`}
             />
           </Suspense>
         </GridItem>

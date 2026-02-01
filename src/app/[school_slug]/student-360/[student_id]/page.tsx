@@ -45,7 +45,20 @@ import {
   Sparkles,
   Home,
   Pencil,
+  Timer,
+  Gauge,
+  Zap,
 } from 'lucide-react';
+import {
+  calculateVolatilityIndex,
+  calculateTimeToImpact,
+  calculateDosageMetrics,
+  calculateMetricVitality,
+  type VolatilityMetrics,
+  type TimeToImpact,
+  type DosageMetrics,
+  type MetricVitality,
+} from '@/lib/analytics/purpose-driven-metrics';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
@@ -113,6 +126,61 @@ export default function Student360DeepDivePage() {
   const avgGrowth = student ? (student.reading.growthPercentile + student.math.growthPercentile) / 2 : 50;
   const attendancePercent = student ? student.attendanceRate * 100 : 95;
   const mtssStatus = student?.riskLevel === 'critical' ? 'Tier 3' : student?.riskLevel === 'at_risk' ? 'Tier 2' : 'Tier 1';
+
+  // Purpose-Driven Intelligence Metrics
+  const volatilityMetrics = React.useMemo<VolatilityMetrics>(() => {
+    if (!student?.purposeDriven?.assessmentHistory) {
+      return calculateVolatilityIndex([]);
+    }
+    const readingScores = student.purposeDriven.assessmentHistory
+      .filter((a) => a.subject === 'reading')
+      .map((a) => a.score);
+    return calculateVolatilityIndex(readingScores);
+  }, [student]);
+
+  const timeToImpact = React.useMemo<TimeToImpact>(() => {
+    if (!student?.purposeDriven?.assessmentHistory || !student.reading) {
+      return {
+        daysToTarget: -1,
+        targetScore: 212,
+        slope: 0,
+        onTrack: false,
+        estimate: 'Insufficient data',
+        confidence: 'low' as const,
+      };
+    }
+    const targetRit = 212; // Grade-level target
+    const history = student.purposeDriven.assessmentHistory
+      .filter((a) => a.subject === 'reading')
+      .map((a) => ({ score: a.score, date: a.date }));
+    return calculateTimeToImpact(student.reading.winterRit, targetRit, history);
+  }, [student]);
+
+  const dosageMetrics = React.useMemo<DosageMetrics>(() => {
+    if (!student?.purposeDriven?.interventionSessions) {
+      return {
+        targetMinutes: 300,
+        actualMinutes: 0,
+        percentComplete: 0,
+        classification: 'critical' as const,
+        sessionsCompleted: 0,
+        sessionsPlanned: 15,
+        avgSessionDuration: 0,
+      };
+    }
+    const sessions = student.purposeDriven.interventionSessions.map((s) => ({
+      date: s.date,
+      durationMinutes: s.durationMinutes,
+    }));
+    return calculateDosageMetrics(
+      sessions,
+      student.purposeDriven.targetInterventionMinutes || 300
+    );
+  }, [student]);
+
+  const metricVitality = React.useMemo<MetricVitality>(() => {
+    return calculateMetricVitality(student?.purposeDriven?.lastDataUpdate ?? null);
+  }, [student]);
 
   // Generate CGI trajectory data (RIT-style for the screenshot)
   const periods = ['Fall', 'Early Winter', 'Mid Winter', 'Projected'];
@@ -360,6 +428,201 @@ export default function Student360DeepDivePage() {
               </Link>
             </CardContent>
           </Card>
+
+          {/* Time-to-Impact Estimate */}
+          <Card className="bg-slate-800/30 border-slate-700">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2 text-cyan-400">
+                <Timer className="w-4 h-4" />
+                <CardTitle className="text-xs font-bold uppercase tracking-wider">
+                  Time-to-Impact
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className={cn(
+                  'text-3xl font-black',
+                  timeToImpact.onTrack ? 'text-emerald-400' :
+                  timeToImpact.daysToTarget > 0 ? 'text-amber-400' : 'text-slate-400'
+                )}>
+                  {timeToImpact.estimate}
+                </span>
+              </div>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Target RIT</span>
+                  <span className="text-slate-200">{timeToImpact.targetScore}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Trajectory Slope</span>
+                  <span className={cn(
+                    timeToImpact.slope > 0 ? 'text-emerald-400' : 'text-amber-400'
+                  )}>
+                    {timeToImpact.slope > 0 ? '+' : ''}{timeToImpact.slope.toFixed(3)}/day
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Confidence</span>
+                  <Badge variant="outline" className={cn(
+                    'text-[10px]',
+                    timeToImpact.confidence === 'high' ? 'border-emerald-500/50 text-emerald-400' :
+                    timeToImpact.confidence === 'medium' ? 'border-amber-500/50 text-amber-400' :
+                    'border-slate-500/50 text-slate-400'
+                  )}>
+                    {timeToImpact.confidence}
+                  </Badge>
+                </div>
+              </div>
+              {timeToImpact.onTrack && (
+                <div className="mt-3 p-2 rounded bg-emerald-500/10 border border-emerald-500/20">
+                  <p className="text-[10px] text-emerald-400">
+                    On track to reach grade-level target within the school year
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Volatility Index */}
+          <Card className={cn(
+            "bg-slate-800/30 border-slate-700",
+            volatilityMetrics.classification === 'fragile' && "border-red-500/30"
+          )}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2 text-amber-400">
+                <Gauge className="w-4 h-4" />
+                <CardTitle className="text-xs font-bold uppercase tracking-wider">
+                  Volatility Index
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between mb-3">
+                <span className={cn(
+                  'text-3xl font-black',
+                  volatilityMetrics.classification === 'stable' ? 'text-emerald-400' :
+                  volatilityMetrics.classification === 'moderate' ? 'text-amber-400' : 'text-rose-400'
+                )}>
+                  {volatilityMetrics.volatilityIndex === -1 ? '--' : volatilityMetrics.volatilityIndex.toFixed(1)}
+                </span>
+                <Badge className={cn(
+                  'text-[10px]',
+                  volatilityMetrics.classification === 'stable' ? 'bg-emerald-500/20 text-emerald-400' :
+                  volatilityMetrics.classification === 'moderate' ? 'bg-amber-500/20 text-amber-400' :
+                  'bg-rose-500/20 text-rose-400'
+                )}>
+                  {volatilityMetrics.label}
+                </Badge>
+              </div>
+
+              {/* Visual scale */}
+              <div className="relative h-2 bg-slate-700 rounded-full overflow-hidden mb-2">
+                <div
+                  className={cn(
+                    "absolute h-full rounded-full transition-all",
+                    volatilityMetrics.classification === 'stable' ? 'bg-emerald-500' :
+                    volatilityMetrics.classification === 'moderate' ? 'bg-amber-500' : 'bg-rose-500'
+                  )}
+                  style={{ width: `${Math.max(10, (volatilityMetrics.volatilityIndex / 10) * 100)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-slate-500">
+                <span>Stable</span>
+                <span>Fragile</span>
+              </div>
+
+              {volatilityMetrics.alertMessage && (
+                <div className="mt-3 p-2 rounded bg-rose-500/10 border border-rose-500/20">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-3 h-3 text-rose-400 mt-0.5" />
+                    <p className="text-[10px] text-rose-400">{volatilityMetrics.alertMessage}</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Intervention Dosage */}
+          {dosageMetrics.targetMinutes > 0 && (
+            <Card className="bg-slate-800/30 border-slate-700">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2 text-indigo-400">
+                  <Zap className="w-4 h-4" />
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider">
+                    Intervention Dosage
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-baseline gap-1 mb-2">
+                  <span className={cn(
+                    'text-2xl font-black',
+                    dosageMetrics.classification === 'on_track' ? 'text-emerald-400' :
+                    dosageMetrics.classification === 'behind' ? 'text-amber-400' : 'text-rose-400'
+                  )}>
+                    {dosageMetrics.actualMinutes}
+                  </span>
+                  <span className="text-slate-400 text-sm">/ {dosageMetrics.targetMinutes} min</span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="relative h-3 bg-slate-700 rounded-full overflow-hidden mb-3">
+                  <div
+                    className={cn(
+                      "absolute h-full rounded-full transition-all",
+                      dosageMetrics.classification === 'on_track' ? 'bg-emerald-500' :
+                      dosageMetrics.classification === 'behind' ? 'bg-amber-500' : 'bg-rose-500'
+                    )}
+                    style={{ width: `${Math.min(100, dosageMetrics.percentComplete)}%` }}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div className="p-2 rounded bg-slate-900/50">
+                    <div className="text-lg font-bold text-slate-200">{dosageMetrics.sessionsCompleted}</div>
+                    <div className="text-[10px] text-slate-500">Sessions</div>
+                  </div>
+                  <div className="p-2 rounded bg-slate-900/50">
+                    <div className="text-lg font-bold text-slate-200">{dosageMetrics.avgSessionDuration}m</div>
+                    <div className="text-[10px] text-slate-500">Avg Duration</div>
+                  </div>
+                </div>
+
+                <div className="mt-2 text-[10px] text-slate-400 text-center">
+                  {dosageMetrics.sessionsPlanned - dosageMetrics.sessionsCompleted} sessions remaining in window
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Data Freshness Indicator */}
+          {metricVitality.freshness !== 'fresh' && (
+            <div className={cn(
+              "p-3 rounded-lg border",
+              metricVitality.freshness === 'stale'
+                ? "bg-amber-500/10 border-amber-500/20"
+                : "bg-rose-500/10 border-rose-500/20"
+            )}>
+              <div className="flex items-center gap-2">
+                <Clock className={cn(
+                  "w-4 h-4",
+                  metricVitality.freshness === 'stale' ? "text-amber-400" : "text-rose-400"
+                )} />
+                <div>
+                  <p className={cn(
+                    "text-xs font-medium",
+                    metricVitality.freshness === 'stale' ? "text-amber-400" : "text-rose-400"
+                  )}>
+                    Data is {metricVitality.daysSinceUpdate} days old
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {metricVitality.warningMessage}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* EduNode Expert Tip */}
           <Card className="bg-slate-800/30 border-indigo-500/20">

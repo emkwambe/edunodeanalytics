@@ -1,6 +1,6 @@
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
 import { headers } from 'next/headers';
-import type { AuditLogInsert } from '@/lib/database.types';
+import type { AuditLogInsert, Json } from '@/lib/database.types';
 
 /**
  * Audit Logging
@@ -52,7 +52,7 @@ interface AuditLogOptions {
  */
 export async function logAuditEvent(options: AuditLogOptions): Promise<void> {
   const supabase = createAdminSupabaseClient();
-  const headersList = headers();
+  const headersList = await headers();
 
   const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0] || null;
   const userAgent = headersList.get('user-agent') || null;
@@ -63,11 +63,11 @@ export async function logAuditEvent(options: AuditLogOptions): Promise<void> {
     action: options.action,
     resource_type: options.resourceType,
     resource_id: options.resourceId || null,
-    old_values: options.oldValues || null,
-    new_values: options.newValues || null,
+    old_values: (options.oldValues as Json) || null,
+    new_values: (options.newValues as Json) || null,
     ip_address: ipAddress,
     user_agent: userAgent,
-    metadata: options.metadata || null,
+    metadata: (options.metadata as Json) || null,
   };
 
   const { error } = await supabase.from('audit_logs').insert(auditLog);

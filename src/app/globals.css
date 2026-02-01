@@ -9,6 +9,13 @@
 
 @layer base {
   :root {
+    /* System Font Stack */
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+      "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-display: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
     /* EduNode Brand Colors */
     --edunode-indigo: 99 102 241;
     --edunode-cyan: 6 182 212;
@@ -104,6 +111,10 @@
   .dashboard-grid {
     @apply grid gap-6;
     grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .grid-col-span-3 {
+    @apply col-span-12 sm:col-span-6 md:col-span-6 lg:col-span-3;
   }
 
   .grid-col-span-4 {

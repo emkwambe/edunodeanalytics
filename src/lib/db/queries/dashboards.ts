@@ -3,6 +3,7 @@ import type {
   DashboardConfig,
   DashboardConfigInsert,
   DashboardConfigUpdate,
+  Json,
 } from '@/lib/database.types';
 
 /**
@@ -175,7 +176,7 @@ export async function updateDashboardLayout(
   id: string,
   layoutConfig: Record<string, unknown>
 ): Promise<DashboardConfig | null> {
-  return updateDashboard(id, { layout_config: layoutConfig });
+  return updateDashboard(id, { layout_config: layoutConfig as Json });
 }
 
 /**
@@ -185,7 +186,7 @@ export async function updateDashboardWidgets(
   id: string,
   widgetConfigs: Record<string, unknown>
 ): Promise<DashboardConfig | null> {
-  return updateDashboard(id, { widget_configs: widgetConfigs });
+  return updateDashboard(id, { widget_configs: widgetConfigs as Json });
 }
 
 /**

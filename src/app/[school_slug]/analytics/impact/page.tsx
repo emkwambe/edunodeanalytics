@@ -124,11 +124,9 @@ export default function ImpactAnalyticsPage() {
       .map((s) => ({
         id: s.id,
         name: `${s.firstName} ${s.lastName}`,
-        currentGrowth: s.math.growthPercentile,
-        attendanceRate: s.attendanceRate * 100,
-        recentMicroGrowth: Math.random() * 15 + 5, // Simulated LMS micro-growth
-        lmsEngagementTrend: Math.random() > 0.5 ? 'increasing' as const : 'stable' as const,
-        assignmentCompletionRate: 65 + Math.random() * 25,
+        attendance: s.attendanceRate * 100,
+        growth: s.math.growthPercentile,
+        lmsEngagement: 60 + Math.random() * 30, // Simulated LMS engagement
       }));
     return identifyInvisibleSuccessStudents(amberStudents);
   }, [students]);
@@ -442,14 +440,14 @@ export default function ImpactAnalyticsPage() {
                       </div>
                       <Badge
                         className={`text-[10px] ${
-                          student.confidenceScore >= 80
+                          student.breakoutProbability >= 80
                             ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                            : student.confidenceScore >= 60
+                            : student.breakoutProbability >= 60
                             ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
                             : 'bg-slate-500/20 text-slate-400 border-slate-500/30'
                         }`}
                       >
-                        {student.confidenceScore}% match
+                        {student.breakoutProbability}% match
                       </Badge>
                     </div>
 
@@ -472,7 +470,7 @@ export default function ImpactAnalyticsPage() {
                         <span className="uppercase font-bold tracking-wide">Key Signals</span>
                       </div>
                       <ul className="text-[11px] text-slate-300 space-y-1">
-                        {student.matchingPatterns.slice(0, 2).map((pattern, idx) => (
+                        {student.microGrowthPatterns.slice(0, 2).map((pattern, idx) => (
                           <li key={idx} className="flex items-start gap-1.5">
                             <span className="text-violet-400 mt-0.5">•</span>
                             <span>{pattern}</span>
@@ -483,7 +481,7 @@ export default function ImpactAnalyticsPage() {
 
                     <div className="p-2 bg-indigo-900/30 rounded-lg border border-indigo-500/20">
                       <div className="text-[10px] text-indigo-400 font-bold mb-1">RECOMMENDED ACTION</div>
-                      <p className="text-[11px] text-slate-300">{student.recommendedAction}</p>
+                      <p className="text-[11px] text-slate-300">{student.recommendation}</p>
                     </div>
 
                     <Button
