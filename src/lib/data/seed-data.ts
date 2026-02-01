@@ -19,6 +19,7 @@ export interface SchoolSeedConfig {
   id: string;
   name: string;
   slug: string;
+  subscriptionTier: 'starter' | 'pro' | 'enterprise';
   colors: {
     primary: string;
     secondary: string;
@@ -421,6 +422,7 @@ export function generateSchoolSeed(
   studentCount: number,
   gradeLevels: number[],
   colors: { primary: string; secondary: string; accent: string },
+  subscriptionTier: 'starter' | 'pro' | 'enterprise' = 'pro',
   seed: number = 42
 ): SchoolSeedConfig {
   const rng = new SeededRandom(seed);
@@ -445,6 +447,7 @@ export function generateSchoolSeed(
     id: schoolId,
     name,
     slug,
+    subscriptionTier,
     colors,
     metrics: {
       totalEnrollment,
@@ -464,6 +467,7 @@ export function generateSchoolSeed(
 // =============================================================================
 
 export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
+  // Enterprise tier - full access to all features including network view
   'academy-tomorrow': generateSchoolSeed(
     'sch_academy_tomorrow_001',
     'Academy of Tomorrow Charter',
@@ -471,8 +475,10 @@ export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
     487,
     [6, 7, 8],
     { primary: '#6366f1', secondary: '#06b6d4', accent: '#10b981' },
+    'enterprise',
     12345
   ),
+  // Starter tier - basic compliance features only (demo feature gating)
   'innovation-prep': generateSchoolSeed(
     'sch_innovation_prep_002',
     'Innovation Prep Academy',
@@ -480,8 +486,10 @@ export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
     312,
     [9, 10, 11, 12],
     { primary: '#8b5cf6', secondary: '#06b6d4', accent: '#10b981' },
+    'starter',
     67890
   ),
+  // Professional tier - Student 360, Intervention Hub, AI features
   'stem-scholars': generateSchoolSeed(
     'sch_stem_scholars_003',
     'STEM Scholars Charter',
@@ -489,9 +497,10 @@ export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
     628,
     [6, 7, 8, 9, 10, 11, 12],
     { primary: '#0ea5e9', secondary: '#10b981', accent: '#f59e0b' },
+    'pro',
     11111
   ),
-  // Demo slugs that map to Academy of Tomorrow
+  // Professional tier - Demo school
   'academy-charter': generateSchoolSeed(
     'sch_academy_charter_demo',
     'Academy Charter School',
@@ -499,6 +508,7 @@ export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
     487,
     [6, 7, 8],
     { primary: '#6366f1', secondary: '#06b6d4', accent: '#10b981' },
+    'pro',
     42424
   ),
 };
