@@ -20,6 +20,7 @@ export interface SchoolSeedConfig {
   name: string;
   slug: string;
   subscriptionTier: 'starter' | 'pro' | 'enterprise';
+  studentCount: number;
   colors: {
     primary: string;
     secondary: string;
@@ -448,6 +449,7 @@ export function generateSchoolSeed(
     name,
     slug,
     subscriptionTier,
+    studentCount,
     colors,
     metrics: {
       totalEnrollment,

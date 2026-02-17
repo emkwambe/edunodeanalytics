@@ -4,6 +4,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Sidebar, MobileNav } from './sidebar';
 import { UpgradeModal, useUpgradeModal } from '@/components/features/upgrade-modal';
+import { SubscriptionProvider } from '@/contexts/subscription-context';
 import type { SubscriptionTier } from '@/lib/features/feature-gates';
 
 /**
@@ -31,42 +32,44 @@ export function DashboardShell({
   const { isOpen, highlightedFeature, openModal, closeModal } = useUpgradeModal();
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
-        <Sidebar
-          schoolSlug={schoolSlug}
-          schoolName={schoolName}
-          logoUrl={logoUrl}
-          collapsed={sidebarCollapsed}
-          onCollapse={setSidebarCollapsed}
-          subscriptionTier={subscriptionTier}
-          onUpgradeClick={() => openModal()}
+    <SubscriptionProvider initialTier={subscriptionTier}>
+      <div className="min-h-screen bg-slate-900">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block">
+          <Sidebar
+            schoolSlug={schoolSlug}
+            schoolName={schoolName}
+            logoUrl={logoUrl}
+            collapsed={sidebarCollapsed}
+            onCollapse={setSidebarCollapsed}
+            subscriptionTier={subscriptionTier}
+            onUpgradeClick={() => openModal()}
+          />
+        </div>
+
+        {/* Mobile Header */}
+        <MobileNav schoolSlug={schoolSlug} schoolName={schoolName} />
+
+        {/* Main Content */}
+        <main
+          className={cn(
+            'transition-all duration-300 min-h-screen',
+            'pt-16 lg:pt-0', // Account for mobile header
+            sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+          )}
+        >
+          <div className="p-4 lg:p-8">{children}</div>
+        </main>
+
+        {/* Upgrade Modal */}
+        <UpgradeModal
+          isOpen={isOpen}
+          onClose={closeModal}
+          currentTier={subscriptionTier}
+          highlightedFeature={highlightedFeature}
         />
       </div>
-
-      {/* Mobile Header */}
-      <MobileNav schoolSlug={schoolSlug} schoolName={schoolName} />
-
-      {/* Main Content */}
-      <main
-        className={cn(
-          'transition-all duration-300 min-h-screen',
-          'pt-16 lg:pt-0', // Account for mobile header
-          sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
-        )}
-      >
-        <div className="p-4 lg:p-8">{children}</div>
-      </main>
-
-      {/* Upgrade Modal */}
-      <UpgradeModal
-        isOpen={isOpen}
-        onClose={closeModal}
-        currentTier={subscriptionTier}
-        highlightedFeature={highlightedFeature}
-      />
-    </div>
+    </SubscriptionProvider>
   );
 }
 
