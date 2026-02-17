@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getSchoolSeed, type StudentSeedData } from '@/lib/data/seed-data';
+import { PageFeatureGate } from '@/components/features/page-feature-gate';
 import { cn } from '@/lib/utils';
 import { generateFlightPlan, type InterventionFlightPlan } from '@/lib/ai/edunode-advisor';
 import {
@@ -152,6 +153,7 @@ export default function InterventionsPage() {
   };
 
   return (
+    <PageFeatureGate featureKey="intervention_hub">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -435,5 +437,6 @@ export default function InterventionsPage() {
         </Card>
       )}
     </div>
+    </PageFeatureGate>
   );
 }

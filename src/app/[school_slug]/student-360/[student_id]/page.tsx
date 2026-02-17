@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getSchoolSeed, type StudentSeedData } from '@/lib/data/seed-data';
 import { cn } from '@/lib/utils';
+import { PageFeatureGate } from '@/components/features/page-feature-gate';
 import { ConfoundingRiskBanner } from '@/components/banners/confounding-risk-banner';
 import { useStudent360Audit } from '@/lib/hooks/use-ferpa-audit';
 import {
@@ -249,6 +250,7 @@ export default function Student360DeepDivePage() {
     : `"Monitor closely. Cross-reference attendance patterns with growth data before making instructional changes."`;
 
   return (
+    <PageFeatureGate featureKey="student_360">
     <div className="space-y-6">
       {/* Header with Avatar */}
       <div className="flex items-center justify-between">
@@ -736,5 +738,6 @@ export default function Student360DeepDivePage() {
         </CardContent>
       </Card>
     </div>
+    </PageFeatureGate>
   );
 }

@@ -3,11 +3,13 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Sidebar, MobileNav } from './sidebar';
+import { UpgradeModal, useUpgradeModal } from '@/components/features/upgrade-modal';
+import type { SubscriptionTier } from '@/lib/features/feature-gates';
 
 /**
  * Dashboard Shell Layout
  *
- * Wraps all dashboard pages with sidebar navigation
+ * Wraps all dashboard pages with sidebar navigation and upgrade modal
  */
 
 interface DashboardShellProps {
@@ -15,6 +17,7 @@ interface DashboardShellProps {
   schoolSlug: string;
   schoolName: string;
   logoUrl?: string;
+  subscriptionTier?: SubscriptionTier;
 }
 
 export function DashboardShell({
@@ -22,8 +25,10 @@ export function DashboardShell({
   schoolSlug,
   schoolName,
   logoUrl,
+  subscriptionTier = 'pro',
 }: DashboardShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const { isOpen, highlightedFeature, openModal, closeModal } = useUpgradeModal();
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -35,6 +40,8 @@ export function DashboardShell({
           logoUrl={logoUrl}
           collapsed={sidebarCollapsed}
           onCollapse={setSidebarCollapsed}
+          subscriptionTier={subscriptionTier}
+          onUpgradeClick={() => openModal()}
         />
       </div>
 
@@ -51,6 +58,14 @@ export function DashboardShell({
       >
         <div className="p-4 lg:p-8">{children}</div>
       </main>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={isOpen}
+        onClose={closeModal}
+        currentTier={subscriptionTier}
+        highlightedFeature={highlightedFeature}
+      />
     </div>
   );
 }

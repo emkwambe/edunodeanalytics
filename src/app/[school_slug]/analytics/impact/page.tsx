@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getSchoolSeed } from '@/lib/data/seed-data';
+import { PageFeatureGate } from '@/components/features/page-feature-gate';
 import {
   ShieldAlert,
   BrainCircuit,
@@ -211,7 +212,7 @@ export default function ImpactAnalyticsPage() {
   };
 
   return (
-    <>
+    <PageFeatureGate featureKey="impact_analyzer">
       <PageHeader
         title="Confounding Variable Analyzer"
         description="Isolating Instructional Impact by cross-referencing Growth with Engagement"
@@ -542,6 +543,6 @@ export default function ImpactAnalyticsPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </PageFeatureGate>
   );
 }

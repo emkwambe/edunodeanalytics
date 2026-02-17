@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { getSchoolBySlug, getSchoolBranding } from '@/lib/db/queries/schools';
+import { getSchoolSeed } from '@/lib/data/seed-data';
 
 /**
  * Tenant-Specific Layout
@@ -25,8 +26,9 @@ export default async function TenantLayout({
   // Fetch school branding
   const branding = await getSchoolBranding(school_slug);
 
-  // In production, this would 404 if school doesn't exist
-  // For now, we allow any slug for development
+  // Get subscription tier from seed data (in production, from DB)
+  const schoolSeed = getSchoolSeed(school_slug);
+  const subscriptionTier = schoolSeed?.subscriptionTier ?? 'starter';
 
   return (
     <Suspense
@@ -40,6 +42,7 @@ export default async function TenantLayout({
         schoolSlug={school_slug}
         schoolName={branding.name}
         logoUrl={branding.logoUrl}
+        subscriptionTier={subscriptionTier}
       >
         {children}
       </DashboardShell>

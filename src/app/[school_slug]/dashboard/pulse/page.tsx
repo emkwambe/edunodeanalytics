@@ -23,6 +23,7 @@ import {
 import { RiskDistribution } from '@/components/dashboard/status-indicator';
 import { generateMockDashboardData, generateMockStudents } from '@/lib/mock-data';
 import { Activity, BookOpen, Target, AlertCircle } from 'lucide-react';
+import { PageFeatureGate } from '@/components/features/page-feature-gate';
 
 /**
  * Instructional Pulse Dashboard
@@ -60,7 +61,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
     Object.values(latestMastery).length;
 
   return (
-    <>
+    <PageFeatureGate featureKey="ai_pulse">
       <PageHeader
         title="Instructional Pulse"
         description="Real-time formative assessment mastery and early warning indicators"
@@ -243,7 +244,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
           </div>
         </CardContent>
       </Card>
-    </>
+    </PageFeatureGate>
   );
 }
 

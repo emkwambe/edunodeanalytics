@@ -27,6 +27,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { SCHOOL_SEEDS, type StudentSeedData } from '@/lib/data/seed-data';
+import { PageFeatureGate } from '@/components/features/page-feature-gate';
 import {
   calculateVolatilityIndex,
   calculateMomentumScore,
@@ -689,7 +690,7 @@ export default function MomentumPage({ params }: MomentumPageProps) {
   );
 
   return (
-    <>
+    <PageFeatureGate featureKey="momentum_dashboard">
       <PageHeader
         title="Instructional Momentum"
         description="Purpose-Driven Intelligence: Growth trajectory, stability, and intervention fidelity"
@@ -804,6 +805,6 @@ export default function MomentumPage({ params }: MomentumPageProps) {
           </div>
         </div>
       )}
-    </>
+    </PageFeatureGate>
   );
 }
