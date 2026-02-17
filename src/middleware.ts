@@ -49,8 +49,17 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // Redirect unauthenticated users to sign-in
+  // For API routes, return JSON error instead of redirecting to HTML
+  const isApiRoute = path.startsWith('/api/');
+
+  // Redirect unauthenticated users to sign-in (or return 401 for API)
   if (!userId) {
+    if (isApiRoute) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
     const signInUrl = new URL('/sign-in', req.url);
     signInUrl.searchParams.set('redirect_url', req.url);
     return NextResponse.redirect(signInUrl);
@@ -112,6 +121,12 @@ export default clerkMiddleware(async (auth, req) => {
       console.warn(
         `[RBAC] User ${userId} attempted to access ${schoolSlug} without permission`
       );
+      if (isApiRoute) {
+        return NextResponse.json(
+          { error: 'Forbidden', message: 'Access denied to this school' },
+          { status: 403 }
+        );
+      }
       return NextResponse.redirect(new URL('/unauthorized', req.url));
     }
   }
