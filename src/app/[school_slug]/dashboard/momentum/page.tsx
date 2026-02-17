@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   PageHeader,
   DashboardGrid,
@@ -597,10 +597,13 @@ export default function MomentumPage({ params }: MomentumPageProps) {
   // Resolve params
   const [schoolSlug, setSchoolSlug] = useState<string>('');
 
-  // Get school data
-  useMemo(async () => {
-    const { school_slug } = await params;
-    setSchoolSlug(school_slug);
+  // Get school data - use useEffect for async params resolution
+  useEffect(() => {
+    async function resolveParams() {
+      const { school_slug } = await params;
+      setSchoolSlug(school_slug);
+    }
+    resolveParams();
   }, [params]);
 
   // Get demo data
