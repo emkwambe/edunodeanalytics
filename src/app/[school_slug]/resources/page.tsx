@@ -7,17 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  getResourceLibrary,
-  getRecommendedResources,
-  getLearningPath,
-  LearningModule,
-  DownloadableAsset,
+  getAllModuleMetadata,
+  getModuleMetadataFiltered,
+  ModuleMetadata,
+} from '@/lib/resources/content/metadata';
+import {
+  getAllAssets,
+  getAssetsFiltered,
+} from '@/lib/resources/downloadables';
+import {
   ResourceCategory,
   UserRole,
   CATEGORY_LABELS,
   ROLE_LABELS,
   DIFFICULTY_LABELS,
-} from '@/lib/resources';
+  CATEGORY_DESCRIPTIONS,
+} from '@/lib/resources/types';
 import {
   BookOpen,
   Download,
@@ -25,11 +30,7 @@ import {
   ChevronRight,
   Users,
   Target,
-  Lightbulb,
   FileText,
-  Video,
-  ClipboardList,
-  CheckSquare,
   GraduationCap,
   Briefcase,
   Building2,
@@ -43,6 +44,7 @@ import { cn } from '@/lib/utils';
  * Resource Center Page
  *
  * Central hub for data strategy and culture resources.
+ * Uses lightweight metadata for fast loading.
  */
 export default function ResourceCenterPage() {
   const params = useParams();
@@ -51,9 +53,36 @@ export default function ResourceCenterPage() {
   const [selectedRole, setSelectedRole] = React.useState<UserRole | undefined>(undefined);
   const [selectedCategory, setSelectedCategory] = React.useState<ResourceCategory | undefined>(undefined);
 
-  const library = getResourceLibrary(selectedCategory, selectedRole);
-  const recommendations = selectedRole ? getRecommendedResources(selectedRole) : null;
-  const learningPath = selectedRole ? getLearningPath(selectedRole) : null;
+  const modules = getModuleMetadataFiltered(selectedCategory, selectedRole);
+  const assets = getAssetsFiltered(selectedCategory, selectedRole);
+  const allModules = getAllModuleMetadata();
+  const allAssets = getAllAssets();
+
+  const totalMinutes = modules.reduce((sum, m) => sum + m.estimatedMinutes, 0);
+
+  const categories = [
+    {
+      id: 'data_literacy' as ResourceCategory,
+      label: CATEGORY_LABELS.data_literacy,
+      description: CATEGORY_DESCRIPTIONS.data_literacy,
+      moduleCount: allModules.filter((m) => m.category === 'data_literacy').length,
+      assetCount: allAssets.filter((a) => a.category === 'data_literacy').length,
+    },
+    {
+      id: 'culture_change' as ResourceCategory,
+      label: CATEGORY_LABELS.culture_change,
+      description: CATEGORY_DESCRIPTIONS.culture_change,
+      moduleCount: allModules.filter((m) => m.category === 'culture_change').length,
+      assetCount: allAssets.filter((a) => a.category === 'culture_change').length,
+    },
+    {
+      id: 'implementation' as ResourceCategory,
+      label: CATEGORY_LABELS.implementation,
+      description: CATEGORY_DESCRIPTIONS.implementation,
+      moduleCount: allModules.filter((m) => m.category === 'implementation').length,
+      assetCount: allAssets.filter((a) => a.category === 'implementation').length,
+    },
+  ];
 
   const roleIcons: Record<UserRole, React.ElementType> = {
     teacher: GraduationCap,
@@ -67,16 +96,32 @@ export default function ResourceCenterPage() {
     implementation: Target,
   };
 
-  const formatIcons: Record<string, React.ElementType> = {
-    article: FileText,
-    video: Video,
-    interactive: Lightbulb,
-    worksheet: ClipboardList,
-    checklist: CheckSquare,
-    pdf: FileText,
-    xlsx: FileText,
-    docx: FileText,
+  // Recommendations by role
+  const getRecommendations = (role: UserRole): { moduleIds: string[]; assetIds: string[] } => {
+    const recs: Record<UserRole, { moduleIds: string[]; assetIds: string[] }> = {
+      teacher: {
+        moduleIds: ['dl-001', 'dl-002', 'dl-003', 'cc-002'],
+        assetIds: ['dl-ws-001', 'dl-ws-002', 'dl-ws-004'],
+      },
+      school_leader: {
+        moduleIds: ['dl-001', 'dl-004', 'cc-001', 'cc-002', 'im-001', 'im-002'],
+        assetIds: ['cc-ws-001', 'cc-ws-003', 'im-ws-001', 'im-ws-002'],
+      },
+      cmo_executive: {
+        moduleIds: ['dl-004', 'cc-001', 'cc-003', 'im-002', 'im-004'],
+        assetIds: ['cmo-001', 'cmo-002', 'cmo-003', 'cc-ws-002'],
+      },
+    };
+    return recs[role];
   };
+
+  const recommendations = selectedRole ? getRecommendations(selectedRole) : null;
+  const recommendedModules = recommendations
+    ? allModules.filter((m) => recommendations.moduleIds.includes(m.id))
+    : [];
+  const recommendedAssets = recommendations
+    ? allAssets.filter((a) => recommendations.assetIds.includes(a.id))
+    : [];
 
   return (
     <div className="min-h-screen bg-slate-900 p-6 lg:p-8">
@@ -103,7 +148,7 @@ export default function ResourceCenterPage() {
                 <BookOpen className="w-5 h-5 text-indigo-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{library.summary.totalModules}</div>
+                <div className="text-2xl font-bold text-white">{modules.length}</div>
                 <div className="text-sm text-slate-400">Learning Modules</div>
               </div>
             </CardContent>
@@ -114,7 +159,7 @@ export default function ResourceCenterPage() {
                 <Download className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{library.summary.totalAssets}</div>
+                <div className="text-2xl font-bold text-white">{assets.length}</div>
                 <div className="text-sm text-slate-400">Downloadable Tools</div>
               </div>
             </CardContent>
@@ -125,7 +170,7 @@ export default function ResourceCenterPage() {
                 <Clock className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{library.summary.totalMinutes}</div>
+                <div className="text-2xl font-bold text-white">{totalMinutes}</div>
                 <div className="text-sm text-slate-400">Minutes of Content</div>
               </div>
             </CardContent>
@@ -163,7 +208,7 @@ export default function ResourceCenterPage() {
           </CardContent>
         </Card>
 
-        {/* Recommended For You (when role selected) */}
+        {/* Recommended For You */}
         {recommendations && (
           <Card className="bg-gradient-to-br from-indigo-900/30 to-slate-800/50 border-indigo-500/30 mb-8">
             <CardHeader>
@@ -174,11 +219,10 @@ export default function ResourceCenterPage() {
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-6">
-                {/* Start Here Modules */}
                 <div>
                   <h4 className="text-sm font-medium text-slate-300 mb-3">Start Here</h4>
                   <div className="space-y-2">
-                    {recommendations.startHere.slice(0, 4).map((module) => (
+                    {recommendedModules.slice(0, 4).map((module) => (
                       <Link
                         key={module.id}
                         href={`/${schoolSlug}/resources/modules/${module.slug}`}
@@ -196,12 +240,10 @@ export default function ResourceCenterPage() {
                     ))}
                   </div>
                 </div>
-
-                {/* Essential Assets */}
                 <div>
                   <h4 className="text-sm font-medium text-slate-300 mb-3">Essential Tools</h4>
                   <div className="space-y-2">
-                    {recommendations.essentialAssets.slice(0, 4).map((asset) => (
+                    {recommendedAssets.slice(0, 4).map((asset) => (
                       <button
                         key={asset.id}
                         className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700/50 transition group w-full text-left"
@@ -225,48 +267,6 @@ export default function ResourceCenterPage() {
           </Card>
         )}
 
-        {/* Learning Path (when role selected) */}
-        {learningPath && (
-          <Card className="bg-slate-800/50 border-slate-700 mb-8">
-            <CardHeader>
-              <CardTitle className="text-white">Your Learning Path</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {learningPath.map((phase, index) => (
-                  <div key={phase.phase} className="relative">
-                    {index < learningPath.length - 1 && (
-                      <div className="absolute left-4 top-10 bottom-0 w-px bg-slate-700" />
-                    )}
-                    <div className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full bg-indigo-500/20 border-2 border-indigo-500 flex items-center justify-center text-sm font-bold text-indigo-400 z-10">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-white">{phase.phase}</h4>
-                        <p className="text-sm text-slate-400 mb-3">{phase.description}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {phase.modules.map((module) => (
-                            <Link
-                              key={module.id}
-                              href={`/${schoolSlug}/resources/modules/${module.slug}`}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 rounded-lg text-sm text-slate-300 hover:bg-slate-600/50 transition"
-                            >
-                              <BookOpen className="w-3 h-3" />
-                              {module.title}
-                              <span className="text-slate-500">({module.estimatedMinutes}m)</span>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Category Tabs */}
         <div className="flex gap-2 mb-6">
           <button
@@ -280,7 +280,7 @@ export default function ResourceCenterPage() {
           >
             All Categories
           </button>
-          {library.categories.map((cat) => {
+          {categories.map((cat) => {
             const Icon = categoryIcons[cat.id];
             return (
               <button
@@ -312,7 +312,7 @@ export default function ResourceCenterPage() {
               Learning Modules
             </h3>
             <div className="space-y-4">
-              {library.modules.map((module) => {
+              {modules.map((module) => {
                 const CatIcon = categoryIcons[module.category];
                 return (
                   <Link
@@ -350,7 +350,7 @@ export default function ResourceCenterPage() {
                               </span>
                               <span className="flex items-center gap-1">
                                 <FileText className="w-3 h-3" />
-                                {module.sections.length} sections
+                                {module.sectionCount} sections
                               </span>
                               <span className="flex items-center gap-1">
                                 <Users className="w-3 h-3" />
@@ -375,39 +375,36 @@ export default function ResourceCenterPage() {
               Downloadable Tools
             </h3>
             <div className="space-y-3">
-              {library.assets.map((asset) => {
-                const FormatIcon = formatIcons[asset.format] || FileText;
-                return (
-                  <Card key={asset.id} className="bg-slate-800/50 border-slate-700">
-                    <CardContent className="pt-4 pb-4">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-emerald-500/20 rounded-lg">
-                          <FormatIcon className="w-4 h-4 text-emerald-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium text-white mb-1">{asset.title}</h4>
-                          <p className="text-xs text-slate-500 mb-2 line-clamp-2">
-                            {asset.description}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Badge className="bg-slate-700 text-slate-300 text-[10px] uppercase">
-                              {asset.format}
-                            </Badge>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 text-xs text-emerald-400 hover:text-emerald-300"
-                            >
-                              <Download className="w-3 h-3 mr-1" />
-                              Download
-                            </Button>
-                          </div>
+              {assets.map((asset) => (
+                <Card key={asset.id} className="bg-slate-800/50 border-slate-700">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-emerald-500/20 rounded-lg">
+                        <FileText className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-white mb-1">{asset.title}</h4>
+                        <p className="text-xs text-slate-500 mb-2 line-clamp-2">
+                          {asset.description}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-slate-700 text-slate-300 text-[10px] uppercase">
+                            {asset.format}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-xs text-emerald-400 hover:text-emerald-300"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            Download
+                          </Button>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </div>
