@@ -26,6 +26,12 @@ import {
   Zap,
   Crown,
   Sparkles,
+  BookOpen,
+  Network,
+  Search,
+  Bell,
+  TrendingUp,
+  Key,
 } from 'lucide-react';
 import {
   type FeatureKey,
@@ -146,10 +152,22 @@ export function Sidebar({
       featureKey: 'authorizer_portal',
     },
     {
+      label: 'Advanced Analytics',
+      href: `/${schoolSlug}/analytics/advanced`,
+      icon: <TrendingUp className="w-5 h-5" />,
+      featureKey: 'advanced_analytics',
+    },
+    {
       label: 'Reports',
       href: `/${schoolSlug}/dashboard/reports`,
       icon: <FileText className="w-5 h-5" />,
       featureKey: 'basic_reports',
+    },
+    {
+      label: 'Network View',
+      href: `/${schoolSlug}/network`,
+      icon: <Network className="w-5 h-5" />,
+      featureKey: 'network_view',
     },
   ];
 
@@ -172,6 +190,11 @@ export function Sidebar({
   };
 
   const bottomNavItems: NavItem[] = [
+    {
+      label: 'Resources',
+      href: `/${schoolSlug}/resources`,
+      icon: <BookOpen className="w-5 h-5" />,
+    },
     {
       label: 'School Settings',
       href: `/${schoolSlug}/settings`,

@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Sidebar, MobileNav } from './sidebar';
+import { GlobalSearch } from './global-search';
+import { NotificationCenter } from './notification-center';
 import { UpgradeModal, useUpgradeModal } from '@/components/features/upgrade-modal';
 import { SubscriptionProvider } from '@/contexts/subscription-context';
 import type { SubscriptionTier } from '@/lib/features/feature-gates';
@@ -58,6 +60,12 @@ export function DashboardShell({
             sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
           )}
         >
+          {/* Top Toolbar */}
+          <div className="hidden lg:flex items-center justify-end gap-2 px-6 py-3 border-b border-slate-800">
+            <GlobalSearch schoolSlug={schoolSlug} />
+            <NotificationCenter schoolSlug={schoolSlug} />
+          </div>
+
           <div className="p-4 lg:p-8">{children}</div>
         </main>
 
