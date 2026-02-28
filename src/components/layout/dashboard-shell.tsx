@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Sidebar, MobileNav } from './sidebar';
 import { GlobalSearch } from './global-search';
 import { NotificationCenter } from './notification-center';
+import { CommandPalette } from '@/components/command-palette';
 import { UpgradeModal, useUpgradeModal } from '@/components/features/upgrade-modal';
 import { SubscriptionProvider } from '@/contexts/subscription-context';
 import type { SubscriptionTier } from '@/lib/features/feature-gates';
@@ -76,6 +77,9 @@ export function DashboardShell({
           currentTier={subscriptionTier}
           highlightedFeature={highlightedFeature}
         />
+
+        {/* Command Palette (Cmd+K) */}
+        <CommandPalette schoolSlug={schoolSlug} />
       </div>
     </SubscriptionProvider>
   );
