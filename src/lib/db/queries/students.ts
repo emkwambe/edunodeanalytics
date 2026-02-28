@@ -1,41 +1,93 @@
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server';
 import type { Student, StudentInsert, StudentUpdate } from '@/lib/database.types';
-import { SCHOOL_SEEDS, StudentSeedData } from '@/lib/data/seed-data';
+import { SCHOOL_SEEDS, type StudentSeedData } from '@/lib/data/seed-data';
 
 /**
  * Student Queries
  *
- * Data access layer for student operations with multi-tenant isolation
+ * Data access layer for student operations with demo mode fallback
  */
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+export interface StudentQueryOptions {
+  /** Number of records to return (default: 50) */
+  limit?: number;
+  /** Number of records to skip (default: 0) */
+  offset?: number;
+  /** Field to sort by */
+  sortBy?: keyof Student | 'name';
+  /** Sort direction (default: 'asc') */
+  sortOrder?: 'asc' | 'desc';
+  /** Filter by grade level */
+  gradeLevel?: number;
+  /** Filter by risk level */
+  riskLevel?: 'on_track' | 'at_risk' | 'critical';
+  /** Filter by homeroom teacher name */
+  teacherName?: string;
+}
+
+export interface StudentMetrics {
+  totalStudents: number;
+  activeStudents: number;
+  riskDistribution: {
+    onTrack: number;
+    atRisk: number;
+    critical: number;
+  };
+  gradeDistribution: Record<number, number>;
+  averageAttendanceRate: number;
+  chronicAbsenceCount: number;
+  chronicAbsenceRate: number;
+  averageGrowthPercentile: number;
+  averageProficiencyLevel: number;
+  iepCount: number;
+  plan504Count: number;
+  englishLearnerCount: number;
+  teacherDistribution: Record<string, number>;
+}
+
+export interface PaginatedStudents {
+  data: Student[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+// =============================================================================
+// DEMO MODE UTILITIES
+// =============================================================================
 
 const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
 
-export interface GetStudentsOptions {
-  limit?: number;
-  offset?: number;
-  sortBy?: 'name' | 'grade' | 'risk' | 'attendance' | 'updated_at';
-  sortOrder?: 'asc' | 'desc';
-  gradeLevel?: number;
-  riskLevel?: 'on_track' | 'at_risk' | 'critical';
-  teacherName?: string;
-  hasIep?: boolean;
-  isEnglishLearner?: boolean;
-}
-
-// Convert seed data to Student type for demo mode
-function seedToStudent(seed: StudentSeedData, schoolId: string): Partial<Student> {
+/**
+ * Convert seed data to Student type for demo mode
+ */
+function seedToStudent(seed: StudentSeedData, schoolId: string): Student {
+  const now = new Date().toISOString();
   return {
     id: seed.id,
+    created_at: now,
+    updated_at: now,
     school_id: schoolId,
-    sis_student_id: seed.id,
+    sis_student_id: `SIS-${seed.id}`,
     first_name: seed.firstName,
     last_name: seed.lastName,
     display_name: seed.displayName,
     grade_level: seed.gradeLevel,
+    date_of_birth: null,
+    gender: null,
+    ethnicity: null,
     has_iep: seed.hasIep,
     has_504_plan: seed.has504Plan,
     is_english_learner: seed.isEnglishLearner,
+    is_gifted: false,
+    is_free_reduced_lunch: false,
     homeroom_teacher: seed.homeroomTeacher,
+    counselor: null,
     attendance_rate: seed.attendanceRate,
     days_present: seed.daysPresent,
     days_absent: seed.daysAbsent,
@@ -44,91 +96,117 @@ function seedToStudent(seed: StudentSeedData, schoolId: string): Partial<Student
     growth_percentile: seed.growthPercentile,
     risk_level: seed.riskLevel,
     risk_score: seed.riskScore,
+    risk_factors: null,
     reading_scores: seed.reading as unknown as Student['reading_scores'],
     math_scores: seed.math as unknown as Student['math_scores'],
+    purpose_driven_metrics: seed.purposeDriven as unknown as Student['purpose_driven_metrics'],
     is_active: true,
+    enrolled_at: now,
+    withdrawn_at: null,
+    metadata: null,
   };
 }
 
 /**
- * Get students for a school with filtering and pagination
+ * Get school seed data by school ID (matches by slug pattern or ID)
+ */
+function getSchoolSeedBySchoolId(schoolId: string): { students: StudentSeedData[]; id: string } | null {
+  // Try direct slug match first
+  for (const [slug, seed] of Object.entries(SCHOOL_SEEDS)) {
+    if (seed.id === schoolId || schoolId.includes(slug.replace(/-/g, '_')) || schoolId === `demo-${slug}`) {
+      return { students: seed.students, id: seed.id };
+    }
+  }
+  // Fallback: return first available school's students for demo
+  const firstSchool = Object.values(SCHOOL_SEEDS)[0];
+  return firstSchool ? { students: firstSchool.students, id: firstSchool.id } : null;
+}
+
+/**
+ * Apply query options to an array of students (for demo mode)
+ */
+function applyQueryOptions(
+  students: Student[],
+  options: StudentQueryOptions = {}
+): { data: Student[]; total: number } {
+  let filtered = [...students];
+
+  // Apply filters
+  if (options.gradeLevel !== undefined) {
+    filtered = filtered.filter((s) => s.grade_level === options.gradeLevel);
+  }
+  if (options.riskLevel) {
+    filtered = filtered.filter((s) => s.risk_level === options.riskLevel);
+  }
+  if (options.teacherName) {
+    filtered = filtered.filter((s) =>
+      s.homeroom_teacher?.toLowerCase().includes(options.teacherName!.toLowerCase())
+    );
+  }
+
+  const total = filtered.length;
+
+  // Apply sorting
+  const sortBy = options.sortBy || 'last_name';
+  const sortOrder = options.sortOrder || 'asc';
+
+  filtered.sort((a, b) => {
+    let aVal: string | number | null;
+    let bVal: string | number | null;
+
+    if (sortBy === 'name') {
+      aVal = a.display_name;
+      bVal = b.display_name;
+    } else {
+      aVal = a[sortBy] as string | number | null;
+      bVal = b[sortBy] as string | number | null;
+    }
+
+    if (aVal === null) return sortOrder === 'asc' ? 1 : -1;
+    if (bVal === null) return sortOrder === 'asc' ? -1 : 1;
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Apply pagination
+  const offset = options.offset || 0;
+  const limit = options.limit || 50;
+  const paginated = filtered.slice(offset, offset + limit);
+
+  return { data: paginated, total };
+}
+
+// =============================================================================
+// QUERY FUNCTIONS
+// =============================================================================
+
+/**
+ * Get students by school with pagination, sorting, and filtering
  */
 export async function getStudentsBySchool(
   schoolId: string,
-  options: GetStudentsOptions = {}
-): Promise<{ students: Student[]; total: number }> {
-  const {
-    limit = 50,
-    offset = 0,
-    sortBy = 'name',
-    sortOrder = 'asc',
-    gradeLevel,
-    riskLevel,
-    teacherName,
-    hasIep,
-    isEnglishLearner,
-  } = options;
+  options: StudentQueryOptions = {}
+): Promise<PaginatedStudents> {
+  const limit = options.limit || 50;
+  const offset = options.offset || 0;
 
-  // Demo mode: return seed data
+  // Demo mode fallback
   if (isDemoMode) {
-    const schoolSlug = Object.keys(SCHOOL_SEEDS).find(
-      (slug) => SCHOOL_SEEDS[slug] && `demo-${slug}` === schoolId
-    ) || Object.keys(SCHOOL_SEEDS)[0];
-
-    const seedData = SCHOOL_SEEDS[schoolSlug];
-    if (!seedData?.students) {
-      return { students: [], total: 0 };
+    const seedData = getSchoolSeedBySchoolId(schoolId);
+    if (seedData) {
+      const allStudents = seedData.students.map((s) => seedToStudent(s, schoolId));
+      const { data, total } = applyQueryOptions(allStudents, options);
+      return {
+        data,
+        total,
+        limit,
+        offset,
+        hasMore: offset + data.length < total,
+      };
     }
-
-    let students = seedData.students.map((s) => seedToStudent(s, schoolId) as Student);
-
-    // Apply filters
-    if (gradeLevel !== undefined) {
-      students = students.filter((s) => s.grade_level === gradeLevel);
-    }
-    if (riskLevel) {
-      students = students.filter((s) => s.risk_level === riskLevel);
-    }
-    if (teacherName) {
-      students = students.filter((s) => s.homeroom_teacher === teacherName);
-    }
-    if (hasIep !== undefined) {
-      students = students.filter((s) => s.has_iep === hasIep);
-    }
-    if (isEnglishLearner !== undefined) {
-      students = students.filter((s) => s.is_english_learner === isEnglishLearner);
-    }
-
-    // Sort
-    students.sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case 'name':
-          comparison = a.display_name.localeCompare(b.display_name);
-          break;
-        case 'grade':
-          comparison = a.grade_level - b.grade_level;
-          break;
-        case 'risk':
-          const riskOrder = { critical: 0, at_risk: 1, on_track: 2 };
-          comparison = riskOrder[a.risk_level] - riskOrder[b.risk_level];
-          break;
-        case 'attendance':
-          comparison = (a.attendance_rate || 0) - (b.attendance_rate || 0);
-          break;
-        default:
-          comparison = 0;
-      }
-      return sortOrder === 'desc' ? -comparison : comparison;
-    });
-
-    const total = students.length;
-    const paginated = students.slice(offset, offset + limit);
-
-    return { students: paginated, total };
   }
 
-  // Production: query Supabase
   const supabase = await createServerSupabaseClient();
 
   let query = supabase
@@ -138,25 +216,20 @@ export async function getStudentsBySchool(
     .eq('is_active', true);
 
   // Apply filters
-  if (gradeLevel !== undefined) {
-    query = query.eq('grade_level', gradeLevel);
+  if (options.gradeLevel !== undefined) {
+    query = query.eq('grade_level', options.gradeLevel);
   }
-  if (riskLevel) {
-    query = query.eq('risk_level', riskLevel);
+  if (options.riskLevel) {
+    query = query.eq('risk_level', options.riskLevel);
   }
-  if (teacherName) {
-    query = query.eq('homeroom_teacher', teacherName);
-  }
-  if (hasIep !== undefined) {
-    query = query.eq('has_iep', hasIep);
-  }
-  if (isEnglishLearner !== undefined) {
-    query = query.eq('is_english_learner', isEnglishLearner);
+  if (options.teacherName) {
+    query = query.ilike('homeroom_teacher', `%${options.teacherName}%`);
   }
 
   // Apply sorting
-  const sortColumn = sortBy === 'name' ? 'display_name' : sortBy === 'risk' ? 'risk_score' : sortBy;
-  query = query.order(sortColumn, { ascending: sortOrder === 'asc' });
+  const sortBy = options.sortBy === 'name' ? 'display_name' : (options.sortBy || 'last_name');
+  const sortOrder = options.sortOrder === 'desc' ? false : true;
+  query = query.order(sortBy, { ascending: sortOrder });
 
   // Apply pagination
   query = query.range(offset, offset + limit - 1);
@@ -164,29 +237,32 @@ export async function getStudentsBySchool(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error('[DB] Error fetching students:', error);
-    return { students: [], total: 0 };
+    console.error('[DB] Error fetching students by school:', error);
+    return { data: [], total: 0, limit, offset, hasMore: false };
   }
 
-  return { students: data || [], total: count || 0 };
+  const total = count || 0;
+  return {
+    data: data || [],
+    total,
+    limit,
+    offset,
+    hasMore: offset + (data?.length || 0) < total,
+  };
 }
 
 /**
  * Get a single student by ID
  */
 export async function getStudentById(id: string): Promise<Student | null> {
-  // Demo mode
+  // Demo mode fallback
   if (isDemoMode) {
-    for (const schoolSlug of Object.keys(SCHOOL_SEEDS)) {
-      const seedData = SCHOOL_SEEDS[schoolSlug];
-      if (seedData?.students) {
-        const student = seedData.students.find((s) => s.id === id);
-        if (student) {
-          return seedToStudent(student, `demo-${schoolSlug}`) as Student;
-        }
+    for (const seed of Object.values(SCHOOL_SEEDS)) {
+      const student = seed.students.find((s) => s.id === id);
+      if (student) {
+        return seedToStudent(student, seed.id);
       }
     }
-    return null;
   }
 
   const supabase = await createServerSupabaseClient();
@@ -198,7 +274,9 @@ export async function getStudentById(id: string): Promise<Student | null> {
     .single();
 
   if (error) {
-    console.error('[DB] Error fetching student by ID:', error);
+    if (error.code !== 'PGRST116') {
+      console.error('[DB] Error fetching student by ID:', error);
+    }
     return null;
   }
 
@@ -206,14 +284,21 @@ export async function getStudentById(id: string): Promise<Student | null> {
 }
 
 /**
- * Get a student by SIS ID (external system ID)
+ * Get student by SIS ID within a school
  */
 export async function getStudentBySisId(
   schoolId: string,
   sisStudentId: string
 ): Promise<Student | null> {
+  // Demo mode fallback
   if (isDemoMode) {
-    return null; // Demo mode doesn't support SIS ID lookup
+    const seedData = getSchoolSeedBySchoolId(schoolId);
+    if (seedData) {
+      const student = seedData.students.find((s) => `SIS-${s.id}` === sisStudentId || s.id === sisStudentId);
+      if (student) {
+        return seedToStudent(student, schoolId);
+      }
+    }
   }
 
   const supabase = await createServerSupabaseClient();
@@ -236,36 +321,41 @@ export async function getStudentBySisId(
 }
 
 /**
- * Search students by name
+ * Search students by name within a school
  */
 export async function searchStudents(
   schoolId: string,
   query: string,
-  limit = 20
+  limit: number = 20
 ): Promise<Student[]> {
+  const searchTerm = query.toLowerCase().trim();
+
+  // Demo mode fallback
   if (isDemoMode) {
-    const schoolSlug = Object.keys(SCHOOL_SEEDS).find(
-      (slug) => SCHOOL_SEEDS[slug] && `demo-${slug}` === schoolId
-    ) || Object.keys(SCHOOL_SEEDS)[0];
-
-    const seedData = SCHOOL_SEEDS[schoolSlug];
-    if (!seedData?.students) return [];
-
-    const lowerQuery = query.toLowerCase();
-    return seedData.students
-      .filter((s) => s.displayName.toLowerCase().includes(lowerQuery))
-      .slice(0, limit)
-      .map((s) => seedToStudent(s, schoolId) as Student);
+    const seedData = getSchoolSeedBySchoolId(schoolId);
+    if (seedData) {
+      const allStudents = seedData.students.map((s) => seedToStudent(s, schoolId));
+      return allStudents
+        .filter(
+          (s) =>
+            s.first_name.toLowerCase().includes(searchTerm) ||
+            s.last_name.toLowerCase().includes(searchTerm) ||
+            s.display_name.toLowerCase().includes(searchTerm)
+        )
+        .slice(0, limit);
+    }
   }
 
   const supabase = await createServerSupabaseClient();
 
+  // Search using ilike on display_name (covers both first and last name)
   const { data, error } = await supabase
     .from('students')
     .select('*')
     .eq('school_id', schoolId)
     .eq('is_active', true)
-    .ilike('display_name', `%${query}%`)
+    .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,display_name.ilike.%${searchTerm}%`)
+    .order('last_name')
     .limit(limit);
 
   if (error) {
@@ -277,32 +367,81 @@ export async function searchStudents(
 }
 
 /**
- * Get students at risk (at_risk or critical)
+ * Get students at risk (risk_level = 'at_risk' or 'critical')
  */
-export async function getStudentsAtRisk(schoolId: string): Promise<Student[]> {
+export async function getStudentsAtRisk(
+  schoolId: string,
+  options: Omit<StudentQueryOptions, 'riskLevel'> = {}
+): Promise<PaginatedStudents> {
+  const limit = options.limit || 50;
+  const offset = options.offset || 0;
+
+  // Demo mode fallback
   if (isDemoMode) {
-    const result = await getStudentsBySchool(schoolId, { limit: 1000 });
-    return result.students.filter(
-      (s) => s.risk_level === 'at_risk' || s.risk_level === 'critical'
-    );
+    const seedData = getSchoolSeedBySchoolId(schoolId);
+    if (seedData) {
+      const allStudents = seedData.students
+        .filter((s) => s.riskLevel === 'at_risk' || s.riskLevel === 'critical')
+        .map((s) => seedToStudent(s, schoolId));
+
+      const { data, total } = applyQueryOptions(allStudents, {
+        ...options,
+        sortBy: options.sortBy || 'risk_score',
+        sortOrder: options.sortOrder || 'desc',
+        limit,
+        offset,
+      });
+
+      return {
+        data,
+        total,
+        limit,
+        offset,
+        hasMore: offset + data.length < total,
+      };
+    }
   }
 
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('students')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('school_id', schoolId)
     .eq('is_active', true)
-    .in('risk_level', ['at_risk', 'critical'])
-    .order('risk_score', { ascending: false });
+    .in('risk_level', ['at_risk', 'critical']);
+
+  // Apply additional filters
+  if (options.gradeLevel !== undefined) {
+    query = query.eq('grade_level', options.gradeLevel);
+  }
+  if (options.teacherName) {
+    query = query.ilike('homeroom_teacher', `%${options.teacherName}%`);
+  }
+
+  // Apply sorting (default: risk_score descending for at-risk students)
+  const sortBy = options.sortBy === 'name' ? 'display_name' : (options.sortBy || 'risk_score');
+  const sortOrder = options.sortOrder === 'asc' ? true : false;
+  query = query.order(sortBy, { ascending: sortOrder });
+
+  // Apply pagination
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
 
   if (error) {
     console.error('[DB] Error fetching at-risk students:', error);
-    return [];
+    return { data: [], total: 0, limit, offset, hasMore: false };
   }
 
-  return data || [];
+  const total = count || 0;
+  return {
+    data: data || [],
+    total,
+    limit,
+    offset,
+    hasMore: offset + (data?.length || 0) < total,
+  };
 }
 
 /**
@@ -310,9 +449,13 @@ export async function getStudentsAtRisk(schoolId: string): Promise<Student[]> {
  */
 export async function getStudentsByTeacher(
   schoolId: string,
-  teacherName: string
-): Promise<Student[]> {
-  return (await getStudentsBySchool(schoolId, { teacherName, limit: 200 })).students;
+  teacherName: string,
+  options: Omit<StudentQueryOptions, 'teacherName'> = {}
+): Promise<PaginatedStudents> {
+  return getStudentsBySchool(schoolId, {
+    ...options,
+    teacherName,
+  });
 }
 
 /**
@@ -360,127 +503,208 @@ export async function updateStudent(
 }
 
 /**
- * Bulk upsert students (for data sync)
+ * Bulk upsert students for data sync (admin only)
+ *
+ * Uses sis_student_id as the conflict resolution key within a school
  */
 export async function bulkUpsertStudents(
   schoolId: string,
   students: StudentInsert[]
-): Promise<{ inserted: number; updated: number; errors: number }> {
+): Promise<{ success: boolean; inserted: number; updated: number; errors: string[] }> {
   const supabase = createAdminSupabaseClient();
+  const errors: string[] = [];
+  let inserted = 0;
+  let updated = 0;
 
   // Ensure all students have the correct school_id
-  const studentsWithSchool = students.map((s) => ({
+  const studentsWithSchoolId = students.map((s) => ({
     ...s,
     school_id: schoolId,
+    updated_at: new Date().toISOString(),
   }));
 
-  const { data, error } = await supabase
+  // Get existing students by SIS ID for this school
+  const sisIds = studentsWithSchoolId.map((s) => s.sis_student_id);
+  const { data: existingStudents } = await supabase
     .from('students')
-    .upsert(studentsWithSchool, {
-      onConflict: 'school_id,sis_student_id',
-      ignoreDuplicates: false,
-    })
-    .select('id');
+    .select('id, sis_student_id')
+    .eq('school_id', schoolId)
+    .in('sis_student_id', sisIds);
 
-  if (error) {
-    console.error('[DB] Error bulk upserting students:', error);
-    return { inserted: 0, updated: 0, errors: students.length };
+  const existingSisIds = new Set(existingStudents?.map((s) => s.sis_student_id) || []);
+  const existingMap = new Map(existingStudents?.map((s) => [s.sis_student_id, s.id]) || []);
+
+  // Separate into inserts and updates
+  const toInsert = studentsWithSchoolId.filter((s) => !existingSisIds.has(s.sis_student_id));
+  const toUpdate = studentsWithSchoolId.filter((s) => existingSisIds.has(s.sis_student_id));
+
+  // Batch insert new students
+  if (toInsert.length > 0) {
+    const { error: insertError, data: insertedData } = await supabase
+      .from('students')
+      .insert(toInsert)
+      .select();
+
+    if (insertError) {
+      errors.push(`Insert error: ${insertError.message}`);
+    } else {
+      inserted = insertedData?.length || 0;
+    }
+  }
+
+  // Update existing students one by one (to handle partial failures)
+  for (const student of toUpdate) {
+    const existingId = existingMap.get(student.sis_student_id);
+    if (!existingId) continue;
+
+    // Remove fields that shouldn't be updated
+    const { id: _id, created_at: _createdAt, sis_student_id: _sisId, ...updateData } = student;
+
+    const { error: updateError } = await supabase
+      .from('students')
+      .update(updateData)
+      .eq('id', existingId);
+
+    if (updateError) {
+      errors.push(`Update error for ${student.sis_student_id}: ${updateError.message}`);
+    } else {
+      updated++;
+    }
   }
 
   return {
-    inserted: data?.length || 0,
-    updated: 0, // Supabase upsert doesn't distinguish
-    errors: 0,
+    success: errors.length === 0,
+    inserted,
+    updated,
+    errors,
   };
 }
 
 /**
- * Get aggregate metrics for a school's students
+ * Get aggregate metrics for students in a school
  */
-export async function getStudentMetrics(schoolId: string): Promise<{
-  total: number;
-  byRisk: Record<string, number>;
-  byGrade: Record<number, number>;
-  averageAttendance: number;
-  chronicallyAbsentCount: number;
-  iepCount: number;
-  ellCount: number;
-}> {
+export async function getStudentMetrics(schoolId: string): Promise<StudentMetrics> {
+  // Demo mode fallback
   if (isDemoMode) {
-    const { students, total } = await getStudentsBySchool(schoolId, { limit: 1000 });
-
-    const byRisk: Record<string, number> = { on_track: 0, at_risk: 0, critical: 0 };
-    const byGrade: Record<number, number> = {};
-    let totalAttendance = 0;
-    let chronicallyAbsentCount = 0;
-    let iepCount = 0;
-    let ellCount = 0;
-
-    for (const student of students) {
-      byRisk[student.risk_level] = (byRisk[student.risk_level] || 0) + 1;
-      byGrade[student.grade_level] = (byGrade[student.grade_level] || 0) + 1;
-      totalAttendance += student.attendance_rate || 0;
-      if (student.is_chronically_absent) chronicallyAbsentCount++;
-      if (student.has_iep) iepCount++;
-      if (student.is_english_learner) ellCount++;
+    const seedData = getSchoolSeedBySchoolId(schoolId);
+    if (seedData) {
+      const students = seedData.students.map((s) => seedToStudent(s, schoolId));
+      return calculateMetricsFromStudents(students);
     }
-
-    return {
-      total,
-      byRisk,
-      byGrade,
-      averageAttendance: total > 0 ? totalAttendance / total : 0,
-      chronicallyAbsentCount,
-      iepCount,
-      ellCount,
-    };
   }
 
   const supabase = await createServerSupabaseClient();
 
-  // Get all students for aggregation
   const { data: students, error } = await supabase
     .from('students')
-    .select('grade_level, risk_level, attendance_rate, is_chronically_absent, has_iep, is_english_learner')
-    .eq('school_id', schoolId)
-    .eq('is_active', true);
+    .select('*')
+    .eq('school_id', schoolId);
 
-  if (error || !students) {
-    console.error('[DB] Error fetching student metrics:', error);
-    return {
-      total: 0,
-      byRisk: {},
-      byGrade: {},
-      averageAttendance: 0,
-      chronicallyAbsentCount: 0,
-      iepCount: 0,
-      ellCount: 0,
-    };
+  if (error) {
+    console.error('[DB] Error fetching students for metrics:', error);
+    return getEmptyMetrics();
   }
 
-  const byRisk: Record<string, number> = {};
-  const byGrade: Record<number, number> = {};
-  let totalAttendance = 0;
-  let chronicallyAbsentCount = 0;
-  let iepCount = 0;
-  let ellCount = 0;
-
-  for (const student of students) {
-    byRisk[student.risk_level] = (byRisk[student.risk_level] || 0) + 1;
-    byGrade[student.grade_level] = (byGrade[student.grade_level] || 0) + 1;
-    totalAttendance += student.attendance_rate || 0;
-    if (student.is_chronically_absent) chronicallyAbsentCount++;
-    if (student.has_iep) iepCount++;
-    if (student.is_english_learner) ellCount++;
+  if (!students || students.length === 0) {
+    return getEmptyMetrics();
   }
+
+  return calculateMetricsFromStudents(students);
+}
+
+/**
+ * Calculate metrics from an array of students
+ */
+function calculateMetricsFromStudents(students: Student[]): StudentMetrics {
+  const totalStudents = students.length;
+  const activeStudents = students.filter((s) => s.is_active).length;
+
+  // Risk distribution
+  const onTrack = students.filter((s) => s.risk_level === 'on_track').length;
+  const atRisk = students.filter((s) => s.risk_level === 'at_risk').length;
+  const critical = students.filter((s) => s.risk_level === 'critical').length;
+
+  // Grade distribution
+  const gradeDistribution: Record<number, number> = {};
+  students.forEach((s) => {
+    gradeDistribution[s.grade_level] = (gradeDistribution[s.grade_level] || 0) + 1;
+  });
+
+  // Attendance metrics
+  const studentsWithAttendance = students.filter((s) => s.attendance_rate !== null);
+  const averageAttendanceRate =
+    studentsWithAttendance.length > 0
+      ? studentsWithAttendance.reduce((sum, s) => sum + (s.attendance_rate || 0), 0) /
+        studentsWithAttendance.length
+      : 0;
+
+  const chronicAbsenceCount = students.filter((s) => s.is_chronically_absent).length;
+  const chronicAbsenceRate = totalStudents > 0 ? chronicAbsenceCount / totalStudents : 0;
+
+  // Growth metrics
+  const studentsWithGrowth = students.filter((s) => s.growth_percentile !== null);
+  const averageGrowthPercentile =
+    studentsWithGrowth.length > 0
+      ? studentsWithGrowth.reduce((sum, s) => sum + (s.growth_percentile || 0), 0) /
+        studentsWithGrowth.length
+      : 0;
+
+  // Proficiency metrics
+  const studentsWithProficiency = students.filter((s) => s.proficiency_level !== null);
+  const averageProficiencyLevel =
+    studentsWithProficiency.length > 0
+      ? studentsWithProficiency.reduce((sum, s) => sum + (s.proficiency_level || 0), 0) /
+        studentsWithProficiency.length
+      : 0;
+
+  // Special population counts
+  const iepCount = students.filter((s) => s.has_iep).length;
+  const plan504Count = students.filter((s) => s.has_504_plan).length;
+  const englishLearnerCount = students.filter((s) => s.is_english_learner).length;
+
+  // Teacher distribution
+  const teacherDistribution: Record<string, number> = {};
+  students.forEach((s) => {
+    if (s.homeroom_teacher) {
+      teacherDistribution[s.homeroom_teacher] =
+        (teacherDistribution[s.homeroom_teacher] || 0) + 1;
+    }
+  });
 
   return {
-    total: students.length,
-    byRisk,
-    byGrade,
-    averageAttendance: students.length > 0 ? totalAttendance / students.length : 0,
-    chronicallyAbsentCount,
+    totalStudents,
+    activeStudents,
+    riskDistribution: { onTrack, atRisk, critical },
+    gradeDistribution,
+    averageAttendanceRate: Math.round(averageAttendanceRate * 1000) / 1000,
+    chronicAbsenceCount,
+    chronicAbsenceRate: Math.round(chronicAbsenceRate * 1000) / 1000,
+    averageGrowthPercentile: Math.round(averageGrowthPercentile * 10) / 10,
+    averageProficiencyLevel: Math.round(averageProficiencyLevel * 10) / 10,
     iepCount,
-    ellCount,
+    plan504Count,
+    englishLearnerCount,
+    teacherDistribution,
+  };
+}
+
+/**
+ * Return empty metrics structure
+ */
+function getEmptyMetrics(): StudentMetrics {
+  return {
+    totalStudents: 0,
+    activeStudents: 0,
+    riskDistribution: { onTrack: 0, atRisk: 0, critical: 0 },
+    gradeDistribution: {},
+    averageAttendanceRate: 0,
+    chronicAbsenceCount: 0,
+    chronicAbsenceRate: 0,
+    averageGrowthPercentile: 0,
+    averageProficiencyLevel: 0,
+    iepCount: 0,
+    plan504Count: 0,
+    englishLearnerCount: 0,
+    teacherDistribution: {},
   };
 }
