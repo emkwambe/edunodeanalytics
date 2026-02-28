@@ -59,6 +59,31 @@ const DEMO_SCHOOLS: Record<string, Partial<School>> = {
 const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
 
 /**
+ * Get all schools
+ */
+export async function getAllSchools(): Promise<School[]> {
+  // In demo mode, return demo schools
+  if (isDemoMode) {
+    return Object.values(DEMO_SCHOOLS) as School[];
+  }
+
+  const supabase = await createServerSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('schools')
+    .select('*')
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) {
+    console.error('[DB] Error fetching all schools:', error);
+    return [];
+  }
+
+  return data;
+}
+
+/**
  * Get school by slug (most common query pattern)
  */
 export async function getSchoolBySlug(slug: string): Promise<School | null> {
@@ -245,4 +270,57 @@ export async function getSchoolsByAuthorizer(authorizerId: string): Promise<Scho
   }
 
   return data;
+}
+
+/**
+ * School metrics type
+ */
+export interface SchoolMetrics {
+  totalStudents: number;
+  totalTeachers: number;
+  averageAttendance: number;
+  averageGpa: number;
+  graduationRate: number;
+}
+
+/**
+ * Get metrics for a school
+ */
+export async function getSchoolMetrics(schoolId: string): Promise<SchoolMetrics | null> {
+  const supabase = await createServerSupabaseClient();
+
+  // Get student count
+  const { count: studentCount, error: studentError } = await supabase
+    .from('students')
+    .select('*', { count: 'exact', head: true })
+    .eq('school_id', schoolId);
+
+  if (studentError) {
+    console.error('[DB] Error fetching student count:', studentError);
+  }
+
+  // Get unique teacher count from students' homeroom_teacher field
+  const { data: teacherData, error: teacherError } = await supabase
+    .from('students')
+    .select('homeroom_teacher')
+    .eq('school_id', schoolId)
+    .not('homeroom_teacher', 'is', null);
+
+  let teacherCount = 0;
+  if (teacherError) {
+    console.error('[DB] Error fetching teacher count:', teacherError);
+  } else if (teacherData) {
+    // Count unique teacher names
+    const uniqueTeachers = new Set(teacherData.map(s => s.homeroom_teacher));
+    teacherCount = uniqueTeachers.size;
+  }
+
+  // Return metrics with defaults for any missing data
+  return {
+    totalStudents: studentCount ?? 0,
+    totalTeachers: teacherCount,
+    averageAttendance: 0,
+    averageGpa: 0,
+    graduationRate: 0,
+  };
 }
