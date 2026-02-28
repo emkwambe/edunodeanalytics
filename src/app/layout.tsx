@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
+import { Providers } from '@/components/providers';
 import './globals.css';
 
 // CSS font variables are set in globals.css using system font stack
@@ -67,7 +68,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <body className="min-h-screen bg-slate-900 font-sans antialiased">
-          {children}
+          <Providers>{children}</Providers>
         </body>
       </html>
     </ClerkProvider>
