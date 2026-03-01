@@ -191,6 +191,11 @@ export function Sidebar({
 
   const bottomNavItems: NavItem[] = [
     {
+      label: 'Notifications',
+      href: `/${schoolSlug}/notifications`,
+      icon: <Bell className="w-5 h-5" />,
+    },
+    {
       label: 'Resources',
       href: `/${schoolSlug}/resources`,
       icon: <BookOpen className="w-5 h-5" />,

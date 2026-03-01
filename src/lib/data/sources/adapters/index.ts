@@ -8,6 +8,7 @@
 
 // SIS Adapters
 export { cleverAdapter } from './clever';
+export { classlinkAdapter } from './classlink';
 export { powerschoolAdapter } from './powerschool';
 
 // Assessment Adapters

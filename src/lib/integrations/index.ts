@@ -5,3 +5,4 @@
  */
 
 export * from './clever-mock';
+export * from './classlink-mock';
