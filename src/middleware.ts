@@ -74,6 +74,12 @@ export default clerkMiddleware(async (auth, req) => {
   const pathParts = path.split('/').filter(Boolean);
   const schoolSlug = pathParts[0];
 
+  // For API routes with school context in path (e.g., /api/schools/[schoolId]/...)
+  // Let the route handler deal with authorization
+  if (isApiRoute && path.startsWith('/api/schools/')) {
+    return NextResponse.next();
+  }
+
   // If no school slug in URL, redirect to school selection
   if (!schoolSlug || schoolSlug === 'api') {
     // Check if user has a default school in their metadata
