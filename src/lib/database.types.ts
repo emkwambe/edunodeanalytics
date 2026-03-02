@@ -1232,3 +1232,138 @@ export type WebhookEventUpdate = Database['public']['Tables']['webhook_events'][
 export type SyncHistory = Database['public']['Tables']['sync_history']['Row'];
 export type SyncHistoryInsert = Database['public']['Tables']['sync_history']['Insert'];
 export type SyncHistoryUpdate = Database['public']['Tables']['sync_history']['Update'];
+
+// Sprint 21 types - Reports and AI Usage
+export interface ScheduledReport {
+  id: string;
+  school_id: string;
+  report_type: string;
+  format: string;
+  title: string;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly';
+  day_of_week: number | null;
+  day_of_month: number | null;
+  time_of_day: string;
+  timezone: string;
+  filters: Json;
+  options: Json;
+  recipients: Json;
+  is_active: boolean;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  last_error: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScheduledReportInsert {
+  id?: string;
+  school_id: string;
+  report_type: string;
+  format?: string;
+  title: string;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly';
+  day_of_week?: number | null;
+  day_of_month?: number | null;
+  time_of_day?: string;
+  timezone?: string;
+  filters?: Json;
+  options?: Json;
+  recipients?: Json;
+  is_active?: boolean;
+  next_run_at?: string | null;
+  created_by: string;
+}
+
+export interface GeneratedReport {
+  id: string;
+  school_id: string;
+  scheduled_report_id: string | null;
+  report_type: string;
+  format: string;
+  title: string;
+  generated_by: string;
+  generated_at: string;
+  generation_time_ms: number | null;
+  storage_path: string | null;
+  file_size_bytes: number | null;
+  expires_at: string | null;
+  delivery_status: 'pending' | 'sent' | 'failed';
+  delivered_at: string | null;
+  delivery_error: string | null;
+  filters: Json;
+  record_count: number | null;
+  created_at: string;
+}
+
+export interface GeneratedReportInsert {
+  id?: string;
+  school_id: string;
+  scheduled_report_id?: string | null;
+  report_type: string;
+  format: string;
+  title: string;
+  generated_by: string;
+  generation_time_ms?: number | null;
+  storage_path?: string | null;
+  file_size_bytes?: number | null;
+  expires_at?: string | null;
+  delivery_status?: 'pending' | 'sent' | 'failed';
+  filters?: Json;
+  record_count?: number | null;
+}
+
+export interface AIUsage {
+  id: string;
+  school_id: string;
+  user_id: string;
+  provider: 'anthropic' | 'openai' | 'google' | 'mock';
+  model: string;
+  feature: string;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  cost_cents: number;
+  latency_ms: number | null;
+  success: boolean;
+  error_message: string | null;
+  anonymization_level: 'none' | 'pseudonym' | 'aggregate' | null;
+  student_count: number;
+  pii_detected: boolean;
+  audit_id: string | null;
+  created_at: string;
+}
+
+export interface AIUsageInsert {
+  id?: string;
+  school_id: string;
+  user_id: string;
+  provider: 'anthropic' | 'openai' | 'google' | 'mock';
+  model: string;
+  feature: string;
+  input_tokens?: number;
+  output_tokens?: number;
+  cost_cents?: number;
+  latency_ms?: number | null;
+  success?: boolean;
+  error_message?: string | null;
+  anonymization_level?: 'none' | 'pseudonym' | 'aggregate' | null;
+  student_count?: number;
+  pii_detected?: boolean;
+  audit_id?: string | null;
+}
+
+export interface AIUsageLimits {
+  id: string;
+  school_id: string;
+  monthly_token_limit: number | null;
+  monthly_cost_limit_cents: number | null;
+  current_month_tokens: number;
+  current_month_cost_cents: number;
+  period_start: string;
+  alert_threshold_percent: number;
+  alert_sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+}

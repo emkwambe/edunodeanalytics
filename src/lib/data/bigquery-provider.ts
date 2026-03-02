@@ -54,8 +54,7 @@ let bigQueryClientInstance: unknown = null;
  *
  * Note: The @google-cloud/bigquery package is an optional dependency.
  * When not installed, we gracefully fall back to seed data.
- * The dynamic import is wrapped in eval() to prevent bundlers from
- * trying to resolve it at build time.
+ * Dynamic import prevents bundler errors when package isn't installed.
  */
 async function initBigQueryClient(): Promise<unknown | null> {
   if (!IS_BIGQUERY_ENABLED) {
@@ -67,10 +66,32 @@ async function initBigQueryClient(): Promise<unknown | null> {
     return bigQueryClientInstance;
   }
 
-  // Skip BigQuery initialization entirely in this build
-  // The package is optional and only used when GOOGLE_APPLICATION_CREDENTIALS is set
-  console.log('[BigQuery] Package integration disabled for this build - using seed data');
-  return null;
+  try {
+    // Dynamic import to prevent bundler errors when package isn't installed
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { BigQuery } = await import('@google-cloud/bigquery').catch(() => ({ BigQuery: null }));
+
+    if (!BigQuery) {
+      console.log('[BigQuery] Package not installed - using seed data fallback');
+      return null;
+    }
+
+    // Initialize with project ID
+    bigQueryClientInstance = new BigQuery({
+      projectId: BIGQUERY_PROJECT_ID,
+    });
+
+    console.log('[BigQuery] Client initialized successfully', {
+      project: BIGQUERY_PROJECT_ID,
+      dataset: BIGQUERY_DATASET,
+    });
+
+    return bigQueryClientInstance;
+  } catch (error) {
+    console.warn('[BigQuery] Failed to initialize client:', error);
+    console.log('[BigQuery] Falling back to seed data');
+    return null;
+  }
 }
 
 /**

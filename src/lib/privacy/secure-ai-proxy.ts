@@ -21,9 +21,45 @@ import {
   detectPotentialPII,
   getAnonymizer,
 } from './pii-anonymizer';
+import { checkRateLimit } from '@/lib/cache/redis';
+import { captureException } from '@/lib/monitoring/sentry';
 
 // AI Provider types
 export type AIProvider = 'anthropic' | 'openai' | 'google' | 'mock';
+
+// AI model configuration
+const AI_CONFIG = {
+  anthropic: {
+    model: 'claude-sonnet-4-20250514',
+    maxTokens: 4096,
+    costPer1kInput: 0.003, // $3 per 1M input tokens
+    costPer1kOutput: 0.015, // $15 per 1M output tokens
+    rateLimit: { requests: 60, window: 60 }, // 60 requests per minute
+  },
+  openai: {
+    model: 'gpt-4-turbo-preview',
+    maxTokens: 4096,
+    costPer1kInput: 0.01, // $10 per 1M input tokens
+    costPer1kOutput: 0.03, // $30 per 1M output tokens
+    rateLimit: { requests: 60, window: 60 },
+  },
+  google: {
+    model: 'gemini-pro',
+    maxTokens: 4096,
+    costPer1kInput: 0.00025, // $0.25 per 1M input tokens
+    costPer1kOutput: 0.0005, // $0.50 per 1M output tokens
+    rateLimit: { requests: 60, window: 60 },
+  },
+};
+
+// In-memory usage tracking (in production, persist to database)
+const usageTracker = new Map<string, {
+  totalRequests: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCost: number;
+  lastRequest: Date;
+}>();
 
 // Request context for AI calls
 export interface AIRequestContext {
@@ -214,7 +250,136 @@ IMPORTANT: The student data provided has been anonymized. Student names, IDs, an
   }
 
   /**
-   * Make an anonymized AI API call (with full audit logging)
+   * Select the best available AI provider
+   * Prefers Anthropic > OpenAI > Google > Mock
+   */
+  private selectProvider(preferredProvider?: AIProvider): AIProvider {
+    if (preferredProvider && preferredProvider !== 'mock') {
+      // Check if preferred provider is configured
+      const envMap: Record<AIProvider, string | undefined> = {
+        anthropic: process.env.ANTHROPIC_API_KEY,
+        openai: process.env.OPENAI_API_KEY,
+        google: process.env.GOOGLE_AI_API_KEY,
+        mock: 'always-available',
+      };
+
+      if (envMap[preferredProvider]) {
+        return preferredProvider;
+      }
+    }
+
+    // Auto-select based on availability
+    if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
+    if (process.env.OPENAI_API_KEY) return 'openai';
+    if (process.env.GOOGLE_AI_API_KEY) return 'google';
+
+    return 'mock';
+  }
+
+  /**
+   * Check rate limit for a provider
+   */
+  private async checkProviderRateLimit(
+    provider: AIProvider,
+    schoolId: string
+  ): Promise<{ allowed: boolean; retryAfter?: number }> {
+    if (provider === 'mock') {
+      return { allowed: true };
+    }
+
+    const config = AI_CONFIG[provider];
+    const rateLimitKey = `ai:${provider}:${schoolId}`;
+
+    const result = await checkRateLimit(
+      rateLimitKey,
+      config.rateLimit.requests,
+      config.rateLimit.window
+    );
+
+    return {
+      allowed: result.allowed,
+      retryAfter: result.allowed ? undefined : result.resetIn,
+    };
+  }
+
+  /**
+   * Track AI usage for cost monitoring
+   */
+  private trackUsage(
+    schoolId: string,
+    provider: AIProvider,
+    inputTokens: number,
+    outputTokens: number
+  ): void {
+    if (provider === 'mock') return;
+
+    const config = AI_CONFIG[provider];
+    const cost =
+      (inputTokens / 1000) * config.costPer1kInput +
+      (outputTokens / 1000) * config.costPer1kOutput;
+
+    const key = `${schoolId}:${new Date().toISOString().slice(0, 7)}`; // Monthly key
+    const existing = usageTracker.get(key) || {
+      totalRequests: 0,
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+      totalCost: 0,
+      lastRequest: new Date(),
+    };
+
+    existing.totalRequests++;
+    existing.totalInputTokens += inputTokens;
+    existing.totalOutputTokens += outputTokens;
+    existing.totalCost += cost;
+    existing.lastRequest = new Date();
+
+    usageTracker.set(key, existing);
+
+    console.log('[AI Usage]', {
+      schoolId,
+      provider,
+      inputTokens,
+      outputTokens,
+      cost: `$${cost.toFixed(4)}`,
+      monthlyCost: `$${existing.totalCost.toFixed(2)}`,
+    });
+  }
+
+  /**
+   * Get AI usage statistics for a school
+   */
+  static getUsageStats(schoolId: string): {
+    currentMonth: { requests: number; tokens: number; cost: number };
+    lastMonth: { requests: number; tokens: number; cost: number };
+  } {
+    const now = new Date();
+    const currentMonthKey = `${schoolId}:${now.toISOString().slice(0, 7)}`;
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1);
+    const lastMonthKey = `${schoolId}:${lastMonth.toISOString().slice(0, 7)}`;
+
+    const current = usageTracker.get(currentMonthKey);
+    const last = usageTracker.get(lastMonthKey);
+
+    return {
+      currentMonth: current
+        ? {
+            requests: current.totalRequests,
+            tokens: current.totalInputTokens + current.totalOutputTokens,
+            cost: current.totalCost,
+          }
+        : { requests: 0, tokens: 0, cost: 0 },
+      lastMonth: last
+        ? {
+            requests: last.totalRequests,
+            tokens: last.totalInputTokens + last.totalOutputTokens,
+            cost: last.totalCost,
+          }
+        : { requests: 0, tokens: 0, cost: 0 },
+    };
+  }
+
+  /**
+   * Make an anonymized AI API call (with rate limiting and cost tracking)
    */
   async callAI(
     provider: AIProvider,
@@ -229,8 +394,20 @@ IMPORTANT: The student data provided has been anonymized. Student names, IDs, an
     response: string;
     auditId: string;
     anonymizationApplied: boolean;
+    provider: AIProvider;
   }> {
     const startTime = Date.now();
+
+    // Select the best available provider
+    const selectedProvider = this.selectProvider(provider);
+
+    // Check rate limit
+    const rateCheck = await this.checkProviderRateLimit(selectedProvider, context.schoolId);
+    if (!rateCheck.allowed) {
+      throw new Error(
+        `Rate limit exceeded for ${selectedProvider}. Retry after ${rateCheck.retryAfter}s`
+      );
+    }
 
     // Build safe prompt with anonymized data
     const { prompt: safePrompt, metadata } = this.buildSafePrompt(
@@ -240,9 +417,10 @@ IMPORTANT: The student data provided has been anonymized. Student names, IDs, an
       context
     );
 
-    // Calculate request size
+    // Calculate request size and estimate tokens
     const requestPayload = JSON.stringify(safePrompt);
     const requestSizeBytes = new TextEncoder().encode(requestPayload).length;
+    const estimatedInputTokens = Math.ceil(requestSizeBytes / 4); // Rough estimate
 
     // Create audit entry
     const auditEntry: AIAuditLogEntry = {
@@ -250,7 +428,7 @@ IMPORTANT: The student data provided has been anonymized. Student names, IDs, an
       timestamp: new Date(),
       schoolId: context.schoolId,
       userId: context.userId,
-      provider,
+      provider: selectedProvider,
       feature: context.feature,
       anonymizationLevel: context.anonymizationLevel || 'pseudonym',
       studentCount: metadata.studentCount,
@@ -265,7 +443,7 @@ IMPORTANT: The student data provided has been anonymized. Student names, IDs, an
       // Make the actual AI call based on provider
       let response: string;
 
-      switch (provider) {
+      switch (selectedProvider) {
         case 'anthropic':
           response = await this.callAnthropic(safePrompt);
           break;
@@ -280,6 +458,10 @@ IMPORTANT: The student data provided has been anonymized. Student names, IDs, an
           response = await this.callMock(safePrompt, context.feature);
       }
 
+      // Estimate output tokens and track usage
+      const estimatedOutputTokens = Math.ceil(new TextEncoder().encode(response).length / 4);
+      this.trackUsage(context.schoolId, selectedProvider, estimatedInputTokens, estimatedOutputTokens);
+
       // Update audit entry
       auditEntry.responseReceived = true;
       auditEntry.latencyMs = Date.now() - startTime;
@@ -293,6 +475,7 @@ IMPORTANT: The student data provided has been anonymized. Student names, IDs, an
         response,
         auditId: auditEntry.id,
         anonymizationApplied: metadata.fieldsAnonymized.length > 0 || metadata.piiInQueryDetected,
+        provider: selectedProvider,
       };
     } catch (error) {
       auditEntry.latencyMs = Date.now() - startTime;
@@ -301,6 +484,12 @@ IMPORTANT: The student data provided has been anonymized. Student names, IDs, an
       if (this.auditEnabled) {
         this.logAuditEntry(auditEntry);
       }
+
+      captureException(error, {
+        provider: selectedProvider,
+        feature: context.feature,
+        schoolId: context.schoolId,
+      });
 
       throw error;
     }
