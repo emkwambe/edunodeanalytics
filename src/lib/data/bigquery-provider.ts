@@ -25,6 +25,7 @@ import {
   type SchoolMetrics,
 } from './seed-data';
 import type { Student360Data } from '@/components/dashboard/student-360-card';
+import * as redis from '@/lib/cache/redis';
 
 // =============================================================================
 // BIGQUERY CONFIGURATION & LIVE SWITCH
@@ -141,9 +142,6 @@ export interface RenewalRadarMetrics {
 // =============================================================================
 
 class BigQueryProvider {
-  private cache: Map<string, { data: unknown; timestamp: number }> = new Map();
-  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
   /**
    * Check if BigQuery is available and connected
    */
@@ -153,31 +151,35 @@ class BigQueryProvider {
   }
 
   /**
-   * Get cached result if available and not expired
+   * Get cached result using Redis (or in-memory fallback)
    */
-  private getCachedResult<T>(key: string): T | null {
-    const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      return cached.data as T;
-    }
-    return null;
+  private async getCachedResult<T>(key: string): Promise<T | null> {
+    return redis.get<T>(key);
   }
 
   /**
-   * Store result in cache
+   * Store result in Redis cache
    */
-  private setCachedResult(key: string, data: unknown): void {
-    this.cache.set(key, { data, timestamp: Date.now() });
+  private async setCachedResult(key: string, data: unknown, ttl = redis.TTL.BIGQUERY): Promise<void> {
+    await redis.set(key, data, ttl);
   }
 
   /**
-   * Execute BigQuery query with fallback
+   * Execute BigQuery query with caching and fallback
    */
-  private async executeQuery<T>(
+  private async executeQueryWithCache<T>(
+    cacheKey: string,
     query: string,
     params: Record<string, unknown>,
-    fallbackFn: () => T
-  ): Promise<{ data: T; isLive: boolean }> {
+    fallbackFn: () => T,
+    ttl = redis.TTL.BIGQUERY
+  ): Promise<{ data: T; isLive: boolean; cached: boolean }> {
+    // Check cache first
+    const cached = await this.getCachedResult<T>(cacheKey);
+    if (cached !== null) {
+      return { data: cached, isLive: false, cached: true };
+    }
+
     const client = await initBigQueryClient();
 
     if (client && typeof (client as { query: unknown }).query === 'function') {
@@ -186,13 +188,25 @@ class BigQueryProvider {
           query,
           params,
         });
-        return { data: rows as T, isLive: true };
+        const data = rows as T;
+        await this.setCachedResult(cacheKey, data, ttl);
+        return { data, isLive: true, cached: false };
       } catch (error) {
         console.warn('[BigQuery] Query failed, using fallback:', error);
       }
     }
 
-    return { data: fallbackFn(), isLive: false };
+    const data = fallbackFn();
+    await this.setCachedResult(cacheKey, data, ttl);
+    return { data, isLive: false, cached: false };
+  }
+
+  /**
+   * Invalidate school cache on data changes
+   */
+  async invalidateSchoolCache(schoolSlug: string): Promise<void> {
+    await redis.invalidateSchool(schoolSlug);
+    console.log(`[BigQuery] Invalidated cache for school: ${schoolSlug}`);
   }
 
   /**

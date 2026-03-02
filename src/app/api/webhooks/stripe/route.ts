@@ -29,6 +29,11 @@ import {
   markEventFailed,
 } from '@/lib/db/queries/webhook-events';
 import { createNotification } from '@/lib/db/queries/notifications';
+import {
+  sendPaymentFailureEmail,
+  sendPaymentSuccessEmail,
+} from '@/lib/email/templates';
+import { captureException } from '@/lib/monitoring/sentry';
 import type { Json } from '@/lib/database.types';
 
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -291,12 +296,45 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
 
   if (payment) {
     console.log('[Webhook] Payment record created:', payment.id);
+
+    // Send payment success email
+    const adminEmail = school.contact_email || null;
+    if (adminEmail) {
+      try {
+        // Get period end for email
+        const periodEnd = invoiceData.period_end
+          ? new Date(invoiceData.period_end * 1000).toLocaleDateString('en-US', {
+              month: 'long',
+              day: 'numeric',
+              year: 'numeric',
+            })
+          : 'your next billing date';
+
+        const emailResult = await sendPaymentSuccessEmail(
+          { email: adminEmail, name: school.name },
+          {
+            schoolName: school.name,
+            amount: amountPaid,
+            currency: invoice.currency || 'usd',
+            invoiceUrl: invoiceData.hosted_invoice_url || undefined,
+            periodEnd,
+          }
+        );
+
+        if (emailResult.success) {
+          console.log('[Webhook] Payment success email sent to:', adminEmail);
+        }
+      } catch (emailError) {
+        console.error('[Webhook] Failed to send payment success email:', emailError);
+        captureException(emailError, { schoolId: school.id, paymentId: payment.id });
+      }
+    }
   }
 }
 
 /**
  * Handle invoice.payment_failed
- * Notify school of failed payment
+ * Notify school of failed payment via email and in-app notification
  */
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
   // Access properties with type assertion for newer Stripe API versions
@@ -304,6 +342,8 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
     customer?: string | { id: string };
     subscription?: string | { id: string };
     parent?: { subscription?: string | { id: string } };
+    amount_due?: number;
+    next_payment_attempt?: number | null;
   };
 
   const subscriptionId = typeof invoiceData.subscription === 'string'
@@ -337,9 +377,53 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
 
   console.log('[Webhook] School marked as past_due:', school.id);
 
+  // Get payment failure reason from invoice
+  const failureReason = 'Your card was declined. Please update your payment method.';
+  const amountDue = invoiceData.amount_due || 0;
+  const nextRetry = invoiceData.next_payment_attempt
+    ? new Date(invoiceData.next_payment_attempt * 1000).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : undefined;
+
+  // Send email notification to school contact
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.edunode.io';
+  const updatePaymentUrl = `${baseUrl}/${school.slug}/settings/billing`;
+
+  // Get school admin email - in production, query users table for school admins
+  // For now, we'll use the school's contact email if available
+  const adminEmail = school.contact_email || null;
+
+  if (adminEmail) {
+    try {
+      const emailResult = await sendPaymentFailureEmail(
+        { email: adminEmail, name: school.name },
+        {
+          schoolName: school.name,
+          amount: amountDue,
+          currency: invoice.currency || 'usd',
+          reason: failureReason,
+          retryDate: nextRetry,
+          updatePaymentUrl,
+        }
+      );
+
+      if (emailResult.success) {
+        console.log('[Webhook] Payment failure email sent to:', adminEmail);
+      } else {
+        console.error('[Webhook] Failed to send payment failure email:', emailResult.error);
+      }
+    } catch (emailError) {
+      console.error('[Webhook] Exception sending payment failure email:', emailError);
+      captureException(emailError, { schoolId: school.id, invoiceId: invoice.id });
+    }
+  } else {
+    console.warn('[Webhook] No contact email for school:', school.id);
+  }
+
   // Create in-app notification for school admins
-  // Note: In a real app, we'd get all school admin users and notify each
-  // For now, we'll create a system notification that can be displayed
   try {
     await createNotification({
       school_id: school.id,
