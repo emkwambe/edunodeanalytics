@@ -126,7 +126,9 @@ CREATE INDEX idx_ai_usage_school ON ai_usage(school_id);
 CREATE INDEX idx_ai_usage_provider ON ai_usage(provider);
 CREATE INDEX idx_ai_usage_feature ON ai_usage(feature);
 CREATE INDEX idx_ai_usage_created_at ON ai_usage(created_at DESC);
-CREATE INDEX idx_ai_usage_school_month ON ai_usage(school_id, date_trunc('month', created_at));
+-- Note: For monthly aggregation queries, use a covering index on school_id + created_at
+-- date_trunc cannot be used in index expressions as it's not IMMUTABLE
+CREATE INDEX idx_ai_usage_school_created ON ai_usage(school_id, created_at);
 
 -- ============================================
 -- AI Usage Limits Table
