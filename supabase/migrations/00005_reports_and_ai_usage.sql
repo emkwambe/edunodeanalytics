@@ -254,9 +254,9 @@ CREATE POLICY "School admins can view AI limits"
 CREATE TRIGGER update_scheduled_reports_timestamp
     BEFORE UPDATE ON scheduled_reports
     FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at();
+    EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_ai_usage_limits_timestamp
     BEFORE UPDATE ON ai_usage_limits
     FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at();
+    EXECUTE FUNCTION update_updated_at_column();
