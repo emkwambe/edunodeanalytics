@@ -211,14 +211,14 @@ ALTER TABLE ai_usage_limits ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "School members can view scheduled reports"
     ON scheduled_reports FOR SELECT
     USING (school_id IN (
-        SELECT school_id FROM school_members
+        SELECT school_id FROM school_memberships
         WHERE user_id = auth.uid()
     ));
 
 CREATE POLICY "School admins can manage scheduled reports"
     ON scheduled_reports FOR ALL
     USING (school_id IN (
-        SELECT school_id FROM school_members
+        SELECT school_id FROM school_memberships
         WHERE user_id = auth.uid() AND role IN ('admin', 'owner')
     ));
 
@@ -226,7 +226,7 @@ CREATE POLICY "School admins can manage scheduled reports"
 CREATE POLICY "School members can view generated reports"
     ON generated_reports FOR SELECT
     USING (school_id IN (
-        SELECT school_id FROM school_members
+        SELECT school_id FROM school_memberships
         WHERE user_id = auth.uid()
     ));
 
@@ -234,7 +234,7 @@ CREATE POLICY "School members can view generated reports"
 CREATE POLICY "School admins can view AI usage"
     ON ai_usage FOR SELECT
     USING (school_id IN (
-        SELECT school_id FROM school_members
+        SELECT school_id FROM school_memberships
         WHERE user_id = auth.uid() AND role IN ('admin', 'owner')
     ));
 
@@ -242,7 +242,7 @@ CREATE POLICY "School admins can view AI usage"
 CREATE POLICY "School admins can view AI limits"
     ON ai_usage_limits FOR SELECT
     USING (school_id IN (
-        SELECT school_id FROM school_members
+        SELECT school_id FROM school_memberships
         WHERE user_id = auth.uid() AND role IN ('admin', 'owner')
     ));
 
