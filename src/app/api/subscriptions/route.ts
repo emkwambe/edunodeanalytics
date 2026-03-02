@@ -55,7 +55,7 @@ export interface SubscriptionResponse {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = await auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -66,28 +66,57 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'School slug required' }, { status: 400 });
     }
 
-    // In production, fetch from database
-    // const subscription = await getSubscriptionBySchoolSlug(schoolSlug);
+    // Fetch real subscription data from database
+    const { getSchoolBySlug } = await import('@/lib/db/queries/schools');
+    const school = await getSchoolBySlug(schoolSlug);
 
-    // Mock response for development
-    const mockSubscription: SubscriptionResponse = {
-      id: 'sub_mock_123',
-      status: 'active',
-      tier: 'pro',
-      currentPeriodStart: new Date().toISOString(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      cancelAtPeriodEnd: false,
-      studentCount: 450,
-      monthlyAmount: 8125, // $7500/12 + $5*450/12
+    if (!school) {
+      return NextResponse.json({ error: 'School not found' }, { status: 404 });
+    }
+
+    // Build subscription response from school data
+    const subscription: SubscriptionResponse = {
+      id: school.stripe_subscription_id || `sub_${school.id}`,
+      status: school.subscription_status,
+      tier: school.subscription_tier,
+      currentPeriodStart: school.current_period_start || new Date().toISOString(),
+      currentPeriodEnd: school.current_period_end ||
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      cancelAtPeriodEnd: school.cancel_at_period_end,
+      studentCount: school.student_count,
+      monthlyAmount: calculateMonthlyAmount(school.subscription_tier, school.student_count),
     };
 
-    return NextResponse.json(mockSubscription);
+    return NextResponse.json(subscription);
   } catch (error) {
     console.error('Error fetching subscription:', error);
     return NextResponse.json(
       { error: 'Failed to fetch subscription' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Calculate monthly amount based on tier and student count
+ */
+function calculateMonthlyAmount(
+  tier: 'starter' | 'pro' | 'enterprise',
+  studentCount: number
+): number {
+  switch (tier) {
+    case 'starter':
+      return 0; // Free tier
+    case 'pro':
+      // $7,500/year base + $5/student/year = monthly amount
+      const yearlyBase = 7500;
+      const yearlyPerStudent = studentCount * 5;
+      return Math.round((yearlyBase + yearlyPerStudent) / 12 * 100); // Return cents
+    case 'enterprise':
+      // Custom pricing - return placeholder
+      return 0;
+    default:
+      return 0;
   }
 }
 

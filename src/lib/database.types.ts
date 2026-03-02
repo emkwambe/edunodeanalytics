@@ -32,6 +32,15 @@ export interface Database {
           subscription_tier: 'starter' | 'pro' | 'enterprise';
           subscription_status: 'active' | 'trialing' | 'past_due' | 'canceled';
           trial_ends_at: string | null;
+          // Stripe fields
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          canceled_at: string | null;
+          student_count: number;
+          // Integration IDs
           bigquery_dataset_id: string | null;
           clever_district_id: string | null;
           classlink_tenant_id: string | null;
@@ -59,6 +68,15 @@ export interface Database {
           subscription_tier?: 'starter' | 'pro' | 'enterprise';
           subscription_status?: 'active' | 'trialing' | 'past_due' | 'canceled';
           trial_ends_at?: string | null;
+          // Stripe fields
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          canceled_at?: string | null;
+          student_count?: number;
+          // Integration IDs
           bigquery_dataset_id?: string | null;
           clever_district_id?: string | null;
           classlink_tenant_id?: string | null;
@@ -86,6 +104,15 @@ export interface Database {
           subscription_tier?: 'starter' | 'pro' | 'enterprise';
           subscription_status?: 'active' | 'trialing' | 'past_due' | 'canceled';
           trial_ends_at?: string | null;
+          // Stripe fields
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          canceled_at?: string | null;
+          student_count?: number;
+          // Integration IDs
           bigquery_dataset_id?: string | null;
           clever_district_id?: string | null;
           classlink_tenant_id?: string | null;
@@ -926,6 +953,121 @@ export interface Database {
           }
         ];
       };
+      payments: {
+        Row: {
+          id: string;
+          created_at: string;
+          school_id: string;
+          stripe_invoice_id: string;
+          stripe_subscription_id: string | null;
+          stripe_payment_intent_id: string | null;
+          stripe_charge_id: string | null;
+          amount: number;
+          currency: string;
+          status: 'paid' | 'pending' | 'failed' | 'refunded' | 'partially_refunded';
+          invoice_number: string | null;
+          invoice_pdf_url: string | null;
+          hosted_invoice_url: string | null;
+          period_start: string | null;
+          period_end: string | null;
+          subscription_tier: 'starter' | 'pro' | 'enterprise' | null;
+          student_count: number | null;
+          paid_at: string | null;
+          refunded_at: string | null;
+          metadata: Json | null;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          school_id: string;
+          stripe_invoice_id: string;
+          stripe_subscription_id?: string | null;
+          stripe_payment_intent_id?: string | null;
+          stripe_charge_id?: string | null;
+          amount: number;
+          currency?: string;
+          status: 'paid' | 'pending' | 'failed' | 'refunded' | 'partially_refunded';
+          invoice_number?: string | null;
+          invoice_pdf_url?: string | null;
+          hosted_invoice_url?: string | null;
+          period_start?: string | null;
+          period_end?: string | null;
+          subscription_tier?: 'starter' | 'pro' | 'enterprise' | null;
+          student_count?: number | null;
+          paid_at?: string | null;
+          refunded_at?: string | null;
+          metadata?: Json | null;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          school_id?: string;
+          stripe_invoice_id?: string;
+          stripe_subscription_id?: string | null;
+          stripe_payment_intent_id?: string | null;
+          stripe_charge_id?: string | null;
+          amount?: number;
+          currency?: string;
+          status?: 'paid' | 'pending' | 'failed' | 'refunded' | 'partially_refunded';
+          invoice_number?: string | null;
+          invoice_pdf_url?: string | null;
+          hosted_invoice_url?: string | null;
+          period_start?: string | null;
+          period_end?: string | null;
+          subscription_tier?: 'starter' | 'pro' | 'enterprise' | null;
+          student_count?: number | null;
+          paid_at?: string | null;
+          refunded_at?: string | null;
+          metadata?: Json | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'payments_school_id_fkey';
+            columns: ['school_id'];
+            referencedRelation: 'schools';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+      webhook_events: {
+        Row: {
+          id: string;
+          created_at: string;
+          event_id: string;
+          event_type: string;
+          status: 'pending' | 'processing' | 'processed' | 'failed';
+          processed_at: string | null;
+          error_message: string | null;
+          retry_count: number;
+          payload: Json;
+          result: Json | null;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          event_id: string;
+          event_type: string;
+          status?: 'pending' | 'processing' | 'processed' | 'failed';
+          processed_at?: string | null;
+          error_message?: string | null;
+          retry_count?: number;
+          payload: Json;
+          result?: Json | null;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          event_id?: string;
+          event_type?: string;
+          status?: 'pending' | 'processing' | 'processed' | 'failed';
+          processed_at?: string | null;
+          error_message?: string | null;
+          retry_count?: number;
+          payload?: Json;
+          result?: Json | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -947,6 +1089,8 @@ export interface Database {
       notification_type: 'alert' | 'insight' | 'system' | 'action';
       notification_priority: 'low' | 'medium' | 'high' | 'urgent';
       resource_category: 'data_literacy' | 'culture_change' | 'implementation';
+      payment_status: 'paid' | 'pending' | 'failed' | 'refunded' | 'partially_refunded';
+      webhook_event_status: 'pending' | 'processing' | 'processed' | 'failed';
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -997,3 +1141,11 @@ export type ResourceProgressUpdate = Database['public']['Tables']['resource_prog
 export type UserPreferences = Database['public']['Tables']['user_preferences']['Row'];
 export type UserPreferencesInsert = Database['public']['Tables']['user_preferences']['Insert'];
 export type UserPreferencesUpdate = Database['public']['Tables']['user_preferences']['Update'];
+
+export type Payment = Database['public']['Tables']['payments']['Row'];
+export type PaymentInsert = Database['public']['Tables']['payments']['Insert'];
+export type PaymentUpdate = Database['public']['Tables']['payments']['Update'];
+
+export type WebhookEvent = Database['public']['Tables']['webhook_events']['Row'];
+export type WebhookEventInsert = Database['public']['Tables']['webhook_events']['Insert'];
+export type WebhookEventUpdate = Database['public']['Tables']['webhook_events']['Update'];

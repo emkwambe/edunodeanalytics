@@ -103,17 +103,18 @@ Provide actionable insights for both educators and the student.`,
 
     // Prepare student data for AI (will be anonymized by the proxy)
     const studentData = [{
-      student_id: student.id,
-      first_name: student.firstName,
-      last_name: student.lastName,
-      email: student.email || '',
-      grade_level: student.gradeLevel,
-      risk_level: student.riskLevel,
-      gpa: student.gpa,
-      attendance_rate: student.attendanceRate,
-      assignment_completion_rate: student.assignmentCompletionRate,
-      recent_trend: student.recentTrend,
-      flags: student.flags,
+      id: student.id,
+      student_id: student.sis_student_id,
+      first_name: student.first_name,
+      last_name: student.last_name,
+      email: '', // Not stored in students table
+      grade_level: student.grade_level,
+      risk_level: student.risk_level,
+      gpa: student.proficiency_level || 0,
+      attendance_rate: student.attendance_rate || 0,
+      assignment_completion_rate: 0, // Not available in current schema
+      recent_trend: 'stable',
+      flags: (student.risk_factors as string[]) || [],
     }];
 
     // Make the secure AI call (PII automatically anonymized)

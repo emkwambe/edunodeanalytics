@@ -324,3 +324,174 @@ export async function getSchoolMetrics(schoolId: string): Promise<SchoolMetrics 
     graduationRate: 0,
   };
 }
+
+// ==============================================
+// STRIPE SUBSCRIPTION OPERATIONS
+// ==============================================
+
+/**
+ * Subscription update parameters from Stripe webhooks
+ */
+export interface SubscriptionUpdateParams {
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  subscriptionTier?: 'starter' | 'pro' | 'enterprise';
+  subscriptionStatus?: 'active' | 'trialing' | 'past_due' | 'canceled';
+  currentPeriodStart?: Date;
+  currentPeriodEnd?: Date;
+  cancelAtPeriodEnd?: boolean;
+  canceledAt?: Date | null;
+  studentCount?: number;
+  trialEndsAt?: Date | null;
+}
+
+/**
+ * Get school by Stripe customer ID
+ */
+export async function getSchoolByStripeCustomerId(customerId: string): Promise<School | null> {
+  const supabase = createAdminSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('schools')
+    .select('*')
+    .eq('stripe_customer_id', customerId)
+    .single();
+
+  if (error) {
+    if (error.code !== 'PGRST116') {
+      console.error('[DB] Error fetching school by Stripe customer ID:', error);
+    }
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Get school by Stripe subscription ID
+ */
+export async function getSchoolByStripeSubscriptionId(subscriptionId: string): Promise<School | null> {
+  const supabase = createAdminSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('schools')
+    .select('*')
+    .eq('stripe_subscription_id', subscriptionId)
+    .single();
+
+  if (error) {
+    if (error.code !== 'PGRST116') {
+      console.error('[DB] Error fetching school by Stripe subscription ID:', error);
+    }
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Update school subscription from Stripe webhook
+ * Uses admin client to bypass RLS for webhook operations
+ */
+export async function updateSchoolSubscription(
+  schoolId: string,
+  params: SubscriptionUpdateParams
+): Promise<School | null> {
+  const supabase = createAdminSupabaseClient();
+
+  const updates: SchoolUpdate = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (params.stripeCustomerId !== undefined) {
+    updates.stripe_customer_id = params.stripeCustomerId;
+  }
+  if (params.stripeSubscriptionId !== undefined) {
+    updates.stripe_subscription_id = params.stripeSubscriptionId;
+  }
+  if (params.subscriptionTier !== undefined) {
+    updates.subscription_tier = params.subscriptionTier;
+  }
+  if (params.subscriptionStatus !== undefined) {
+    updates.subscription_status = params.subscriptionStatus;
+  }
+  if (params.currentPeriodStart !== undefined) {
+    updates.current_period_start = params.currentPeriodStart.toISOString();
+  }
+  if (params.currentPeriodEnd !== undefined) {
+    updates.current_period_end = params.currentPeriodEnd.toISOString();
+  }
+  if (params.cancelAtPeriodEnd !== undefined) {
+    updates.cancel_at_period_end = params.cancelAtPeriodEnd;
+  }
+  if (params.canceledAt !== undefined) {
+    updates.canceled_at = params.canceledAt?.toISOString() ?? null;
+  }
+  if (params.studentCount !== undefined) {
+    updates.student_count = params.studentCount;
+  }
+  if (params.trialEndsAt !== undefined) {
+    updates.trial_ends_at = params.trialEndsAt?.toISOString() ?? null;
+  }
+
+  const { data, error } = await supabase
+    .from('schools')
+    .update(updates)
+    .eq('id', schoolId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[DB] Error updating school subscription:', error);
+    return null;
+  }
+
+  console.log('[DB] Updated school subscription:', {
+    schoolId,
+    tier: updates.subscription_tier,
+    status: updates.subscription_status,
+  });
+
+  return data;
+}
+
+/**
+ * Update school subscription by slug (for checkout completion)
+ */
+export async function updateSchoolSubscriptionBySlug(
+  slug: string,
+  params: SubscriptionUpdateParams
+): Promise<School | null> {
+  const supabase = createAdminSupabaseClient();
+
+  // First get the school ID
+  const { data: school, error: fetchError } = await supabase
+    .from('schools')
+    .select('id')
+    .eq('slug', slug)
+    .single();
+
+  if (fetchError || !school) {
+    console.error('[DB] Error fetching school by slug for subscription update:', fetchError);
+    return null;
+  }
+
+  return updateSchoolSubscription(school.id, params);
+}
+
+/**
+ * Update school subscription by Stripe subscription ID (for subscription webhooks)
+ */
+export async function updateSchoolSubscriptionByStripeId(
+  stripeSubscriptionId: string,
+  params: SubscriptionUpdateParams
+): Promise<School | null> {
+  const school = await getSchoolByStripeSubscriptionId(stripeSubscriptionId);
+
+  if (!school) {
+    console.error('[DB] No school found with Stripe subscription ID:', stripeSubscriptionId);
+    return null;
+  }
+
+  return updateSchoolSubscription(school.id, params);
+}

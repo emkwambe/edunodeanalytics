@@ -16,6 +16,7 @@ export async function GET() {
 
     // Sample student data with PII
     const testStudentData = [{
+      id: 'uuid-test-0001',
       student_id: 'stu_test_0001',
       first_name: 'Emma',
       last_name: 'Thompson',
