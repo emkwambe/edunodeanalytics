@@ -66,6 +66,16 @@ export interface StudentSeedData {
   math: AssessmentScores;
   /** Purpose-Driven Intelligence metrics */
   purposeDriven?: PurposeDrivenMetrics;
+  /** LMS Engagement (Canvas, Google Classroom) */
+  lms?: LmsEngagementData;
+}
+
+export interface LmsEngagementData {
+  courseGPA: number;
+  assignmentCompletionRate: number;
+  missingAssignments: number;
+  lastLmsActivity: Date;
+  activeCourses: number;
 }
 
 export interface AssessmentScores {
@@ -247,6 +257,58 @@ function generateNweaScores(
   };
 }
 
+/**
+ * Generate mock LMS engagement data
+ * Higher GPA and completion rates for on-track students
+ */
+function generateLmsEngagementData(
+  rng: SeededRandom,
+  riskLevel: 'on_track' | 'at_risk' | 'critical',
+  proficiency: number
+): LmsEngagementData {
+  // Base GPA influenced by proficiency and risk level
+  let baseGPA: number;
+  let baseCompletionRate: number;
+  let baseMissing: number;
+
+  if (riskLevel === 'on_track') {
+    baseGPA = 2.8 + rng.next() * 1.2; // 2.8-4.0
+    baseCompletionRate = 0.85 + rng.next() * 0.15; // 85-100%
+    baseMissing = rng.nextInt(0, 2);
+  } else if (riskLevel === 'at_risk') {
+    baseGPA = 2.0 + rng.next() * 1.0; // 2.0-3.0
+    baseCompletionRate = 0.65 + rng.next() * 0.25; // 65-90%
+    baseMissing = rng.nextInt(2, 6);
+  } else {
+    baseGPA = 1.0 + rng.next() * 1.5; // 1.0-2.5
+    baseCompletionRate = 0.40 + rng.next() * 0.35; // 40-75%
+    baseMissing = rng.nextInt(4, 12);
+  }
+
+  // Adjust slightly based on proficiency
+  const proficiencyAdjust = (proficiency - 50) / 100;
+  baseGPA = Math.min(4.0, Math.max(0.5, baseGPA + proficiencyAdjust * 0.5));
+  baseCompletionRate = Math.min(1.0, Math.max(0.3, baseCompletionRate + proficiencyAdjust * 0.1));
+
+  // Last activity: on-track students more recent, critical students less recent
+  const daysAgo = riskLevel === 'on_track'
+    ? rng.nextInt(0, 2)
+    : riskLevel === 'at_risk'
+      ? rng.nextInt(1, 5)
+      : rng.nextInt(3, 10);
+
+  const lastActivity = new Date();
+  lastActivity.setDate(lastActivity.getDate() - daysAgo);
+
+  return {
+    courseGPA: Math.round(baseGPA * 100) / 100,
+    assignmentCompletionRate: Math.round(baseCompletionRate * 1000) / 1000,
+    missingAssignments: baseMissing,
+    lastLmsActivity: lastActivity,
+    activeCourses: rng.nextInt(4, 7),
+  };
+}
+
 function generatePurposeDrivenMetrics(
   rng: SeededRandom,
   reading: AssessmentScores,
@@ -413,6 +475,7 @@ function generateStudent(
     reading: readingScores,
     math: mathScores,
     purposeDriven: generatePurposeDrivenMetrics(rng, readingScores, mathScores, riskLevel, hasIep),
+    lms: generateLmsEngagementData(rng, riskLevel, proficiency),
   };
 }
 
@@ -523,6 +586,13 @@ export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
  * Convert seed data to Student360Data format for UI components
  */
 export function toStudent360Data(student: StudentSeedData): Student360Data {
+  // Calculate engagement tier from LMS data
+  const engagementTier = student.lms
+    ? student.lms.assignmentCompletionRate >= 0.85 ? 'on_track' as const
+      : student.lms.assignmentCompletionRate >= 0.70 ? 'at_risk' as const
+      : 'critical' as const
+    : undefined;
+
   return {
     id: student.id,
     firstName: student.firstName,
@@ -544,6 +614,14 @@ export function toStudent360Data(student: StudentSeedData): Student360Data {
     mathGrowthPercentile: student.math.growthPercentile,
     growthTier: student.growthPercentile >= 60 ? 'on_track' :
                 student.growthPercentile >= 40 ? 'at_risk' : 'critical',
+    // LMS Engagement data
+    courseGPA: student.lms?.courseGPA,
+    assignmentCompletionRate: student.lms?.assignmentCompletionRate,
+    missingAssignments: student.lms?.missingAssignments,
+    lastLmsActivity: student.lms?.lastLmsActivity,
+    engagementTier,
+    activeCourses: student.lms?.activeCourses,
+    // Program flags
     hasIep: student.hasIep,
     has504Plan: student.has504Plan,
     isEnglishLearner: student.isEnglishLearner,

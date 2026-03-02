@@ -33,12 +33,20 @@ export interface Student360Data {
   daysPresent: number;
   isChronicallyAbsent: boolean;
 
-  // Academic
+  // Academic (Assessments)
   readingPercentile?: number;
   mathPercentile?: number;
   readingGrowthPercentile?: number;
   mathGrowthPercentile?: number;
   growthTier: StatusLevel;
+
+  // LMS Engagement (Canvas, Google Classroom)
+  courseGPA?: number;
+  assignmentCompletionRate?: number;
+  missingAssignments?: number;
+  lastLmsActivity?: Date | string;
+  engagementTier?: StatusLevel;
+  activeCourses?: number;
 
   // Program flags
   hasIep?: boolean;
@@ -85,9 +93,17 @@ export function Student360Card({
               {student.displayName}
             </span>
             <span className="text-xs text-slate-500">Grade {student.gradeLevel}</span>
+            {student.missingAssignments && student.missingAssignments > 0 && (
+              <Badge variant="destructive" size="sm" className="text-[10px]">
+                {student.missingAssignments} missing
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
             <span>Attendance: {formatPercent(student.attendanceRate)}</span>
+            {student.courseGPA !== undefined && (
+              <span>GPA: {student.courseGPA.toFixed(1)}</span>
+            )}
             {student.readingPercentile && (
               <span>Reading: {student.readingPercentile}%ile</span>
             )}
@@ -156,6 +172,30 @@ export function Student360Card({
             </div>
           </div>
 
+          {/* Engagement (LMS) */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500">Engagement</span>
+              {student.engagementTier && (
+                <StatusIndicator status={student.engagementTier} size="sm" />
+              )}
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-lg font-bold text-slate-100">
+                {student.assignmentCompletionRate !== undefined
+                  ? formatPercent(student.assignmentCompletionRate)
+                  : '-'}
+              </span>
+            </div>
+            <div className="text-[10px] text-slate-500">
+              {student.missingAssignments !== undefined && student.missingAssignments > 0 ? (
+                <span className="text-amber-400">{student.missingAssignments} missing</span>
+              ) : (
+                'Assignment rate'
+              )}
+            </div>
+          </div>
+
           {/* Growth */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
@@ -173,6 +213,28 @@ export function Student360Card({
             <div className="text-[10px] text-slate-500">
               Composite SGP
             </div>
+          </div>
+
+          {/* GPA */}
+          <div className="space-y-1">
+            <span className="text-xs text-slate-500">Course GPA</span>
+            <div className="flex items-baseline gap-1">
+              <span className={cn(
+                'text-lg font-bold',
+                student.courseGPA !== undefined
+                  ? student.courseGPA >= 3.0 ? 'text-emerald-400'
+                    : student.courseGPA >= 2.0 ? 'text-amber-400'
+                    : 'text-red-400'
+                  : 'text-slate-400'
+              )}>
+                {student.courseGPA !== undefined ? student.courseGPA.toFixed(2) : '-'}
+              </span>
+            </div>
+            {student.activeCourses !== undefined && (
+              <div className="text-[10px] text-slate-500">
+                {student.activeCourses} courses
+              </div>
+            )}
           </div>
 
           {/* Reading */}
