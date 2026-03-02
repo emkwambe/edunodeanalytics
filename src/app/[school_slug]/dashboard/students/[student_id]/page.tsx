@@ -124,9 +124,11 @@ export default function StudentDashboardDetailPage() {
     [student_id, mtssLogs]
   );
 
-  // Calculate metrics
-  const avgGrowth = student ? (student.reading.growthPercentile + student.math.growthPercentile) / 2 : 50;
-  const attendancePercent = student ? student.attendanceRate * 100 : 95;
+  // Calculate metrics with null safety
+  const avgGrowth = student?.reading?.growthPercentile && student?.math?.growthPercentile
+    ? (student.reading.growthPercentile + student.math.growthPercentile) / 2
+    : 50;
+  const attendancePercent = student?.attendanceRate ? student.attendanceRate * 100 : 95;
   const mtssStatus = student?.riskLevel === 'critical' ? 'Tier 3' : student?.riskLevel === 'at_risk' ? 'Tier 2' : 'Tier 1';
 
   // Purpose-Driven Intelligence Metrics
@@ -547,10 +549,10 @@ export default function StudentDashboardDetailPage() {
                     <BookOpen className="w-4 h-4" />
                     Reading RIT
                   </span>
-                  <span className="font-bold text-white">{student.reading.winterRit}</span>
+                  <span className="font-bold text-white">{student.reading?.winterRit ?? 'N/A'}</span>
                 </div>
                 <div className="text-xs text-slate-500">
-                  Growth: {student.reading.growthPercentile}th %ile
+                  Growth: {student.reading?.growthPercentile ?? 'N/A'}{student.reading?.growthPercentile ? 'th %ile' : ''}
                 </div>
               </div>
               <div>
@@ -559,10 +561,10 @@ export default function StudentDashboardDetailPage() {
                     <Target className="w-4 h-4" />
                     Math RIT
                   </span>
-                  <span className="font-bold text-white">{student.math.winterRit}</span>
+                  <span className="font-bold text-white">{student.math?.winterRit ?? 'N/A'}</span>
                 </div>
                 <div className="text-xs text-slate-500">
-                  Growth: {student.math.growthPercentile}th %ile
+                  Growth: {student.math?.growthPercentile ?? 'N/A'}{student.math?.growthPercentile ? 'th %ile' : ''}
                 </div>
               </div>
             </CardContent>
