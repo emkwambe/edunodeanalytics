@@ -219,7 +219,7 @@ CREATE POLICY "School admins can manage scheduled reports"
     ON scheduled_reports FOR ALL
     USING (school_id IN (
         SELECT school_id FROM school_memberships
-        WHERE user_id = auth.uid() AND role IN ('admin', 'owner')
+        WHERE user_id = auth.uid() AND role IN ('school_admin', 'principal', 'data_manager')
     ));
 
 -- Generated reports policies
@@ -235,7 +235,7 @@ CREATE POLICY "School admins can view AI usage"
     ON ai_usage FOR SELECT
     USING (school_id IN (
         SELECT school_id FROM school_memberships
-        WHERE user_id = auth.uid() AND role IN ('admin', 'owner')
+        WHERE user_id = auth.uid() AND role IN ('school_admin', 'principal', 'data_manager')
     ));
 
 -- AI usage limits policies
@@ -243,7 +243,7 @@ CREATE POLICY "School admins can view AI limits"
     ON ai_usage_limits FOR SELECT
     USING (school_id IN (
         SELECT school_id FROM school_memberships
-        WHERE user_id = auth.uid() AND role IN ('admin', 'owner')
+        WHERE user_id = auth.uid() AND role IN ('school_admin', 'principal', 'data_manager')
     ));
 
 -- ============================================
