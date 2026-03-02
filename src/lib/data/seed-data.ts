@@ -10,10 +10,23 @@
  */
 
 import type { Student360Data } from '@/components/dashboard/student-360-card';
+import {
+  type SchoolDataAvailability,
+  type DataSourceType,
+  createMockDataAvailability,
+} from './data-availability';
 
 // =============================================================================
 // SCHOOL CONFIGURATIONS
 // =============================================================================
+
+export interface DataAvailabilityConfig {
+  hasSis?: boolean;
+  hasLms?: boolean;
+  hasAssessment?: boolean;
+  hasBehavior?: boolean;
+  hasSel?: boolean;
+}
 
 export interface SchoolSeedConfig {
   id: string;
@@ -28,6 +41,10 @@ export interface SchoolSeedConfig {
   };
   metrics: SchoolMetrics;
   students: StudentSeedData[];
+  /** Data availability configuration - tracks which integrations are connected */
+  dataAvailability: SchoolDataAvailability;
+  /** Raw config for reference */
+  dataConfig: DataAvailabilityConfig;
 }
 
 export interface SchoolMetrics {
@@ -407,7 +424,8 @@ function generateStudent(
   rng: SeededRandom,
   schoolId: string,
   gradeLevels: number[],
-  index: number
+  index: number,
+  dataConfig: DataAvailabilityConfig = { hasSis: true, hasLms: true, hasAssessment: true }
 ): StudentSeedData {
   const firstName = rng.pick(FIRST_NAMES);
   const lastName = rng.pick(LAST_NAMES);
@@ -472,10 +490,17 @@ function generateStudent(
     has504Plan,
     isEnglishLearner: isEll,
     homeroomTeacher: rng.pick(TEACHERS),
-    reading: readingScores,
-    math: mathScores,
-    purposeDriven: generatePurposeDrivenMetrics(rng, readingScores, mathScores, riskLevel, hasIep),
-    lms: generateLmsEngagementData(rng, riskLevel, proficiency),
+    // Assessment data - only if connected
+    reading: dataConfig.hasAssessment !== false ? readingScores : undefined as unknown as AssessmentScores,
+    math: dataConfig.hasAssessment !== false ? mathScores : undefined as unknown as AssessmentScores,
+    // Purpose-driven metrics - only if assessments connected
+    purposeDriven: dataConfig.hasAssessment !== false
+      ? generatePurposeDrivenMetrics(rng, readingScores, mathScores, riskLevel, hasIep)
+      : undefined,
+    // LMS data - only if connected
+    lms: dataConfig.hasLms !== false
+      ? generateLmsEngagementData(rng, riskLevel, proficiency)
+      : undefined,
   };
 }
 
@@ -487,14 +512,19 @@ export function generateSchoolSeed(
   gradeLevels: number[],
   colors: { primary: string; secondary: string; accent: string },
   subscriptionTier: 'starter' | 'pro' | 'enterprise' = 'pro',
-  seed: number = 42
+  seed: number = 42,
+  dataConfig: DataAvailabilityConfig = { hasSis: true, hasLms: true, hasAssessment: true }
 ): SchoolSeedConfig {
   const rng = new SeededRandom(seed);
   const students: StudentSeedData[] = [];
 
+  // Generate students with data based on availability
   for (let i = 0; i < studentCount; i++) {
-    students.push(generateStudent(rng, schoolId, gradeLevels, i));
+    students.push(generateStudent(rng, schoolId, gradeLevels, i, dataConfig));
   }
+
+  // Create data availability object
+  const dataAvailability = createMockDataAvailability(schoolId, dataConfig);
 
   // Calculate metrics
   const totalEnrollment = students.length;
@@ -524,6 +554,8 @@ export function generateSchoolSeed(
       riskDistribution: { onTrack, atRisk, critical },
     },
     students,
+    dataAvailability,
+    dataConfig,
   };
 }
 
@@ -532,7 +564,7 @@ export function generateSchoolSeed(
 // =============================================================================
 
 export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
-  // Enterprise tier - full access to all features including network view
+  // Enterprise tier - COMPREHENSIVE: all data sources connected
   'academy-tomorrow': generateSchoolSeed(
     'sch_academy_tomorrow_001',
     'Academy of Tomorrow Charter',
@@ -541,9 +573,10 @@ export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
     [6, 7, 8],
     { primary: '#6366f1', secondary: '#06b6d4', accent: '#10b981' },
     'enterprise',
-    12345
+    12345,
+    { hasSis: true, hasLms: true, hasAssessment: true, hasBehavior: true, hasSel: true }
   ),
-  // Starter tier - basic compliance features only (demo feature gating)
+  // Starter tier - BASIC: SIS only, no LMS or assessments (new school onboarding)
   'innovation-prep': generateSchoolSeed(
     'sch_innovation_prep_002',
     'Innovation Prep Academy',
@@ -552,9 +585,10 @@ export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
     [9, 10, 11, 12],
     { primary: '#8b5cf6', secondary: '#06b6d4', accent: '#10b981' },
     'starter',
-    67890
+    67890,
+    { hasSis: true, hasLms: false, hasAssessment: false } // Basic: SIS only
   ),
-  // Professional tier - Student 360, Intervention Hub, AI features
+  // Professional tier - STANDARD: SIS + Assessments, no LMS yet
   'stem-scholars': generateSchoolSeed(
     'sch_stem_scholars_003',
     'STEM Scholars Charter',
@@ -563,9 +597,10 @@ export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
     [6, 7, 8, 9, 10, 11, 12],
     { primary: '#0ea5e9', secondary: '#10b981', accent: '#f59e0b' },
     'pro',
-    11111
+    11111,
+    { hasSis: true, hasLms: false, hasAssessment: true } // Standard: SIS + Assessments
   ),
-  // Professional tier - Demo school
+  // Professional tier - STANDARD: SIS + LMS, no assessments yet
   'academy-charter': generateSchoolSeed(
     'sch_academy_charter_demo',
     'Academy Charter School',
@@ -574,7 +609,8 @@ export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
     [6, 7, 8],
     { primary: '#6366f1', secondary: '#06b6d4', accent: '#10b981' },
     'pro',
-    42424
+    42424,
+    { hasSis: true, hasLms: true, hasAssessment: false } // Standard: SIS + LMS
   ),
 };
 
@@ -608,10 +644,10 @@ export function toStudent360Data(student: StudentSeedData): Student360Data {
     daysAbsent: student.daysAbsent,
     daysPresent: student.daysPresent,
     isChronicallyAbsent: student.isChronicallyAbsent,
-    readingPercentile: student.reading.nationalPercentile,
-    mathPercentile: student.math.nationalPercentile,
-    readingGrowthPercentile: student.reading.growthPercentile,
-    mathGrowthPercentile: student.math.growthPercentile,
+    readingPercentile: student.reading?.nationalPercentile,
+    mathPercentile: student.math?.nationalPercentile,
+    readingGrowthPercentile: student.reading?.growthPercentile,
+    mathGrowthPercentile: student.math?.growthPercentile,
     growthTier: student.growthPercentile >= 60 ? 'on_track' :
                 student.growthPercentile >= 40 ? 'at_risk' : 'critical',
     // LMS Engagement data

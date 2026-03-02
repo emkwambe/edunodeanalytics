@@ -6,12 +6,31 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/avatar';
 import { StatusIndicator, StatusBadge, type StatusLevel } from './status-indicator';
+import {
+  type SchoolDataAvailability,
+  type StudentInsight,
+  type DataSourceType,
+  generateStudentInsights,
+  getMissingDataSources,
+  hasMinimumViableData,
+  createMockDataAvailability,
+} from '@/lib/data/data-availability';
+
+// Re-export data availability types for consumers
+export type { SchoolDataAvailability, StudentInsight, DataSourceType };
+export { createMockDataAvailability, generateStudentInsights, hasMinimumViableData };
 
 /**
  * Student 360 Card Component
  *
  * Holistic view of a single student merging SEL, Behavior, and Academic data
  * Designed with RLS in mind - teachers only see their own roster
+ *
+ * Adaptive Design:
+ * - Shows available metrics with clear labels
+ * - Indicates "Not connected" vs "No data" states
+ * - Provides actionable insights from whatever data exists
+ * - Minimum viable: attendance data alone enables core functionality
  */
 
 export interface Student360Data {
@@ -62,6 +81,86 @@ interface Student360CardProps {
   variant?: 'default' | 'compact' | 'expanded';
   onClick?: (student: Student360Data) => void;
   className?: string;
+  /** Data availability for the school - enables adaptive display */
+  dataAvailability?: SchoolDataAvailability;
+  /** Show top insight from available data */
+  showInsight?: boolean;
+}
+
+/**
+ * Metric display with "not connected" state
+ */
+function MetricValue({
+  value,
+  suffix,
+  isConnected = true,
+  colorClass = 'text-slate-100',
+}: {
+  value: number | string | undefined;
+  suffix?: string;
+  isConnected?: boolean;
+  colorClass?: string;
+}) {
+  if (!isConnected) {
+    return <span className="text-sm text-slate-600 italic">Not connected</span>;
+  }
+  if (value === undefined || value === null) {
+    return <span className="text-lg font-bold text-slate-500">-</span>;
+  }
+  return (
+    <span className={cn('text-lg font-bold', colorClass)}>
+      {value}
+      {suffix && <span className="text-xs text-slate-400">{suffix}</span>}
+    </span>
+  );
+}
+
+/**
+ * Data source indicator badge
+ */
+function DataSourceBadge({
+  connected,
+  name
+}: {
+  connected: boolean;
+  name: string;
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px]',
+        connected
+          ? 'bg-emerald-500/10 text-emerald-400'
+          : 'bg-slate-700/50 text-slate-500'
+      )}
+    >
+      <span className={cn(
+        'w-1.5 h-1.5 rounded-full',
+        connected ? 'bg-emerald-400' : 'bg-slate-600'
+      )} />
+      {name}
+    </span>
+  );
+}
+
+/**
+ * Insight badge for quick visibility
+ */
+function InsightBadge({ insight }: { insight: StudentInsight }) {
+  const colorMap = {
+    high: 'bg-red-500/10 text-red-400 border-red-500/20',
+    medium: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    low: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  };
+
+  return (
+    <div className={cn(
+      'text-xs px-2 py-1 rounded border',
+      colorMap[insight.priority]
+    )}>
+      {insight.title}
+    </div>
+  );
 }
 
 export function Student360Card({
@@ -69,10 +168,26 @@ export function Student360Card({
   variant = 'default',
   onClick,
   className,
+  dataAvailability,
+  showInsight = false,
 }: Student360CardProps) {
   const handleClick = () => {
     if (onClick) onClick(student);
   };
+
+  // Determine what data sources are connected
+  const hasLms = dataAvailability
+    ? dataAvailability.sources.some(s => s.type === 'lms' && s.connected)
+    : student.assignmentCompletionRate !== undefined || student.courseGPA !== undefined;
+  const hasAssessment = dataAvailability
+    ? dataAvailability.sources.some(s => s.type === 'assessment' && s.connected)
+    : student.readingPercentile !== undefined || student.mathPercentile !== undefined;
+
+  // Generate insights if requested
+  const insights = showInsight && dataAvailability
+    ? generateStudentInsights(student, dataAvailability)
+    : [];
+  const topInsight = insights[0];
 
   // Compact variant for list views
   if (variant === 'compact') {
@@ -151,9 +266,14 @@ export function Student360Card({
           </div>
         )}
 
-        {/* Metrics Grid */}
+        {/* Top Insight (if enabled) */}
+        {topInsight && (
+          <InsightBadge insight={topInsight} />
+        )}
+
+        {/* Metrics Grid - Adaptive based on available data */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Attendance */}
+          {/* Attendance - Always shown (core metric) */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-500">Attendance</span>
@@ -172,23 +292,26 @@ export function Student360Card({
             </div>
           </div>
 
-          {/* Engagement (LMS) */}
+          {/* Engagement (LMS) - Shows connection status */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-500">Engagement</span>
-              {student.engagementTier && (
+              {hasLms && student.engagementTier && (
                 <StatusIndicator status={student.engagementTier} size="sm" />
               )}
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-lg font-bold text-slate-100">
-                {student.assignmentCompletionRate !== undefined
+              <MetricValue
+                value={student.assignmentCompletionRate !== undefined
                   ? formatPercent(student.assignmentCompletionRate)
-                  : '-'}
-              </span>
+                  : undefined}
+                isConnected={hasLms}
+              />
             </div>
             <div className="text-[10px] text-slate-500">
-              {student.missingAssignments !== undefined && student.missingAssignments > 0 ? (
+              {!hasLms ? (
+                <span className="text-slate-600">Connect LMS</span>
+              ) : student.missingAssignments !== undefined && student.missingAssignments > 0 ? (
                 <span className="text-amber-400">{student.missingAssignments} missing</span>
               ) : (
                 'Assignment rate'
@@ -196,71 +319,77 @@ export function Student360Card({
             </div>
           </div>
 
-          {/* Growth */}
+          {/* Growth - Shows connection status */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-500">Growth</span>
-              <StatusIndicator status={student.growthTier} size="sm" />
+              {hasAssessment && <StatusIndicator status={student.growthTier} size="sm" />}
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-lg font-bold text-slate-100">
-                {student.readingGrowthPercentile ?? student.mathGrowthPercentile ?? '-'}
-                {(student.readingGrowthPercentile || student.mathGrowthPercentile) && (
-                  <span className="text-xs text-slate-400">%ile</span>
-                )}
-              </span>
+              <MetricValue
+                value={student.readingGrowthPercentile ?? student.mathGrowthPercentile}
+                suffix={(student.readingGrowthPercentile || student.mathGrowthPercentile) ? '%ile' : undefined}
+                isConnected={hasAssessment}
+              />
             </div>
             <div className="text-[10px] text-slate-500">
-              Composite SGP
+              {hasAssessment ? 'Composite SGP' : <span className="text-slate-600">Connect assessments</span>}
             </div>
           </div>
 
-          {/* GPA */}
+          {/* GPA - Shows connection status */}
           <div className="space-y-1">
             <span className="text-xs text-slate-500">Course GPA</span>
             <div className="flex items-baseline gap-1">
-              <span className={cn(
-                'text-lg font-bold',
-                student.courseGPA !== undefined
+              <MetricValue
+                value={student.courseGPA !== undefined ? student.courseGPA.toFixed(2) : undefined}
+                isConnected={hasLms}
+                colorClass={student.courseGPA !== undefined
                   ? student.courseGPA >= 3.0 ? 'text-emerald-400'
                     : student.courseGPA >= 2.0 ? 'text-amber-400'
                     : 'text-red-400'
-                  : 'text-slate-400'
-              )}>
-                {student.courseGPA !== undefined ? student.courseGPA.toFixed(2) : '-'}
-              </span>
+                  : 'text-slate-100'}
+              />
             </div>
-            {student.activeCourses !== undefined && (
+            {hasLms && student.activeCourses !== undefined ? (
               <div className="text-[10px] text-slate-500">
                 {student.activeCourses} courses
               </div>
+            ) : !hasLms && (
+              <div className="text-[10px] text-slate-600">Connect LMS</div>
             )}
           </div>
 
-          {/* Reading */}
+          {/* Reading - Shows connection status */}
           <div className="space-y-1">
             <span className="text-xs text-slate-500">Reading</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-lg font-bold text-cyan-400">
-                {student.readingPercentile ?? '-'}
-                {student.readingPercentile && (
-                  <span className="text-xs text-slate-400">%ile</span>
-                )}
-              </span>
+              <MetricValue
+                value={student.readingPercentile}
+                suffix={student.readingPercentile ? '%ile' : undefined}
+                isConnected={hasAssessment}
+                colorClass="text-cyan-400"
+              />
             </div>
+            {!hasAssessment && (
+              <div className="text-[10px] text-slate-600">Connect NWEA MAP</div>
+            )}
           </div>
 
-          {/* Math */}
+          {/* Math - Shows connection status */}
           <div className="space-y-1">
             <span className="text-xs text-slate-500">Math</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-lg font-bold text-emerald-400">
-                {student.mathPercentile ?? '-'}
-                {student.mathPercentile && (
-                  <span className="text-xs text-slate-400">%ile</span>
-                )}
-              </span>
+              <MetricValue
+                value={student.mathPercentile}
+                suffix={student.mathPercentile ? '%ile' : undefined}
+                isConnected={hasAssessment}
+                colorClass="text-emerald-400"
+              />
             </div>
+            {!hasAssessment && (
+              <div className="text-[10px] text-slate-600">Connect NWEA MAP</div>
+            )}
           </div>
         </div>
 
@@ -283,6 +412,67 @@ export function Student360Card({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Data Completeness Indicator
+ * Shows which data sources are connected for the school
+ */
+export function DataCompletenessIndicator({
+  availability,
+  compact = false,
+}: {
+  availability: SchoolDataAvailability;
+  compact?: boolean;
+}) {
+  const connectedCount = availability.sources.filter(s => s.connected).length;
+  const totalCount = availability.sources.length;
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2 text-xs">
+        <div className="flex gap-0.5">
+          {availability.sources.map((source, i) => (
+            <div
+              key={i}
+              className={cn(
+                'w-2 h-2 rounded-full',
+                source.connected ? 'bg-emerald-400' : 'bg-slate-600'
+              )}
+              title={`${source.name}: ${source.connected ? 'Connected' : 'Not connected'}`}
+            />
+          ))}
+        </div>
+        <span className="text-slate-500">{connectedCount}/{totalCount} sources</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-slate-400">Data Sources</span>
+        <span className="text-xs text-slate-500">
+          {availability.completenessScore}% complete
+        </span>
+      </div>
+      <div className="h-1.5 rounded-full bg-slate-700 overflow-hidden">
+        <div
+          className={cn(
+            'h-full rounded-full transition-all',
+            availability.completenessScore >= 80 ? 'bg-emerald-500' :
+            availability.completenessScore >= 50 ? 'bg-amber-500' : 'bg-red-500'
+          )}
+          style={{ width: `${availability.completenessScore}%` }}
+        />
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {availability.sources.map((source, i) => (
+          <DataSourceBadge key={i} connected={source.connected} name={source.name} />
+        ))}
+      </div>
+    </div>
   );
 }
 
