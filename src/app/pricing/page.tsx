@@ -352,7 +352,7 @@ export default function PricingPage() {
 
                   {/* CTA */}
                   <Link
-                    href={tier.id === 'enterprise' ? '/contact' : '/sign-up'}
+                    href={tier.id === 'enterprise' ? '/contact' : `/checkout?tier=${tier.id}&period=${billingPeriod}`}
                     className={`block w-full text-center py-3 px-4 rounded-lg font-semibold transition ${
                       tier.ctaVariant === 'primary'
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
@@ -480,7 +480,7 @@ export default function PricingPage() {
             Start your 30-day free trial today. No credit card required.
           </p>
           <Link
-            href="/sign-up"
+            href="/checkout?tier=pro&period=annual"
             className="inline-flex items-center gap-2 bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition"
           >
             Get Started Free

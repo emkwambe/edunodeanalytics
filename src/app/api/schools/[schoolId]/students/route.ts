@@ -13,6 +13,7 @@ import {
   createStudent,
   type StudentQueryOptions,
 } from '@/lib/db/queries/students';
+import { checkApiRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit';
 
 interface RouteParams {
   params: Promise<{ schoolId: string }>;
@@ -23,6 +24,12 @@ interface RouteParams {
  * List students for a school with optional filtering, sorting, and pagination
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  // Rate limiting
+  const rateLimitResult = await checkApiRateLimit(request, RATE_LIMITS.standard);
+  if (!rateLimitResult.allowed) {
+    return rateLimitResult.response!;
+  }
+
   try {
     const { schoolId } = await params;
     const searchParams = request.nextUrl.searchParams;
@@ -99,6 +106,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * Create a new student
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
+  // Rate limiting
+  const rateLimitResult = await checkApiRateLimit(request, RATE_LIMITS.standard);
+  if (!rateLimitResult.allowed) {
+    return rateLimitResult.response!;
+  }
+
   try {
     const { schoolId } = await params;
     const body = await request.json();

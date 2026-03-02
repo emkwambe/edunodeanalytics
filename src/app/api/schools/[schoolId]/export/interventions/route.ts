@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getInterventionsBySchool } from '@/lib/db/queries/interventions';
 import { exportInterventionsToCSV } from '@/lib/export';
+import { checkApiRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit';
 
 interface RouteParams {
   params: Promise<{ schoolId: string }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  // Rate limiting for export endpoints (expensive operations)
+  const rateLimitResult = await checkApiRateLimit(request, RATE_LIMITS.export);
+  if (!rateLimitResult.allowed) {
+    return rateLimitResult.response!;
+  }
+
   try {
     const { schoolId } = await params;
     const searchParams = request.nextUrl.searchParams;

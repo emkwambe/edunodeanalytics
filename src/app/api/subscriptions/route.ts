@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import Stripe from 'stripe';
+import { checkApiRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit';
 
 // Initialize Stripe (will use env var in production)
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -54,6 +55,12 @@ export interface SubscriptionResponse {
  * Retrieve the current subscription for the authenticated school
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting for billing endpoints
+  const rateLimitResult = await checkApiRateLimit(request, RATE_LIMITS.billing);
+  if (!rateLimitResult.allowed) {
+    return rateLimitResult.response!;
+  }
+
   try {
     const { userId } = await auth();
 
@@ -125,6 +132,12 @@ function calculateMonthlyAmount(
  * Create a new Stripe Checkout session for subscription
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting for billing endpoints
+  const rateLimitResult = await checkApiRateLimit(request, RATE_LIMITS.billing);
+  if (!rateLimitResult.allowed) {
+    return rateLimitResult.response!;
+  }
+
   try {
     const { userId } = await auth();
 
@@ -211,6 +224,12 @@ export async function POST(request: NextRequest) {
  * Update subscription (upgrade/downgrade plan)
  */
 export async function PATCH(request: NextRequest) {
+  // Rate limiting for billing endpoints
+  const rateLimitResult = await checkApiRateLimit(request, RATE_LIMITS.billing);
+  if (!rateLimitResult.allowed) {
+    return rateLimitResult.response!;
+  }
+
   try {
     const { userId } = await auth();
 
@@ -308,6 +327,12 @@ export async function PATCH(request: NextRequest) {
  * Cancel subscription (at period end)
  */
 export async function DELETE(request: NextRequest) {
+  // Rate limiting for billing endpoints
+  const rateLimitResult = await checkApiRateLimit(request, RATE_LIMITS.billing);
+  if (!rateLimitResult.allowed) {
+    return rateLimitResult.response!;
+  }
+
   try {
     const { userId } = await auth();
 
