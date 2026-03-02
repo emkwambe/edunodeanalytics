@@ -42,8 +42,8 @@ CREATE TABLE IF NOT EXISTS scheduled_reports (
 );
 
 -- Indexes for scheduled_reports
-CREATE INDEX idx_scheduled_reports_school ON scheduled_reports(school_id);
-CREATE INDEX idx_scheduled_reports_next_run ON scheduled_reports(next_run_at) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_scheduled_reports_school ON scheduled_reports(school_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_reports_next_run ON scheduled_reports(next_run_at) WHERE is_active = true;
 
 -- ============================================
 -- Generated Reports Table (History)
@@ -81,9 +81,9 @@ CREATE TABLE IF NOT EXISTS generated_reports (
 );
 
 -- Indexes for generated_reports
-CREATE INDEX idx_generated_reports_school ON generated_reports(school_id);
-CREATE INDEX idx_generated_reports_type ON generated_reports(report_type);
-CREATE INDEX idx_generated_reports_generated_at ON generated_reports(generated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_generated_reports_school ON generated_reports(school_id);
+CREATE INDEX IF NOT EXISTS idx_generated_reports_type ON generated_reports(report_type);
+CREATE INDEX IF NOT EXISTS idx_generated_reports_generated_at ON generated_reports(generated_at DESC);
 
 -- ============================================
 -- AI Usage Tracking Table
@@ -122,13 +122,13 @@ CREATE TABLE IF NOT EXISTS ai_usage (
 );
 
 -- Indexes for ai_usage
-CREATE INDEX idx_ai_usage_school ON ai_usage(school_id);
-CREATE INDEX idx_ai_usage_provider ON ai_usage(provider);
-CREATE INDEX idx_ai_usage_feature ON ai_usage(feature);
-CREATE INDEX idx_ai_usage_created_at ON ai_usage(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_school ON ai_usage(school_id);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_provider ON ai_usage(provider);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_feature ON ai_usage(feature);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_created_at ON ai_usage(created_at DESC);
 -- Note: For monthly aggregation queries, use a covering index on school_id + created_at
 -- date_trunc cannot be used in index expressions as it's not IMMUTABLE
-CREATE INDEX idx_ai_usage_school_created ON ai_usage(school_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_school_created ON ai_usage(school_id, created_at);
 
 -- ============================================
 -- AI Usage Limits Table
@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS ai_usage_limits (
     -- Current month usage (reset monthly via cron)
     current_month_tokens INTEGER NOT NULL DEFAULT 0,
     current_month_cost_cents INTEGER NOT NULL DEFAULT 0,
-    period_start TIMESTAMPTZ NOT NULL DEFAULT date_trunc('month', now()),
+    period_start TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     -- Alerts
     alert_threshold_percent INTEGER DEFAULT 80,
