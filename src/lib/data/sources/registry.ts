@@ -15,7 +15,7 @@
 
 export type DataSourceCategory = 'sis' | 'assessment' | 'lms' | 'behavior' | 'finance';
 
-export type SyncStatus = 'connected' | 'syncing' | 'error' | 'disconnected' | 'pending_auth';
+export type SyncStatus = 'connected' | 'syncing' | 'error' | 'disconnected' | 'pending_auth' | 'pending' | 'failed';
 
 export type SyncFrequency = 'realtime' | 'hourly' | 'daily' | 'weekly' | 'manual';
 

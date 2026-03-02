@@ -71,6 +71,8 @@ const STATUS_CONFIG: Record<SyncStatus, { color: string; icon: React.ElementType
   error: { color: 'rose', icon: AlertCircle, label: 'Error' },
   disconnected: { color: 'slate', icon: Unplug, label: 'Not Connected' },
   pending_auth: { color: 'amber', icon: Clock, label: 'Pending Auth' },
+  pending: { color: 'amber', icon: Clock, label: 'Pending' },
+  failed: { color: 'rose', icon: AlertCircle, label: 'Failed' },
 };
 
 interface SourceWithStatus extends DataSourceAdapter {

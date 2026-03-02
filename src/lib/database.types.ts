@@ -1068,6 +1068,85 @@ export interface Database {
         };
         Relationships: [];
       };
+      sync_history: {
+        Row: {
+          id: string;
+          created_at: string;
+          school_id: string;
+          data_source_id: string;
+          sync_type: 'full' | 'incremental' | 'manual';
+          started_at: string;
+          completed_at: string | null;
+          status: 'pending' | 'syncing' | 'completed' | 'failed';
+          error_message: string | null;
+          records_processed: number;
+          records_created: number;
+          records_updated: number;
+          records_deleted: number;
+          records_skipped: number;
+          details: Json;
+          errors: Json;
+          triggered_by: 'cron' | 'manual' | 'webhook' | 'oauth_callback';
+          triggered_by_user_id: string | null;
+          duration_ms: number | null;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          school_id: string;
+          data_source_id: string;
+          sync_type: 'full' | 'incremental' | 'manual';
+          started_at: string;
+          completed_at?: string | null;
+          status?: 'pending' | 'syncing' | 'completed' | 'failed';
+          error_message?: string | null;
+          records_processed?: number;
+          records_created?: number;
+          records_updated?: number;
+          records_deleted?: number;
+          records_skipped?: number;
+          details?: Json;
+          errors?: Json;
+          triggered_by: 'cron' | 'manual' | 'webhook' | 'oauth_callback';
+          triggered_by_user_id?: string | null;
+          duration_ms?: number | null;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          school_id?: string;
+          data_source_id?: string;
+          sync_type?: 'full' | 'incremental' | 'manual';
+          started_at?: string;
+          completed_at?: string | null;
+          status?: 'pending' | 'syncing' | 'completed' | 'failed';
+          error_message?: string | null;
+          records_processed?: number;
+          records_created?: number;
+          records_updated?: number;
+          records_deleted?: number;
+          records_skipped?: number;
+          details?: Json;
+          errors?: Json;
+          triggered_by?: 'cron' | 'manual' | 'webhook' | 'oauth_callback';
+          triggered_by_user_id?: string | null;
+          duration_ms?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'sync_history_school_id_fkey';
+            columns: ['school_id'];
+            referencedRelation: 'schools';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'sync_history_data_source_id_fkey';
+            columns: ['data_source_id'];
+            referencedRelation: 'data_sources';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1149,3 +1228,7 @@ export type PaymentUpdate = Database['public']['Tables']['payments']['Update'];
 export type WebhookEvent = Database['public']['Tables']['webhook_events']['Row'];
 export type WebhookEventInsert = Database['public']['Tables']['webhook_events']['Insert'];
 export type WebhookEventUpdate = Database['public']['Tables']['webhook_events']['Update'];
+
+export type SyncHistory = Database['public']['Tables']['sync_history']['Row'];
+export type SyncHistoryInsert = Database['public']['Tables']['sync_history']['Insert'];
+export type SyncHistoryUpdate = Database['public']['Tables']['sync_history']['Update'];
