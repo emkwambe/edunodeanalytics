@@ -30,6 +30,32 @@ export default function HomePage() {
               <span className="font-semibold text-slate-100">EduNode Analytics</span>
             </div>
 
+            <nav className="hidden md:flex items-center gap-6">
+              <Link
+                href="/security"
+                className="text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                Security
+              </Link>
+              <Link
+                href="/integrations"
+                className="text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                Integrations
+              </Link>
+              <Link
+                href="/case-studies"
+                className="text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                Case Studies
+              </Link>
+              <Link
+                href="/pricing"
+                className="text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                Pricing
+              </Link>
+            </nav>
             <div className="flex items-center gap-4">
               <Link
                 href="/sign-in"
@@ -208,14 +234,23 @@ export default function HomePage() {
             </span>
           </div>
           <div className="flex items-center gap-6 text-sm text-slate-500">
-            <Link href="/privacy" className="hover:text-slate-300">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-slate-300">
-              Terms of Service
-            </Link>
             <Link href="/security" className="hover:text-slate-300">
               Security
+            </Link>
+            <Link href="/integrations" className="hover:text-slate-300">
+              Integrations
+            </Link>
+            <Link href="/case-studies" className="hover:text-slate-300">
+              Case Studies
+            </Link>
+            <Link href="/pricing" className="hover:text-slate-300">
+              Pricing
+            </Link>
+            <Link href="/privacy" className="hover:text-slate-300">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-slate-300">
+              Terms
             </Link>
           </div>
         </div>
