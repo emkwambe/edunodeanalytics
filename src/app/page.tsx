@@ -239,6 +239,8 @@ export default function HomePage() {
               <h4 className="text-sm font-semibold text-slate-300 mb-4">Resources</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link href="/case-studies" className="text-slate-500 hover:text-slate-300">Case Studies</Link></li>
+                <li><Link href="/testimonials" className="text-slate-500 hover:text-slate-300">Testimonials</Link></li>
+                <li><Link href="/faq" className="text-slate-500 hover:text-slate-300">FAQ</Link></li>
                 <li><Link href="/contact" className="text-slate-500 hover:text-slate-300">Contact</Link></li>
               </ul>
             </div>
@@ -255,8 +257,10 @@ export default function HomePage() {
             <div>
               <h4 className="text-sm font-semibold text-slate-300 mb-4">Company</h4>
               <ul className="space-y-2 text-sm">
+                <li><Link href="/about" className="text-slate-500 hover:text-slate-300">About Us</Link></li>
+                <li><Link href="/partners" className="text-slate-500 hover:text-slate-300">Partners</Link></li>
+                <li><Link href="/demo" className="text-slate-500 hover:text-slate-300">Request Demo</Link></li>
                 <li><Link href="/sign-in" className="text-slate-500 hover:text-slate-300">Sign In</Link></li>
-                <li><Link href="/sign-up" className="text-slate-500 hover:text-slate-300">Get Started</Link></li>
               </ul>
             </div>
           </div>
