@@ -400,8 +400,9 @@ export class ReportGenerator {
 
     // Calculate summary stats
     const totalStudents = students?.length || 0;
-    const avgGrowth =
-      students?.reduce((sum, s) => sum + (s.growth_percentile || 50), 0) / totalStudents || 0;
+    const avgGrowth = totalStudents > 0
+      ? (students?.reduce((sum, s) => sum + (s.growth_percentile || 50), 0) ?? 0) / totalStudents
+      : 0;
 
     return {
       metadata: {
@@ -552,7 +553,7 @@ export class ReportGenerator {
         {
           title: 'Recent Interventions',
           data: interventions?.slice(0, 10).map((i) => ({
-            type: i.intervention_type,
+            type: i.type,
             status: i.status,
             priority: i.priority,
             createdAt: i.created_at,

@@ -62,17 +62,17 @@ export async function GET(request: NextRequest) {
       .from('interventions')
       .select(`
         id,
-        intervention_type,
+        type,
         updated_at,
         student_id,
-        owner_id,
+        assigned_to_user_id,
         students!inner (
           first_name,
           last_name,
           school_id
         )
       `)
-      .eq('status', 'active')
+      .eq('status', 'in_progress')
       .lt('updated_at', staleDate.toISOString())
       .order('updated_at', { ascending: true });
 
@@ -119,8 +119,8 @@ export async function GET(request: NextRequest) {
         school_id: string;
       };
       schoolIds.add(student.school_id);
-      if (intervention.owner_id) {
-        ownerIds.add(intervention.owner_id);
+      if (intervention.assigned_to_user_id) {
+        ownerIds.add(intervention.assigned_to_user_id);
       }
     }
 
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
         school_id: string;
       };
 
-      const ownerId = intervention.owner_id;
+      const ownerId = intervention.assigned_to_user_id;
       if (!ownerId) continue;
 
       const owner = userMap.get(ownerId);
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
       const ownerData = interventionsByOwner.get(ownerId)!;
       ownerData.interventions.push({
         studentName: `${student.first_name} ${student.last_name}`,
-        interventionType: intervention.intervention_type,
+        interventionType: intervention.type,
         daysSinceUpdate,
       });
     }
@@ -208,15 +208,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Update intervention status to mark as stale (optional flag)
-    // This allows UI to show "stale" badge without changing workflow
-    const interventionIds = staleInterventions.map(i => i.id);
-    if (interventionIds.length > 0) {
-      await supabase
-        .from('interventions')
-        .update({ is_stale: true })
-        .in('id', interventionIds);
-    }
+    // Note: is_stale column not yet in schema, skipping update for now
+    // When column is added, can mark interventions with:
+    // await supabase.from('interventions').update({ is_stale: true }).in('id', interventionIds);
 
     const alertResults = {
       job: 'stale-interventions',

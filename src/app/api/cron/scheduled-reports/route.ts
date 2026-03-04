@@ -48,7 +48,9 @@ export async function GET(request: NextRequest) {
     const now = new Date();
 
     // Find reports due for generation
-    const { data: dueReports, error: fetchError } = await supabase
+    // Note: scheduled_reports table may not exist in all environments
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: dueReports, error: fetchError } = await (supabase as any)
       .from('scheduled_reports')
       .select(`
         id,
@@ -118,7 +120,8 @@ export async function GET(request: NextRequest) {
         stats.reportsGenerated++;
 
         // Store generated report
-        await supabase.from('generated_reports').insert({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('generated_reports').insert({
           school_id: report.school_id,
           scheduled_report_id: report.id,
           report_type: report.report_type,
@@ -169,7 +172,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Update delivery status
-        await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
           .from('generated_reports')
           .update({
             delivery_status: stats.emailsSent > 0 ? 'sent' : 'failed',
@@ -181,7 +185,8 @@ export async function GET(request: NextRequest) {
         const nextRunAt = calculateNextRun(report.frequency, now);
 
         // Update scheduled report
-        await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
           .from('scheduled_reports')
           .update({
             last_run_at: now.toISOString(),
@@ -196,7 +201,8 @@ export async function GET(request: NextRequest) {
         captureException(reportError, { reportId: report.id });
 
         // Update with error
-        await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
           .from('scheduled_reports')
           .update({
             last_run_at: now.toISOString(),

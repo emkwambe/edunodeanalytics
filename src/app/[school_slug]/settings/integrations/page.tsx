@@ -11,12 +11,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
-  DataSourceRegistry,
+  ClientDataSourceRegistry,
   DATA_SOURCE_CATEGORIES,
-  type DataSourceAdapter,
+  type DataSourceMeta,
   type DataSourceCategory,
   type SyncStatus,
-} from '@/lib/data/sources';
+} from '@/lib/data/sources/client';
 import { getSchoolSeed } from '@/lib/data/seed-data';
 import { hasFeatureAccess } from '@/lib/features/feature-gates';
 import {
@@ -75,7 +75,7 @@ const STATUS_CONFIG: Record<SyncStatus, { color: string; icon: React.ElementType
   failed: { color: 'rose', icon: AlertCircle, label: 'Failed' },
 };
 
-interface SourceWithStatus extends DataSourceAdapter {
+interface SourceWithStatus extends DataSourceMeta {
   connectionStatus: SyncStatus;
   lastSyncAt: Date | null;
   recordCount: number;
@@ -95,7 +95,7 @@ export default function IntegrationsPage() {
 
   // Get all sources with mock status data
   const sources: SourceWithStatus[] = React.useMemo(() => {
-    const adapters = DataSourceRegistry.getAll();
+    const adapters = ClientDataSourceRegistry.getAll();
 
     return adapters.map((adapter) => {
       // Check if this source is available for the current tier

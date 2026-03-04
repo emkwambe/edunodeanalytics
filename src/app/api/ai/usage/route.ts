@@ -54,7 +54,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch usage data from database
-    const { data: usageData, error: usageError } = await supabase
+    // Note: ai_usage table may not exist yet in all environments
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: usageData, error: usageError } = await (supabase as any)
       .from('ai_usage')
       .select('*')
       .eq('school_id', schoolId)
@@ -92,22 +94,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate summary statistics
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const usageArray = (usageData || []) as any[];
     const summary = {
-      totalRequests: usageData?.length || 0,
-      totalTokens: usageData?.reduce((sum, u) => sum + (u.input_tokens + u.output_tokens), 0) || 0,
-      totalCost: (usageData?.reduce((sum, u) => sum + u.cost_cents, 0) || 0) / 100, // Convert to dollars
-      avgLatency: usageData?.length
-        ? Math.round(usageData.reduce((sum, u) => sum + (u.latency_ms || 0), 0) / usageData.length)
+      totalRequests: usageArray.length,
+      totalTokens: usageArray.reduce((sum: number, u: any) => sum + (u.input_tokens + u.output_tokens), 0),
+      totalCost: usageArray.reduce((sum: number, u: any) => sum + u.cost_cents, 0) / 100, // Convert to dollars
+      avgLatency: usageArray.length
+        ? Math.round(usageArray.reduce((sum: number, u: any) => sum + (u.latency_ms || 0), 0) / usageArray.length)
         : 0,
-      successRate: usageData?.length
-        ? usageData.filter((u) => u.success).length / usageData.length
+      successRate: usageArray.length
+        ? usageArray.filter((u: any) => u.success).length / usageArray.length
         : 1,
     };
 
     // Group by provider
     const byProvider = Object.entries(
-      usageData?.reduce(
-        (acc, u) => {
+      usageArray.reduce(
+        (acc: Record<string, { requests: number; tokens: number; cost: number }>, u: any) => {
           if (!acc[u.provider]) {
             acc[u.provider] = { requests: 0, tokens: 0, cost: 0 };
           }
@@ -117,13 +121,13 @@ export async function GET(request: NextRequest) {
           return acc;
         },
         {} as Record<string, { requests: number; tokens: number; cost: number }>
-      ) || {}
+      )
     ).map(([provider, stats]) => ({ provider, ...stats }));
 
     // Group by feature
     const byFeature = Object.entries(
-      usageData?.reduce(
-        (acc, u) => {
+      usageArray.reduce(
+        (acc: Record<string, { requests: number; tokens: number; cost: number }>, u: any) => {
           if (!acc[u.feature]) {
             acc[u.feature] = { requests: 0, tokens: 0, cost: 0 };
           }
@@ -133,11 +137,12 @@ export async function GET(request: NextRequest) {
           return acc;
         },
         {} as Record<string, { requests: number; tokens: number; cost: number }>
-      ) || {}
+      )
     ).map(([feature, stats]) => ({ feature, ...stats }));
 
     // Get usage limits
-    const { data: limits } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: limits } = await (supabase as any)
       .from('ai_usage_limits')
       .select('*')
       .eq('school_id', schoolId)
@@ -162,17 +167,20 @@ export async function GET(request: NextRequest) {
         prevEndDate = startDate;
     }
 
-    const { data: prevUsageData } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: prevUsageData } = await (supabase as any)
       .from('ai_usage')
       .select('input_tokens, output_tokens, cost_cents')
       .eq('school_id', schoolId)
       .gte('created_at', prevStartDate.toISOString())
       .lt('created_at', prevEndDate.toISOString());
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prevArray = (prevUsageData || []) as any[];
     const previousPeriod = {
-      totalRequests: prevUsageData?.length || 0,
-      totalTokens: prevUsageData?.reduce((sum, u) => sum + (u.input_tokens + u.output_tokens), 0) || 0,
-      totalCost: (prevUsageData?.reduce((sum, u) => sum + u.cost_cents, 0) || 0) / 100,
+      totalRequests: prevArray.length,
+      totalTokens: prevArray.reduce((sum: number, u: any) => sum + (u.input_tokens + u.output_tokens), 0),
+      totalCost: prevArray.reduce((sum: number, u: any) => sum + u.cost_cents, 0) / 100,
     };
 
     return NextResponse.json({

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
-  Handshake,
+  Users,
   BookOpen,
   Laptop,
   Building2,
@@ -115,7 +115,7 @@ export default function PartnersPage() {
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-sm mb-6">
-            <Handshake className="w-4 h-4" />
+            <Users className="w-4 h-4" />
             <span>Partner Program</span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-slate-100 mb-6">

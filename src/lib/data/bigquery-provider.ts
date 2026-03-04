@@ -68,7 +68,7 @@ async function initBigQueryClient(): Promise<unknown | null> {
 
   try {
     // Dynamic import to prevent bundler errors when package isn't installed
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // @ts-expect-error - Package may not be installed, handled by catch
     const { BigQuery } = await import('@google-cloud/bigquery').catch(() => ({ BigQuery: null }));
 
     if (!BigQuery) {

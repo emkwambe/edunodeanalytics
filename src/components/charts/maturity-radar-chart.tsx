@@ -105,7 +105,7 @@ export function MaturityRadarChart({
         pointLabels: {
           font: {
             size: 12,
-            weight: '500',
+            weight: 500,
           },
           color: '#475569',
         },
