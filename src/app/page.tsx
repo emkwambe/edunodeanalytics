@@ -230,6 +230,8 @@ export default function HomePage() {
               <h4 className="text-sm font-semibold text-slate-300 mb-4">Product</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link href="/pricing" className="text-slate-500 hover:text-slate-300">Pricing</Link></li>
+                <li><Link href="/compare-plans" className="text-slate-500 hover:text-slate-300">Compare Plans</Link></li>
+                <li><Link href="/roi-calculator" className="text-slate-500 hover:text-slate-300">ROI Calculator</Link></li>
                 <li><Link href="/integrations" className="text-slate-500 hover:text-slate-300">Integrations</Link></li>
                 <li><Link href="/data-blueprint" className="text-slate-500 hover:text-slate-300">Data Blueprint</Link></li>
                 <li><Link href="/security" className="text-slate-500 hover:text-slate-300">Security</Link></li>
@@ -238,9 +240,12 @@ export default function HomePage() {
             <div>
               <h4 className="text-sm font-semibold text-slate-300 mb-4">Resources</h4>
               <ul className="space-y-2 text-sm">
+                <li><Link href="/docs" className="text-slate-500 hover:text-slate-300">Documentation</Link></li>
                 <li><Link href="/case-studies" className="text-slate-500 hover:text-slate-300">Case Studies</Link></li>
                 <li><Link href="/testimonials" className="text-slate-500 hover:text-slate-300">Testimonials</Link></li>
                 <li><Link href="/faq" className="text-slate-500 hover:text-slate-300">FAQ</Link></li>
+                <li><Link href="/changelog" className="text-slate-500 hover:text-slate-300">Changelog</Link></li>
+                <li><Link href="/status" className="text-slate-500 hover:text-slate-300">Status</Link></li>
                 <li><Link href="/contact" className="text-slate-500 hover:text-slate-300">Contact</Link></li>
               </ul>
             </div>

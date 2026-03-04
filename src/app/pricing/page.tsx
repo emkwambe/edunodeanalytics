@@ -278,9 +278,18 @@ export default function PricingPage() {
           <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">
             Simple, transparent pricing
           </h1>
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-6">
             Choose the plan that fits your school&apos;s needs. All plans include a 30-day free trial.
           </p>
+          <div className="flex items-center justify-center gap-4 text-sm mb-2">
+            <Link href="/compare-plans" className="text-blue-600 hover:underline">
+              Compare features in detail
+            </Link>
+            <span className="text-slate-300">|</span>
+            <Link href="/roi-calculator" className="text-blue-600 hover:underline">
+              Calculate your ROI
+            </Link>
+          </div>
 
           {/* Billing Toggle */}
           <div className="inline-flex items-center gap-3 bg-slate-100 p-1 rounded-lg mb-12">
