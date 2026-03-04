@@ -224,34 +224,51 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded bg-gradient-to-br from-indigo-500 via-cyan-500 to-emerald-500 flex items-center justify-center">
-              <span className="text-white font-bold text-xs">E</span>
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <h4 className="text-sm font-semibold text-slate-300 mb-4">Product</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/pricing" className="text-slate-500 hover:text-slate-300">Pricing</Link></li>
+                <li><Link href="/integrations" className="text-slate-500 hover:text-slate-300">Integrations</Link></li>
+                <li><Link href="/data-blueprint" className="text-slate-500 hover:text-slate-300">Data Blueprint</Link></li>
+                <li><Link href="/security" className="text-slate-500 hover:text-slate-300">Security</Link></li>
+              </ul>
             </div>
-            <span className="text-slate-400 text-sm">
-              EduNode Analytics - Modern Data Stack for Education
-            </span>
+            <div>
+              <h4 className="text-sm font-semibold text-slate-300 mb-4">Resources</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/case-studies" className="text-slate-500 hover:text-slate-300">Case Studies</Link></li>
+                <li><Link href="/contact" className="text-slate-500 hover:text-slate-300">Contact</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-slate-300 mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/terms" className="text-slate-500 hover:text-slate-300">Terms of Service</Link></li>
+                <li><Link href="/privacy" className="text-slate-500 hover:text-slate-300">Privacy Policy</Link></li>
+                <li><Link href="/ferpa" className="text-slate-500 hover:text-slate-300">FERPA Compliance</Link></li>
+                <li><Link href="/cookies" className="text-slate-500 hover:text-slate-300">Cookie Policy</Link></li>
+                <li><Link href="/accessibility" className="text-slate-500 hover:text-slate-300">Accessibility</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-slate-300 mb-4">Company</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/sign-in" className="text-slate-500 hover:text-slate-300">Sign In</Link></li>
+                <li><Link href="/sign-up" className="text-slate-500 hover:text-slate-300">Get Started</Link></li>
+              </ul>
+            </div>
           </div>
-          <div className="flex items-center gap-6 text-sm text-slate-500">
-            <Link href="/security" className="hover:text-slate-300">
-              Security
-            </Link>
-            <Link href="/integrations" className="hover:text-slate-300">
-              Integrations
-            </Link>
-            <Link href="/case-studies" className="hover:text-slate-300">
-              Case Studies
-            </Link>
-            <Link href="/pricing" className="hover:text-slate-300">
-              Pricing
-            </Link>
-            <Link href="/privacy" className="hover:text-slate-300">
-              Privacy
-            </Link>
-            <Link href="/terms" className="hover:text-slate-300">
-              Terms
-            </Link>
+          <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 rounded bg-gradient-to-br from-indigo-500 via-cyan-500 to-emerald-500 flex items-center justify-center">
+                <span className="text-white font-bold text-xs">E</span>
+              </div>
+              <span className="text-slate-400 text-sm">
+                &copy; {new Date().getFullYear()} EduNode Analytics. All rights reserved.
+              </span>
+            </div>
           </div>
         </div>
       </footer>
