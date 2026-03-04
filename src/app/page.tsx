@@ -241,12 +241,13 @@ export default function HomePage() {
               <h4 className="text-sm font-semibold text-slate-300 mb-4">Resources</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link href="/docs" className="text-slate-500 hover:text-slate-300">Documentation</Link></li>
+                <li><Link href="/help" className="text-slate-500 hover:text-slate-300">Help Center</Link></li>
+                <li><Link href="/blog" className="text-slate-500 hover:text-slate-300">Blog</Link></li>
                 <li><Link href="/case-studies" className="text-slate-500 hover:text-slate-300">Case Studies</Link></li>
-                <li><Link href="/testimonials" className="text-slate-500 hover:text-slate-300">Testimonials</Link></li>
                 <li><Link href="/faq" className="text-slate-500 hover:text-slate-300">FAQ</Link></li>
                 <li><Link href="/changelog" className="text-slate-500 hover:text-slate-300">Changelog</Link></li>
                 <li><Link href="/status" className="text-slate-500 hover:text-slate-300">Status</Link></li>
-                <li><Link href="/contact" className="text-slate-500 hover:text-slate-300">Contact</Link></li>
+                <li><Link href="/feedback" className="text-slate-500 hover:text-slate-300">Feedback</Link></li>
               </ul>
             </div>
             <div>
