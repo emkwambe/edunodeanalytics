@@ -2,21 +2,43 @@
  * Student Risk Detection Engine
  * =============================
  *
- * Layer 2: ML-based risk scoring system for early identification
+ * Layer 2: Risk scoring system for early identification
  * of students who may need intervention.
+ *
+ * SPRINT 1B REFACTOR:
+ *   - Config loaded from risk_model_configs table (not constructor args)
+ *   - Evaluations persisted to risk_evaluations table (immutable audit trail)
+ *   - Trajectory computed from risk_evaluations history
+ *   - Level change detection (previous_level, level_changed)
+ *   - Students table still updated for backward compatibility
  *
  * Features:
  * - Multi-factor risk assessment
  * - Weighted scoring algorithm
  * - Trend analysis for risk trajectory
- * - Configurable thresholds per school
+ * - Configurable thresholds per school (from DB)
  * - Explainable risk factors
+ * - Immutable evaluation audit trail
  */
 
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server';
 import type { Student } from '@/lib/database.types';
+import {
+  type RiskModelConfig,
+  type RiskModelConfigRow,
+  type RiskLevel,
+  type Trajectory,
+  type TriggerType,
+  type RiskFactorRecord,
+  type RiskEvaluationInsert,
+  parseConfigRow,
+} from '@/lib/risk-engine/types';
 
-// Risk factor weights (can be customized per school)
+// ============================================================
+// Legacy type aliases (backward compatibility)
+// ============================================================
+
+/** @deprecated Use RiskModelConfig from risk-engine/types instead */
 export interface RiskWeights {
   attendance: number;
   academicPerformance: number;
@@ -39,7 +61,7 @@ export const DEFAULT_RISK_WEIGHTS: RiskWeights = {
   missingAssignments: 0.05,
 };
 
-// Risk level thresholds
+/** @deprecated Use RiskModelConfig.thresholds instead */
 export interface RiskThresholds {
   criticalMin: number;
   atRiskMin: number;
@@ -47,32 +69,39 @@ export interface RiskThresholds {
 }
 
 export const DEFAULT_THRESHOLDS: RiskThresholds = {
-  criticalMin: 0.7,     // 70-100: Critical
-  atRiskMin: 0.4,       // 40-69: At Risk
-  onTrackMin: 0,        // 0-39: On Track
+  criticalMin: 0.7,
+  atRiskMin: 0.4,
+  onTrackMin: 0,
 };
 
-// Risk assessment result
+// ============================================================
+// Risk Assessment Result (enhanced with level tracking)
+// ============================================================
+
 export interface RiskAssessment {
   studentId: string;
-  riskScore: number;           // 0-1 normalized score
-  riskLevel: 'on_track' | 'at_risk' | 'critical';
+  riskScore: number;
+  riskLevel: RiskLevel;
+  previousLevel: RiskLevel | null;
+  levelChanged: boolean;
   factors: RiskFactor[];
-  trajectory: 'improving' | 'stable' | 'declining';
-  confidenceLevel: number;     // 0-1 confidence in assessment
+  trajectory: Trajectory;
+  confidenceLevel: number;
   assessedAt: Date;
   recommendedActions: string[];
+  configId: string;
+  triggerType: TriggerType;
 }
 
 export interface RiskFactor {
   name: string;
-  category: 'attendance' | 'academic' | 'behavior' | 'engagement' | 'other';
+  category: 'attendance' | 'academic' | 'behavior' | 'engagement' | 'assignments' | 'trend' | 'other';
   rawValue: number;
-  normalizedScore: number;     // 0-1 contribution to risk
+  normalizedScore: number;
   weight: number;
   weightedScore: number;
   description: string;
-  trend: 'improving' | 'stable' | 'declining';
+  trend: Trajectory;
 }
 
 export interface TrendData {
@@ -81,31 +110,71 @@ export interface TrendData {
   factors: Record<string, number>;
 }
 
-/**
- * Student Risk Detection Engine
- *
- * Calculates risk scores based on multiple factors and provides
- * actionable insights for intervention planning.
- */
+// ============================================================
+// Risk Detection Engine
+// ============================================================
+
 export class RiskDetectionEngine {
   private schoolId: string;
+  private config: RiskModelConfig | null = null;
+  private triggerType: TriggerType;
+
+  // Legacy fields for backward compat
   private weights: RiskWeights;
   private thresholds: RiskThresholds;
 
   constructor(
     schoolId: string,
     weights: Partial<RiskWeights> = {},
-    thresholds: Partial<RiskThresholds> = {}
+    thresholds: Partial<RiskThresholds> = {},
+    triggerType: TriggerType = 'batch_nightly'
   ) {
     this.schoolId = schoolId;
     this.weights = { ...DEFAULT_RISK_WEIGHTS, ...weights };
     this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
+    this.triggerType = triggerType;
     this.normalizeWeights();
   }
 
   /**
-   * Ensure weights sum to 1.0
+   * Load config from risk_model_configs table.
+   * Must be called before assessStudent/assessAllStudents.
+   * Falls back to legacy defaults if no DB config exists.
    */
+  async loadConfig(): Promise<RiskModelConfig | null> {
+    try {
+      const supabase = createAdminSupabaseClient();
+
+      const { data, error } = await supabase
+        .from('risk_model_configs')
+        .select('*')
+        .eq('school_id', this.schoolId)
+        .eq('is_active', true)
+        .single();
+
+      if (error || !data) {
+        console.log(`[RiskEngine] No active config for school ${this.schoolId}, using defaults`);
+        return null;
+      }
+
+      this.config = parseConfigRow(data as RiskModelConfigRow);
+      return this.config;
+    } catch (err) {
+      console.error('[RiskEngine] Failed to load config:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Get the active config, loading from DB if needed
+   */
+  private async getConfig(): Promise<RiskModelConfig | null> {
+    if (!this.config) {
+      await this.loadConfig();
+    }
+    return this.config;
+  }
+
   private normalizeWeights(): void {
     const sum = Object.values(this.weights).reduce((a, b) => a + b, 0);
     if (sum !== 1.0) {
@@ -119,72 +188,110 @@ export class RiskDetectionEngine {
    * Assess risk for a single student
    */
   async assessStudent(student: Student): Promise<RiskAssessment> {
+    // Ensure config is loaded
+    const config = await this.getConfig();
+
     const factors: RiskFactor[] = [];
 
     // 1. Attendance Factor
-    const attendanceFactor = this.calculateAttendanceFactor(student);
-    factors.push(attendanceFactor);
+    factors.push(this.calculateAttendanceFactor(student));
 
     // 2. Academic Performance Factor
-    const academicFactor = this.calculateAcademicPerformanceFactor(student);
-    factors.push(academicFactor);
+    factors.push(this.calculateAcademicPerformanceFactor(student));
 
     // 3. Academic Growth Factor
-    const growthFactor = this.calculateAcademicGrowthFactor(student);
-    factors.push(growthFactor);
+    factors.push(this.calculateAcademicGrowthFactor(student));
 
     // 4. Chronic Absence Factor
-    const chronicFactor = this.calculateChronicAbsenceFactor(student);
-    factors.push(chronicFactor);
+    factors.push(this.calculateChronicAbsenceFactor(student));
 
-    // 5. Engagement Factor (if available)
-    const engagementFactor = this.calculateEngagementFactor(student);
-    factors.push(engagementFactor);
+    // 5. Engagement Factor
+    factors.push(this.calculateEngagementFactor(student));
 
     // Calculate total risk score
-    const riskScore = factors.reduce((sum, f) => sum + f.weightedScore, 0);
+    const riskScore = Math.min(1, Math.max(0,
+      factors.reduce((sum, f) => sum + f.weightedScore, 0)
+    ));
 
-    // Determine risk level
+    // Determine risk level using DB config thresholds if available
     const riskLevel = this.determineRiskLevel(riskScore);
 
-    // Get trajectory from historical data
+    // Get previous level for change detection
+    const previousLevel = await this.getPreviousLevel(student.id);
+    const levelChanged = previousLevel !== null && previousLevel !== riskLevel;
+
+    // Get trajectory from evaluation history
     const trajectory = await this.calculateTrajectory(student.id);
 
-    // Calculate confidence based on data completeness
+    // Calculate confidence
     const confidenceLevel = this.calculateConfidence(student, factors);
 
-    // Generate recommended actions
+    // Generate recommendations
     const recommendedActions = this.generateRecommendations(factors, riskLevel);
 
     return {
       studentId: student.id,
-      riskScore,
+      riskScore: Math.round(riskScore * 1000) / 1000,
       riskLevel,
+      previousLevel,
+      levelChanged,
       factors,
       trajectory,
       confidenceLevel,
       assessedAt: new Date(),
       recommendedActions,
+      configId: config?.id || 'legacy-defaults',
+      triggerType: this.triggerType,
     };
   }
 
   /**
-   * Calculate attendance risk factor
+   * Get previous risk level from most recent evaluation
    */
+  private async getPreviousLevel(studentId: string): Promise<RiskLevel | null> {
+    try {
+      const supabase = createAdminSupabaseClient();
+
+      const { data } = await supabase
+        .from('risk_evaluations')
+        .select('risk_level')
+        .eq('student_id', studentId)
+        .eq('school_id', this.schoolId)
+        .order('computed_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      return (data?.risk_level as RiskLevel) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ============================================================
+  // Factor Calculations (unchanged logic, enhanced descriptions)
+  // ============================================================
+
   private calculateAttendanceFactor(student: Student): RiskFactor {
     const attendanceRate = student.attendance_rate || 1;
+    const config = this.config;
 
-    // Risk increases as attendance drops
-    // 95%+ = low risk, 90% = medium, <85% = high risk
     let normalizedScore = 0;
-    if (attendanceRate < 0.85) {
-      normalizedScore = 1.0;
-    } else if (attendanceRate < 0.90) {
-      normalizedScore = 0.7;
-    } else if (attendanceRate < 0.95) {
-      normalizedScore = 0.4;
+    if (config) {
+      // Use DB config thresholds
+      const floor = config.indicators.attendanceFloor / 100;
+      const critical = config.indicators.attendanceCritical / 100;
+      if (attendanceRate >= floor) {
+        normalizedScore = 0;
+      } else {
+        const range = floor - critical;
+        normalizedScore = Math.min(1, Math.max(0, (floor - attendanceRate) / (range || 1)));
+      }
     } else {
-      normalizedScore = 0.1;
+      // Legacy thresholds
+      if (attendanceRate < 0.85) normalizedScore = 1.0;
+      else if (attendanceRate < 0.90) normalizedScore = 0.7;
+      else if (attendanceRate < 0.95) normalizedScore = 0.4;
+      else normalizedScore = 0.1;
     }
 
     return {
@@ -195,27 +302,18 @@ export class RiskDetectionEngine {
       weight: this.weights.attendance,
       weightedScore: normalizedScore * this.weights.attendance,
       description: `${Math.round(attendanceRate * 100)}% attendance rate`,
-      trend: 'stable', // Would be calculated from historical data
+      trend: 'stable',
     };
   }
 
-  /**
-   * Calculate academic performance risk factor
-   */
   private calculateAcademicPerformanceFactor(student: Student): RiskFactor {
-    const proficiency = student.proficiency_level || 3; // 1-5 scale assumed
+    const proficiency = student.proficiency_level || 3;
 
-    // Risk increases as proficiency drops
     let normalizedScore = 0;
-    if (proficiency <= 1) {
-      normalizedScore = 1.0;
-    } else if (proficiency === 2) {
-      normalizedScore = 0.7;
-    } else if (proficiency === 3) {
-      normalizedScore = 0.3;
-    } else {
-      normalizedScore = 0.1;
-    }
+    if (proficiency <= 1) normalizedScore = 1.0;
+    else if (proficiency === 2) normalizedScore = 0.7;
+    else if (proficiency === 3) normalizedScore = 0.3;
+    else normalizedScore = 0.1;
 
     return {
       name: 'Academic Performance',
@@ -229,22 +327,23 @@ export class RiskDetectionEngine {
     };
   }
 
-  /**
-   * Calculate academic growth risk factor
-   */
   private calculateAcademicGrowthFactor(student: Student): RiskFactor {
     const growthPercentile = student.growth_percentile || 50;
+    const config = this.config;
 
-    // Risk increases for low growth
     let normalizedScore = 0;
-    if (growthPercentile < 25) {
-      normalizedScore = 1.0;
-    } else if (growthPercentile < 40) {
-      normalizedScore = 0.6;
-    } else if (growthPercentile < 50) {
-      normalizedScore = 0.3;
+    if (config) {
+      const floor = config.indicators.assessmentFloorPct;
+      if (growthPercentile >= floor) {
+        normalizedScore = 0;
+      } else {
+        normalizedScore = Math.min(1, Math.max(0, (floor - growthPercentile) / floor));
+      }
     } else {
-      normalizedScore = 0.1;
+      if (growthPercentile < 25) normalizedScore = 1.0;
+      else if (growthPercentile < 40) normalizedScore = 0.6;
+      else if (growthPercentile < 50) normalizedScore = 0.3;
+      else normalizedScore = 0.1;
     }
 
     return {
@@ -259,12 +358,8 @@ export class RiskDetectionEngine {
     };
   }
 
-  /**
-   * Calculate chronic absence risk factor
-   */
   private calculateChronicAbsenceFactor(student: Student): RiskFactor {
     const isChronicallyAbsent = student.is_chronically_absent || false;
-
     const normalizedScore = isChronicallyAbsent ? 1.0 : 0.0;
 
     return {
@@ -279,25 +374,15 @@ export class RiskDetectionEngine {
     };
   }
 
-  /**
-   * Calculate engagement risk factor
-   */
   private calculateEngagementFactor(student: Student): RiskFactor {
-    // Use purpose-driven metrics if available
     const metrics = student.purpose_driven_metrics as Record<string, number> | null;
     const engagementScore = metrics?.engagement || 0.5;
 
-    // Risk increases as engagement drops
     let normalizedScore = 0;
-    if (engagementScore < 0.3) {
-      normalizedScore = 1.0;
-    } else if (engagementScore < 0.5) {
-      normalizedScore = 0.6;
-    } else if (engagementScore < 0.7) {
-      normalizedScore = 0.3;
-    } else {
-      normalizedScore = 0.1;
-    }
+    if (engagementScore < 0.3) normalizedScore = 1.0;
+    else if (engagementScore < 0.5) normalizedScore = 0.6;
+    else if (engagementScore < 0.7) normalizedScore = 0.3;
+    else normalizedScore = 0.1;
 
     return {
       name: 'Engagement Score',
@@ -311,77 +396,87 @@ export class RiskDetectionEngine {
     };
   }
 
-  /**
-   * Determine risk level from score
-   */
-  private determineRiskLevel(score: number): 'on_track' | 'at_risk' | 'critical' {
-    if (score >= this.thresholds.criticalMin) {
-      return 'critical';
-    } else if (score >= this.thresholds.atRiskMin) {
-      return 'at_risk';
+  // ============================================================
+  // Risk Level Classification
+  // ============================================================
+
+  private determineRiskLevel(score: number): RiskLevel {
+    const config = this.config;
+
+    if (config) {
+      // Use 4-tier DB config thresholds
+      if (score >= config.thresholds.atRisk) return 'critical';
+      if (score >= config.thresholds.watch) return 'at_risk';
+      if (score >= config.thresholds.onTrack) return 'watch';
+      return 'on_track';
     }
+
+    // Legacy 3-tier thresholds
+    if (score >= this.thresholds.criticalMin) return 'critical';
+    if (score >= this.thresholds.atRiskMin) return 'at_risk';
     return 'on_track';
   }
 
-  /**
-   * Calculate trajectory from historical risk scores
-   */
-  private async calculateTrajectory(studentId: string): Promise<'improving' | 'stable' | 'declining'> {
-    const supabase = await createServerSupabaseClient();
+  // ============================================================
+  // Trajectory (now reads from risk_evaluations)
+  // ============================================================
 
-    const { data: history } = await supabase
-      .from('risk_assessments')
-      .select('risk_score, assessed_at')
-      .eq('student_id', studentId)
-      .order('assessed_at', { ascending: false })
-      .limit(5);
+  private async calculateTrajectory(studentId: string): Promise<Trajectory> {
+    try {
+      const supabase = createAdminSupabaseClient();
 
-    if (!history || history.length < 2) {
+      // Read from risk_evaluations (replaces missing risk_assessments table)
+      const { data: history } = await supabase
+        .from('risk_evaluations')
+        .select('risk_score, computed_at')
+        .eq('student_id', studentId)
+        .eq('school_id', this.schoolId)
+        .order('computed_at', { ascending: false })
+        .limit(5);
+
+      if (!history || history.length < 2) {
+        return 'stable';
+      }
+
+      const recentAvg = history.slice(0, 2).reduce((s, h) => s + Number(h.risk_score), 0) / 2;
+      const olderAvg = history.slice(2).reduce((s, h) => s + Number(h.risk_score), 0) / Math.max(history.length - 2, 1);
+
+      const change = recentAvg - olderAvg;
+
+      if (change < -0.1) return 'improving';
+      if (change > 0.1) return 'declining';
+      return 'stable';
+    } catch {
       return 'stable';
     }
-
-    // Compare recent scores to older scores
-    const recentAvg = history.slice(0, 2).reduce((s, h) => s + h.risk_score, 0) / 2;
-    const olderAvg = history.slice(2).reduce((s, h) => s + h.risk_score, 0) / Math.max(history.length - 2, 1);
-
-    const change = recentAvg - olderAvg;
-
-    if (change < -0.1) {
-      return 'improving';
-    } else if (change > 0.1) {
-      return 'declining';
-    }
-    return 'stable';
   }
 
-  /**
-   * Calculate confidence in the assessment
-   */
+  // ============================================================
+  // Confidence
+  // ============================================================
+
   private calculateConfidence(student: Student, factors: RiskFactor[]): number {
     let confidence = 1.0;
 
-    // Reduce confidence for missing data
     if (student.attendance_rate === null) confidence -= 0.2;
     if (student.proficiency_level === null) confidence -= 0.15;
     if (student.growth_percentile === null) confidence -= 0.15;
 
-    // Reduce confidence if student is new (less than 30 days of data)
     const enrolledAt = student.enrolled_at ? new Date(student.enrolled_at) : new Date();
     const daysSinceEnrollment = (Date.now() - enrolledAt.getTime()) / (1000 * 60 * 60 * 24);
     if (daysSinceEnrollment < 30) {
       confidence -= 0.2;
     }
 
-    return Math.max(0, Math.min(1, confidence));
+    return Math.max(0, Math.min(1, Math.round(confidence * 1000) / 1000));
   }
 
-  /**
-   * Generate recommended actions based on risk factors
-   */
+  // ============================================================
+  // Recommendations
+  // ============================================================
+
   private generateRecommendations(factors: RiskFactor[], riskLevel: string): string[] {
     const recommendations: string[] = [];
-
-    // Sort factors by weighted score (highest risk first)
     const sortedFactors = [...factors].sort((a, b) => b.weightedScore - a.weightedScore);
 
     for (const factor of sortedFactors.slice(0, 3)) {
@@ -407,7 +502,6 @@ export class RiskDetectionEngine {
       }
     }
 
-    // Add level-specific recommendations
     if (riskLevel === 'critical') {
       recommendations.unshift('URGENT: Convene Student Support Team meeting');
       recommendations.push('Consider referral for comprehensive evaluation');
@@ -416,10 +510,14 @@ export class RiskDetectionEngine {
     return [...new Set(recommendations)].slice(0, 5);
   }
 
-  /**
-   * Batch assess all students in a school
-   */
+  // ============================================================
+  // Batch Assessment
+  // ============================================================
+
   async assessAllStudents(): Promise<RiskAssessment[]> {
+    // Ensure config is loaded before batch
+    await this.loadConfig();
+
     const supabase = await createServerSupabaseClient();
 
     const { data: students } = await supabase
@@ -437,50 +535,89 @@ export class RiskDetectionEngine {
       assessments.push(assessment);
     }
 
-    // Store assessments
     await this.storeAssessments(assessments);
 
     return assessments;
   }
 
-  /**
-   * Store risk assessments in database
-   */
+  // ============================================================
+  // Storage (now writes to risk_evaluations + updates students)
+  // ============================================================
+
   private async storeAssessments(assessments: RiskAssessment[]): Promise<void> {
     const supabase = createAdminSupabaseClient();
+    const configId = this.config?.id;
 
-    const records = assessments.map((a) => ({
-      student_id: a.studentId,
-      school_id: this.schoolId,
-      risk_score: a.riskScore,
-      risk_level: a.riskLevel,
-      factors: a.factors,
-      trajectory: a.trajectory,
-      confidence_level: a.confidenceLevel,
-      assessed_at: a.assessedAt.toISOString(),
-      recommended_actions: a.recommendedActions,
-    }));
+    if (!configId) {
+      console.warn('[RiskEngine] No config ID - skipping risk_evaluations insert');
+      // Still update students table for backward compat
+      await this.updateStudentsTable(supabase, assessments);
+      return;
+    }
 
-    await supabase.from('risk_assessments').insert(records);
+    // 1. Insert into risk_evaluations (immutable audit trail)
+    const chunkSize = 100;
+    for (let i = 0; i < assessments.length; i += chunkSize) {
+      const chunk = assessments.slice(i, i + chunkSize);
 
-    // Update student risk_score and risk_level
+      const records: RiskEvaluationInsert[] = chunk.map((a) => ({
+        student_id: a.studentId,
+        school_id: this.schoolId,
+        config_id: configId,
+        risk_score: a.riskScore,
+        risk_level: a.riskLevel,
+        previous_level: a.previousLevel,
+        level_changed: a.levelChanged,
+        risk_factors: a.factors as RiskFactorRecord[],
+        trajectory: a.trajectory,
+        confidence_level: a.confidenceLevel,
+        recommended_actions: a.recommendedActions,
+        metrics_snapshot: {
+          studentId: a.studentId,
+          assessedAt: a.assessedAt.toISOString(),
+          factorCount: a.factors.length,
+        },
+        trigger_type: a.triggerType,
+      }));
+
+      const { error } = await supabase.from('risk_evaluations').insert(records);
+      if (error) {
+        console.error('[RiskEngine] Failed to insert evaluations:', error.message);
+      }
+    }
+
+    // 2. Update students table (backward compatibility)
+    await this.updateStudentsTable(supabase, assessments);
+  }
+
+  /**
+   * Update students table with latest risk scores.
+   * Maintains backward compatibility with existing dashboard queries.
+   */
+  private async updateStudentsTable(
+    supabase: ReturnType<typeof createAdminSupabaseClient>,
+    assessments: RiskAssessment[]
+  ): Promise<void> {
     for (const assessment of assessments) {
       await supabase
         .from('students')
         .update({
           risk_score: assessment.riskScore,
           risk_level: assessment.riskLevel,
+          risk_factors: assessment.factors,
           updated_at: new Date().toISOString(),
         })
         .eq('id', assessment.studentId);
     }
   }
 
-  /**
-   * Get risk distribution for the school
-   */
+  // ============================================================
+  // Query Methods (unchanged, use students table for now)
+  // ============================================================
+
   async getRiskDistribution(): Promise<{
     onTrack: number;
+    watch: number;
     atRisk: number;
     critical: number;
     total: number;
@@ -494,22 +631,20 @@ export class RiskDetectionEngine {
       .eq('is_active', true);
 
     if (!students) {
-      return { onTrack: 0, atRisk: 0, critical: 0, total: 0 };
+      return { onTrack: 0, watch: 0, atRisk: 0, critical: 0, total: 0 };
     }
 
     return {
       onTrack: students.filter((s) => s.risk_level === 'on_track').length,
+      watch: students.filter((s) => s.risk_level === 'watch').length,
       atRisk: students.filter((s) => s.risk_level === 'at_risk').length,
       critical: students.filter((s) => s.risk_level === 'critical').length,
       total: students.length,
     };
   }
 
-  /**
-   * Get students by risk level with pagination
-   */
   async getStudentsByRiskLevel(
-    level: 'on_track' | 'at_risk' | 'critical',
+    level: RiskLevel,
     limit = 20,
     offset = 0
   ): Promise<{ students: Student[]; total: number }> {
@@ -531,13 +666,15 @@ export class RiskDetectionEngine {
   }
 }
 
-/**
- * Create a risk detection engine for a school
- */
+// ============================================================
+// Factory Function
+// ============================================================
+
 export function createRiskEngine(
   schoolId: string,
   weights?: Partial<RiskWeights>,
-  thresholds?: Partial<RiskThresholds>
+  thresholds?: Partial<RiskThresholds>,
+  triggerType?: TriggerType
 ): RiskDetectionEngine {
-  return new RiskDetectionEngine(schoolId, weights, thresholds);
+  return new RiskDetectionEngine(schoolId, weights, thresholds, triggerType);
 }

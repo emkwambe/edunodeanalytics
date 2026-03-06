@@ -5,8 +5,10 @@
  * Layer 2: Student Risk Detection Engine
  *
  * Exports for the risk detection and early warning system.
+ * Sprint 1B: Added risk-engine/types re-exports.
  */
 
+// Detection Engine
 export {
   RiskDetectionEngine,
   createRiskEngine,
@@ -19,6 +21,7 @@ export {
   type TrendData,
 } from './detection-engine';
 
+// Early Warning System
 export {
   EarlyWarningSystem,
   createEarlyWarningSystem,
@@ -27,3 +30,24 @@ export {
   type AlertCondition,
   type Alert,
 } from './early-warning';
+
+// Database Types (Sprint 1B)
+export {
+  type RiskModelConfig,
+  type RiskModelConfigRow,
+  type StudentMetricsRow,
+  type StudentMetricHistoryRow,
+  type RiskEvaluationRow,
+  type RiskEvaluationInsert,
+  type RiskAlertRow,
+  type RiskAlertInsert,
+  type CurrentRiskScoreRow,
+  type RiskLevel,
+  type TriggerType,
+  type Trajectory,
+  type AlertType,
+  type AlertSeverity,
+  type AlertStatus,
+  type RiskFactorRecord,
+  parseConfigRow,
+} from '@/lib/risk-engine/types';
