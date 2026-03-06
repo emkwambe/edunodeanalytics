@@ -1,0 +1,79 @@
+# EDUNODE ANALYTICS - RISK ENGINE GAP ANALYSIS
+# Generated: 2026-03-05 21:07:09
+
+## A) BUILD HEALTH
+  [PASS] Build - package.json
+  [PASS] Build - tsconfig.json
+  [PASS] Build - .env.local
+  [PASS] Build - build-info.json
+
+## B) DATA INTEGRATION
+  [PASS] Data - Adapter directory exists
+  [PASS] Data - Sync cron routes
+
+## C) RISK ENGINE (CORE)
+  [FAIL] Risk - risk-engine/types.ts
+  [FAIL] Risk - risk-engine/normalizers.ts
+  [FAIL] Risk - risk-engine/calculator.ts
+  [FAIL] Risk - risk-engine/trend-detector.ts
+  [FAIL] Risk - risk-engine/orchestrator.ts
+  [FAIL] Risk - risk-engine/alert-engine.ts
+  [PASS] Risk - Risk score computation
+  [PASS] Risk - Weighted indicator model
+  [PASS] Risk - Threshold classification
+  [PASS] Risk - Trend detection logic
+  [PASS] Risk - Alert generation
+  [FAIL] Risk - Batch evaluation
+  [PASS] Risk - Configurable thresholds
+  [PASS] Risk - Data completeness handling
+
+## D) ALERTS
+  [PASS] Alerts - Severity levels
+  [PASS] Alerts - Deduplication
+
+## E) MTSS WORKFLOW
+  [FAIL] MTSS - Interventions API
+  [PASS] MTSS - Tier placement
+  [PASS] MTSS - Progress monitoring
+  [PASS] MTSS - Intervention templates
+
+## F) COMPLIANCE
+  [PASS] Compliance - FERPA infrastructure
+  [PASS] Compliance - PII anonymization
+  [PASS] Compliance - RBAC
+  [PASS] Compliance - Audit logs
+
+## G) EARLY WARNING DASHBOARD
+  [FAIL] Dashboard - Dashboard page
+  [FAIL] Dashboard - Early warning page
+  [PASS] Dashboard - Risk distribution widget
+  [FAIL] Dashboard - At-risk student table
+
+## H) TESTING
+  [PASS] Testing - Risk scoring tests
+
+## ========================================
+## SUMMARY
+##   Total: 38  Passed: 24  Failed: 14
+##   Score: 63.2%
+## ========================================
+
+## FAILED ITEMS (Build Priority):
+  -> Risk | risk-engine/types.ts
+  -> Risk | risk-engine/normalizers.ts
+  -> Risk | risk-engine/calculator.ts
+  -> Risk | risk-engine/trend-detector.ts
+  -> Risk | risk-engine/orchestrator.ts
+  -> Risk | risk-engine/alert-engine.ts
+  -> Risk | Batch evaluation
+  -> MTSS | Interventions API
+  -> Dashboard | Dashboard page
+  -> Dashboard | Early warning page
+  -> Dashboard | At-risk student table
+
+## GO/NO-GO CRITERIA:
+  [PASS] Risk computed automatically
+  [PASS] Alerts trigger on changes
+  [PASS] Tiering and interventions tracked
+  [PASS] Dashboard who/why/what-next
+  [PASS] Audit logs persist

@@ -1,0 +1,440 @@
+# EDUNODE ANALYTICS - DATABASE SCHEMA
+# Generated: 2026-03-06T02:07:01.397Z
+# Supabase: https://cfpongyknrdrudetjhdq.supabase.co
+
+## TABLES (21 found)
+
+### ai_usage (18 columns)
+  anonymization_level                text                NULL
+  audit_id                           text                NULL
+  cost_cents                         integer             NOT NULL
+  created_at                         timestamp with time zoneNOT NULL
+  error_message                      text                NULL
+  feature                            text                NOT NULL
+  id                                 uuid                NOT NULL
+  input_tokens                       integer             NOT NULL
+  latency_ms                         integer             NULL
+  model                              text                NOT NULL
+  output_tokens                      integer             NOT NULL
+  pii_detected                       boolean             NULL
+  provider                           text                NOT NULL
+  school_id                          uuid                NOT NULL
+  student_count                      integer             NULL
+  success                            boolean             NOT NULL
+  total_tokens                       integer             NULL
+  user_id                            uuid                NOT NULL
+
+### ai_usage_limits (11 columns)
+  alert_sent_at                      timestamp with time zoneNULL
+  alert_threshold_percent            integer             NULL
+  created_at                         timestamp with time zoneNOT NULL
+  current_month_cost_cents           integer             NOT NULL
+  current_month_tokens               integer             NOT NULL
+  id                                 uuid                NOT NULL
+  monthly_cost_limit_cents           integer             NULL
+  monthly_token_limit                integer             NULL
+  period_start                       timestamp with time zoneNOT NULL
+  school_id                          uuid                NOT NULL
+  updated_at                         timestamp with time zoneNOT NULL
+
+### audit_logs (12 columns)
+  action                             text                NOT NULL
+  created_at                         timestamp with time zoneNOT NULL
+  id                                 uuid                NOT NULL
+  ip_address                         inet                NULL
+  metadata                           jsonb               NULL
+  new_values                         jsonb               NULL
+  old_values                         jsonb               NULL
+  resource_id                        text                NULL
+  resource_type                      text                NOT NULL
+  school_id                          uuid                NULL
+  user_agent                         text                NULL
+  user_id                            uuid                NULL
+
+### authorizers (7 columns)
+  contact_email                      text                NOT NULL
+  created_at                         timestamp with time zoneNOT NULL
+  id                                 uuid                NOT NULL
+  is_active                          boolean             NOT NULL
+  name                               text                NOT NULL
+  slug                               text                NOT NULL
+  updated_at                         timestamp with time zoneNOT NULL
+
+### dashboard_configs (15 columns)
+  created_at                         timestamp with time zoneNOT NULL
+  description                        text                NULL
+  filters                            jsonb               NULL
+  id                                 uuid                NOT NULL
+  is_default                         boolean             NOT NULL
+  is_shared                          boolean             NOT NULL
+  layout_config                      jsonb               NOT NULL
+  metadata                           jsonb               NULL
+  name                               text                NOT NULL
+  refresh_interval_seconds           integer             NULL
+  school_id                          uuid                NOT NULL
+  slug                               text                NOT NULL
+  updated_at                         timestamp with time zoneNOT NULL
+  user_id                            uuid                NULL
+  widget_configs                     jsonb               NOT NULL
+
+### data_sources (24 columns)
+  access_token_encrypted             text                NULL
+  connected_at                       timestamp with time zoneNULL
+  connection_config                  jsonb               NULL
+  created_at                         timestamp with time zoneNOT NULL
+  disconnected_at                    timestamp with time zoneNULL
+  field_mappings                     jsonb               NULL
+  id                                 uuid                NOT NULL
+  is_active                          boolean             NOT NULL
+  last_record_count                  integer             NULL
+  last_sync_at                       timestamp with time zoneNULL
+  metadata                           jsonb               NULL
+  name                               text                NOT NULL
+  next_sync_at                       timestamp with time zoneNULL
+  provider                           public.data_source_providerNOT NULL
+  records_synced                     integer             NULL
+  refresh_token_encrypted            text                NULL
+  school_id                          uuid                NOT NULL
+  sync_enabled                       boolean             NOT NULL
+  sync_error                         text                NULL
+  sync_frequency_hours               integer             NULL
+  sync_status                        public.sync_status  NULL
+  token_expires_at                   timestamp with time zoneNULL
+  type                               public.data_source_typeNOT NULL
+  updated_at                         timestamp with time zoneNOT NULL
+
+### generated_reports (18 columns)
+  created_at                         timestamp with time zoneNOT NULL
+  delivered_at                       timestamp with time zoneNULL
+  delivery_error                     text                NULL
+  delivery_status                    text                NULL
+  expires_at                         timestamp with time zoneNULL
+  file_size_bytes                    integer             NULL
+  filters                            jsonb               NULL
+  format                             text                NOT NULL
+  generated_at                       timestamp with time zoneNOT NULL
+  generated_by                       uuid                NOT NULL
+  generation_time_ms                 integer             NULL
+  id                                 uuid                NOT NULL
+  record_count                       integer             NULL
+  report_type                        text                NOT NULL
+  scheduled_report_id                uuid                NULL
+  school_id                          uuid                NOT NULL
+  storage_path                       text                NULL
+  title                              text                NOT NULL
+
+### interventions (25 columns)
+  actual_end_date                    date                NULL
+  assigned_to_user_id                uuid                NULL
+  baseline_value                     numeric             NULL
+  created_at                         timestamp with time zoneNOT NULL
+  created_by_user_id                 uuid                NULL
+  current_value                      numeric             NULL
+  description                        text                NULL
+  goal                               text                NULL
+  id                                 uuid                NOT NULL
+  is_stale                           boolean             NULL
+  metadata                           jsonb               NULL
+  outcome_summary                    text                NULL
+  priority                           public.notification_priorityNOT NULL
+  progress_notes                     jsonb               NULL
+  school_id                          uuid                NOT NULL
+  start_date                         date                NULL
+  status                             public.intervention_statusNOT NULL
+  student_id                         uuid                NOT NULL
+  success_criteria                   text                NULL
+  target_end_date                    date                NULL
+  target_value                       numeric             NULL
+  title                              text                NOT NULL
+  type                               public.intervention_typeNOT NULL
+  updated_at                         timestamp with time zoneNOT NULL
+  was_successful                     boolean             NULL
+
+### notifications (18 columns)
+  action_label                       text                NULL
+  action_url                         text                NULL
+  created_at                         timestamp with time zoneNOT NULL
+  dismissed_at                       timestamp with time zoneNULL
+  expires_at                         timestamp with time zoneNULL
+  id                                 uuid                NOT NULL
+  is_dismissed                       boolean             NOT NULL
+  is_read                            boolean             NOT NULL
+  message                            text                NOT NULL
+  metadata                           jsonb               NULL
+  priority                           public.notification_priorityNOT NULL
+  read_at                            timestamp with time zoneNULL
+  related_intervention_id            uuid                NULL
+  related_student_id                 uuid                NULL
+  school_id                          uuid                NOT NULL
+  title                              text                NOT NULL
+  type                               public.notification_typeNOT NULL
+  user_id                            uuid                NOT NULL
+
+### payments (20 columns)
+  amount                             integer             NOT NULL
+  created_at                         timestamp with time zoneNOT NULL
+  currency                           text                NOT NULL
+  hosted_invoice_url                 text                NULL
+  id                                 uuid                NOT NULL
+  invoice_number                     text                NULL
+  invoice_pdf_url                    text                NULL
+  metadata                           jsonb               NULL
+  paid_at                            timestamp with time zoneNULL
+  period_end                         timestamp with time zoneNULL
+  period_start                       timestamp with time zoneNULL
+  refunded_at                        timestamp with time zoneNULL
+  school_id                          uuid                NOT NULL
+  status                             text                NOT NULL
+  stripe_charge_id                   text                NULL
+  stripe_invoice_id                  text                NOT NULL
+  stripe_payment_intent_id           text                NULL
+  stripe_subscription_id             text                NULL
+  student_count                      integer             NULL
+  subscription_tier                  public.subscription_tierNULL
+
+### resource_progress (19 columns)
+  bookmarked_at                      timestamp with time zoneNULL
+  completed_at                       timestamp with time zoneNULL
+  created_at                         timestamp with time zoneNOT NULL
+  current_section                    integer             NULL
+  id                                 uuid                NOT NULL
+  is_bookmarked                      boolean             NOT NULL
+  is_completed                       boolean             NOT NULL
+  is_started                         boolean             NOT NULL
+  metadata                           jsonb               NULL
+  module_category                    public.resource_categoryNOT NULL
+  module_slug                        text                NOT NULL
+  school_id                          uuid                NOT NULL
+  sections_completed                 integer             NULL
+  started_at                         timestamp with time zoneNULL
+  time_spent_minutes                 integer             NULL
+  total_sections                     integer             NOT NULL
+  updated_at                         timestamp with time zoneNOT NULL
+  user_id                            uuid                NOT NULL
+  user_notes                         text                NULL
+
+### scheduled_reports (20 columns)
+  created_at                         timestamp with time zoneNOT NULL
+  created_by                         uuid                NOT NULL
+  day_of_month                       integer             NULL
+  day_of_week                        integer             NULL
+  filters                            jsonb               NULL
+  format                             text                NOT NULL
+  frequency                          text                NOT NULL
+  id                                 uuid                NOT NULL
+  is_active                          boolean             NOT NULL
+  last_error                         text                NULL
+  last_run_at                        timestamp with time zoneNULL
+  next_run_at                        timestamp with time zoneNULL
+  options                            jsonb               NULL
+  recipients                         jsonb               NOT NULL
+  report_type                        text                NOT NULL
+  school_id                          uuid                NOT NULL
+  time_of_day                        time without time zoneNOT NULL
+  timezone                           text                NOT NULL
+  title                              text                NOT NULL
+  updated_at                         timestamp with time zoneNOT NULL
+
+### school_memberships (13 columns)
+  accepted_at                        timestamp with time zoneNULL
+  created_at                         timestamp with time zoneNOT NULL
+  department                         text                NULL
+  grade_levels                       integer[]           NULL
+  id                                 uuid                NOT NULL
+  invited_at                         timestamp with time zoneNULL
+  is_active                          boolean             NOT NULL
+  is_primary                         boolean             NOT NULL
+  role                               public.school_role  NOT NULL
+  school_id                          uuid                NOT NULL
+  sis_staff_id                       text                NULL
+  updated_at                         timestamp with time zoneNOT NULL
+  user_id                            uuid                NOT NULL
+
+### schools (32 columns)
+  academic_year_start_month          integer             NOT NULL
+  accent_color                       text                NOT NULL
+  address                            jsonb               NULL
+  authorizer_id                      uuid                NULL
+  bigquery_dataset_id                text                NULL
+  cancel_at_period_end               boolean             NOT NULL
+  canceled_at                        timestamp with time zoneNULL
+  classlink_tenant_id                text                NULL
+  clever_district_id                 text                NULL
+  contact_email                      text                NOT NULL
+  contact_phone                      text                NULL
+  created_at                         timestamp with time zoneNOT NULL
+  current_period_end                 timestamp with time zoneNULL
+  current_period_start               timestamp with time zoneNULL
+  domain                             text                NULL
+  id                                 uuid                NOT NULL
+  is_active                          boolean             NOT NULL
+  legal_name                         text                NULL
+  logo_url                           text                NULL
+  metadata                           jsonb               NULL
+  name                               text                NOT NULL
+  primary_color                      text                NOT NULL
+  secondary_color                    text                NOT NULL
+  slug                               text                NOT NULL
+  stripe_customer_id                 text                NULL
+  stripe_subscription_id             text                NULL
+  student_count                      integer             NOT NULL
+  subscription_status                public.subscription_statusNOT NULL
+  subscription_tier                  public.subscription_tierNOT NULL
+  timezone                           text                NOT NULL
+  trial_ends_at                      timestamp with time zoneNULL
+  updated_at                         timestamp with time zoneNOT NULL
+
+### students (35 columns)
+  attendance_rate                    numeric             NULL
+  counselor                          text                NULL
+  created_at                         timestamp with time zoneNOT NULL
+  date_of_birth                      date                NULL
+  days_absent                        integer             NULL
+  days_present                       integer             NULL
+  display_name                       text                NOT NULL
+  enrolled_at                        date                NULL
+  ethnicity                          text                NULL
+  first_name                         text                NOT NULL
+  gender                             text                NULL
+  grade_level                        integer             NOT NULL
+  growth_percentile                  integer             NULL
+  has_504_plan                       boolean             NOT NULL
+  has_iep                            boolean             NOT NULL
+  homeroom_teacher                   text                NULL
+  id                                 uuid                NOT NULL
+  is_active                          boolean             NOT NULL
+  is_chronically_absent              boolean             NULL
+  is_english_learner                 boolean             NOT NULL
+  is_free_reduced_lunch              boolean             NOT NULL
+  is_gifted                          boolean             NOT NULL
+  last_name                          text                NOT NULL
+  math_scores                        jsonb               NULL
+  metadata                           jsonb               NULL
+  proficiency_level                  numeric             NULL
+  purpose_driven_metrics             jsonb               NULL
+  reading_scores                     jsonb               NULL
+  risk_factors                       jsonb               NULL
+  risk_level                         public.risk_level   NULL
+  risk_score                         numeric             NULL
+  school_id                          uuid                NOT NULL
+  sis_student_id                     text                NOT NULL
+  updated_at                         timestamp with time zoneNOT NULL
+  withdrawn_at                       date                NULL
+
+### sync_history (19 columns)
+  completed_at                       timestamp with time zoneNULL
+  created_at                         timestamp with time zoneNOT NULL
+  data_source_id                     uuid                NOT NULL
+  details                            jsonb               NULL
+  duration_ms                        integer             NULL
+  error_message                      text                NULL
+  errors                             jsonb               NULL
+  id                                 uuid                NOT NULL
+  records_created                    integer             NULL
+  records_deleted                    integer             NULL
+  records_processed                  integer             NULL
+  records_skipped                    integer             NULL
+  records_updated                    integer             NULL
+  school_id                          uuid                NOT NULL
+  started_at                         timestamp with time zoneNOT NULL
+  status                             public.sync_status  NOT NULL
+  sync_type                          text                NOT NULL
+  triggered_by                       text                NULL
+  triggered_by_user_id               uuid                NULL
+
+### user_preferences (22 columns)
+  alert_assessment_results           boolean             NOT NULL
+  alert_attendance_drops             boolean             NOT NULL
+  alert_critical_students            boolean             NOT NULL
+  alert_intervention_updates         boolean             NOT NULL
+  alert_system_updates               boolean             NOT NULL
+  compact_mode                       boolean             NOT NULL
+  created_at                         timestamp with time zoneNOT NULL
+  custom_preferences                 jsonb               NULL
+  date_format                        text                NULL
+  default_dashboard                  text                NULL
+  digest_frequency                   text                NULL
+  email_notifications                boolean             NOT NULL
+  high_contrast                      boolean             NOT NULL
+  id                                 uuid                NOT NULL
+  number_format                      text                NULL
+  push_notifications                 boolean             NOT NULL
+  reduce_motion                      boolean             NOT NULL
+  share_usage_data                   boolean             NOT NULL
+  show_student_photos                boolean             NOT NULL
+  theme                              text                NULL
+  updated_at                         timestamp with time zoneNOT NULL
+  user_id                            uuid                NOT NULL
+
+### users (13 columns)
+  avatar_url                         text                NULL
+  clerk_user_id                      text                NOT NULL
+  created_at                         timestamp with time zoneNOT NULL
+  email                              text                NOT NULL
+  first_name                         text                NULL
+  id                                 uuid                NOT NULL
+  is_active                          boolean             NOT NULL
+  last_login_at                      timestamp with time zoneNULL
+  last_name                          text                NULL
+  metadata                           jsonb               NULL
+  platform_role                      public.platform_roleNULL
+  preferences                        jsonb               NULL
+  updated_at                         timestamp with time zoneNOT NULL
+
+### v_ai_usage_monthly (11 columns)
+  avg_latency_ms                     integer             NULL
+  feature                            text                NULL
+  month                              timestamp with time zoneNULL
+  provider                           text                NULL
+  request_count                      bigint              NULL
+  school_id                          uuid                NULL
+  success_rate                       double precision    NULL
+  total_cost_cents                   bigint              NULL
+  total_input_tokens                 bigint              NULL
+  total_output_tokens                bigint              NULL
+  total_tokens                       bigint              NULL
+
+### v_report_summary (6 columns)
+  avg_generation_ms                  integer             NULL
+  delivered_count                    bigint              NULL
+  last_generated                     timestamp with time zoneNULL
+  report_type                        text                NULL
+  school_id                          uuid                NULL
+  total_generated                    bigint              NULL
+
+### webhook_events (10 columns)
+  created_at                         timestamp with time zoneNOT NULL
+  error_message                      text                NULL
+  event_id                           text                NOT NULL
+  event_type                         text                NOT NULL
+  id                                 uuid                NOT NULL
+  payload                            jsonb               NOT NULL
+  processed_at                       timestamp with time zoneNULL
+  result                             jsonb               NULL
+  retry_count                        integer             NOT NULL
+  status                             text                NOT NULL
+
+
+## ROW COUNTS
+  schools                       0-0/3
+  students                      */0
+  enrollments                   NOT FOUND (HTTP 404)
+  interventions                 */0
+  notifications                 */0
+  audit_logs                    */0
+  data_sources                  */0
+  sync_logs                     NOT FOUND (HTTP 404)
+  users                         */0
+  profiles                      NOT FOUND (HTTP 404)
+  risk_model_configs            NOT FOUND (HTTP 404)
+  student_metrics               NOT FOUND (HTTP 404)
+  student_metric_history        NOT FOUND (HTTP 404)
+  risk_evaluations              NOT FOUND (HTTP 404)
+  risk_alerts                   NOT FOUND (HTTP 404)
+
+## RISK ENGINE TABLE STATUS
+  [MISSING] risk_model_configs
+  [MISSING] student_metrics
+  [MISSING] student_metric_history
+  [MISSING] risk_evaluations
+  [MISSING] risk_alerts

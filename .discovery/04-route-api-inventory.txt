@@ -1,0 +1,124 @@
+# EDUNODE ANALYTICS - ROUTE AND API INVENTORY
+# Generated: 2026-03-05 21:07:08
+
+## PAGE ROUTES (67)
+  /[school_slug]/account
+  /[school_slug]/analytics/advanced
+  /[school_slug]/analytics/impact
+  /[school_slug]/authorizer
+  /[school_slug]/dashboard/assessments
+  /[school_slug]/dashboard/attendance
+  /[school_slug]/dashboard/momentum
+  /[school_slug]/dashboard
+  /[school_slug]/dashboard/pulse
+  /[school_slug]/dashboard/reports
+  /[school_slug]/dashboard/students/[student_id]
+  /[school_slug]/dashboard/students
+  /[school_slug]/help
+  /[school_slug]/interventions
+  /[school_slug]/network
+  /[school_slug]/notifications
+  /[school_slug]/resources/modules/[slug]
+  /[school_slug]/resources
+  /[school_slug]/search
+  /[school_slug]/settings/api
+  /[school_slug]/settings/billing
+  /[school_slug]/settings/data-sources
+  /[school_slug]/settings/integrations
+  /[school_slug]/settings
+  /[school_slug]/settings/sso
+  /[school_slug]/student-360/[student_id]
+  /about
+  /accessibility
+  /admin/audit-logs
+  /admin
+  /admin/system
+  /blog
+  /careers
+  /case-studies
+  /changelog
+  /checkout
+  /compare-plans
+  /contact
+  /cookies
+  /data-blueprint
+  /demo
+  /docs/api
+  /docs/getting-started
+  /docs
+  /faq
+  /feedback
+  /ferpa
+  /help
+  /integrations
+  /onboarding
+  /
+  /partners
+  /pricing
+  /privacy
+  /roi-calculator
+  /security
+  /select-school
+  /settings/roles
+  /settings/team/invite
+  /settings/team
+  /sign-in/[[...sign-in]]
+  /sign-up/[[...sign-up]]
+  /status
+  /terms
+  /testimonials
+  /unauthorized
+  /webinars
+
+## API ROUTES (39)
+  /api/ai/usage  [GET]
+  /api/cron/scheduled-reports  [GET]
+  /api/cron/stale-interventions  [GET]
+  /api/cron/sync-rosters  [GET]
+  /api/dashboard  [GET]
+  /api/data/sources/[sourceId]/oauth  [GET]
+  /api/data/sources/[sourceId]  [GET]
+  /api/data/sources/[sourceId]/sync  [GET]
+  /api/data/sources  [GET]
+  /api/data/warehouse  [GET, POST]
+  /api/demo-request  [GET, POST]
+  /api/ferpa-audit  [GET, POST]
+  /api/health/live  [GET]
+  /api/health/ready  [GET]
+  /api/health  [GET]
+  /api/privacy/test  [GET]
+  /api/reports  [GET, POST]
+  /api/schools/[schoolId]/export/interventions  [GET, POST]
+  /api/schools/[schoolId]/export/students  [GET, POST]
+  /api/schools/[schoolId]/interventions/[interventionId]  [GET, POST]
+  /api/schools/[schoolId]/interventions/metrics  [GET, POST]
+  /api/schools/[schoolId]/interventions/pending  [GET, POST]
+  /api/schools/[schoolId]/interventions  [GET, POST]
+  /api/schools/[schoolId]/metrics  [GET, POST]
+  /api/schools/[schoolId]/notifications/[notificationId]  [GET, POST]
+  /api/schools/[schoolId]/notifications/read-all  [GET, POST]
+  /api/schools/[schoolId]/notifications  [GET, POST]
+  /api/schools/[schoolId]/privacy/audit  [GET, POST]
+  /api/schools/[schoolId]  [GET, POST]
+  /api/schools/[schoolId]/students/[studentId]/analyze  [GET, POST]
+  /api/schools/[schoolId]/students/[studentId]/interventions  [GET, POST]
+  /api/schools/[schoolId]/students/[studentId]  [GET, POST]
+  /api/schools/[schoolId]/students/at-risk  [GET, POST]
+  /api/schools/[schoolId]/students/metrics  [GET, POST]
+  /api/schools/[schoolId]/students  [GET, POST]
+  /api/schools  [GET, POST]
+  /api/subscriptions/portal  [POST]
+  /api/subscriptions  [GET, POST, PATCH, DELETE]
+  /api/webhooks/stripe  [POST]
+
+## LAYOUTS (2)
+  /[school_slug]/layout.tsx
+  /layout.tsx
+
+## RISK ENGINE ROUTES CHECK
+  [MISSING] api/schools/[schoolId]/risk
+  [MISSING] api/schools/[schoolId]/risk/scores
+  [MISSING] api/schools/[schoolId]/risk/distribution
+  [MISSING] api/schools/[schoolId]/risk/drivers
+  [MISSING] api/schools/[schoolId]/risk/alerts
+  [MISSING] api/schools/[schoolId]/risk/config
