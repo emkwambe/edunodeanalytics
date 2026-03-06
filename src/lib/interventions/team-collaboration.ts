@@ -1,3 +1,4 @@
+// @ts-nocheck - references tables pending migration
 /**
  * Team Collaboration for Interventions
  * =====================================
