@@ -18,6 +18,7 @@ import {
   TrendingUp,
   BarChart3,
   Clock,
+  AlertCircle,
 } from 'lucide-react';
 
 /**
@@ -34,27 +35,40 @@ export default function AssessmentsPage() {
   const schoolSeed = getSchoolSeed(school_slug);
   const students = schoolSeed?.students ?? [];
 
+  // Filter students with assessment data
+  const studentsWithAssessments = students.filter((s) => s.reading && s.math);
+  const hasAssessmentData = studentsWithAssessments.length > 0;
+
   // Calculate assessment stats
   const stats = React.useMemo(() => {
-    const readingAvg = students.reduce((s, st) => s + st.reading.nationalPercentile, 0) / students.length;
-    const mathAvg = students.reduce((s, st) => s + st.math.nationalPercentile, 0) / students.length;
-    const readingGrowth = students.reduce((s, st) => s + st.reading.growthPercentile, 0) / students.length;
-    const mathGrowth = students.reduce((s, st) => s + st.math.growthPercentile, 0) / students.length;
+    if (!hasAssessmentData) {
+      return {
+        readingAvg: 0, mathAvg: 0, readingGrowth: 0, mathGrowth: 0,
+        readingProficient: 0, mathProficient: 0,
+      };
+    }
+
+    const readingAvg = studentsWithAssessments.reduce((s, st) => s + st.reading.nationalPercentile, 0) / studentsWithAssessments.length;
+    const mathAvg = studentsWithAssessments.reduce((s, st) => s + st.math.nationalPercentile, 0) / studentsWithAssessments.length;
+    const readingGrowth = studentsWithAssessments.reduce((s, st) => s + st.reading.growthPercentile, 0) / studentsWithAssessments.length;
+    const mathGrowth = studentsWithAssessments.reduce((s, st) => s + st.math.growthPercentile, 0) / studentsWithAssessments.length;
 
     // Proficiency bands
-    const readingProficient = students.filter((s) => s.reading.nationalPercentile >= 50).length;
-    const mathProficient = students.filter((s) => s.math.nationalPercentile >= 50).length;
+    const readingProficient = studentsWithAssessments.filter((s) => s.reading.nationalPercentile >= 50).length;
+    const mathProficient = studentsWithAssessments.filter((s) => s.math.nationalPercentile >= 50).length;
 
     return {
       readingAvg, mathAvg, readingGrowth, mathGrowth,
       readingProficient, mathProficient,
     };
-  }, [students]);
+  }, [studentsWithAssessments, hasAssessmentData]);
 
   // Grade-level mastery
   const gradeData = React.useMemo(() => {
+    if (!hasAssessmentData) return [];
+
     const grades = new Map<number, { count: number; readingAvg: number; mathAvg: number; readingGrowth: number; mathGrowth: number }>();
-    students.forEach((s) => {
+    studentsWithAssessments.forEach((s) => {
       const current = grades.get(s.gradeLevel) || { count: 0, readingAvg: 0, mathAvg: 0, readingGrowth: 0, mathGrowth: 0 };
       current.count += 1;
       current.readingAvg += s.reading.nationalPercentile;
@@ -73,7 +87,7 @@ export default function AssessmentsPage() {
         mathGrowth: data.mathGrowth / data.count,
       }))
       .sort((a, b) => a.grade - b.grade);
-  }, [students]);
+  }, [studentsWithAssessments, hasAssessmentData]);
 
   return (
     <>
@@ -92,6 +106,24 @@ export default function AssessmentsPage() {
         }
       />
 
+      {!hasAssessmentData && (
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mb-4">
+                <AlertCircle className="w-8 h-8 text-amber-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">No Assessment Data Available</h3>
+              <p className="text-slate-400 max-w-md">
+                Assessment integration is not configured for this school. Connect your MAP Growth or other assessment platform to view student performance data.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasAssessmentData && (
+      <>
       {/* Summary Row */}
       <DashboardGrid className="mb-6">
         {[
@@ -133,16 +165,16 @@ export default function AssessmentsPage() {
             <CardContent>
               <div className="flex items-center gap-4 mb-4">
                 <div className="text-3xl font-black text-white">
-                  {((stats.readingProficient / students.length) * 100).toFixed(0)}%
+                  {studentsWithAssessments.length > 0 ? ((stats.readingProficient / studentsWithAssessments.length) * 100).toFixed(0) : 0}%
                 </div>
                 <p className="text-sm text-slate-400">
-                  {stats.readingProficient} of {students.length} at or above grade level
+                  {stats.readingProficient} of {studentsWithAssessments.length} at or above grade level
                 </p>
               </div>
               <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-full"
-                  style={{ width: `${(stats.readingProficient / students.length) * 100}%` }}
+                  style={{ width: `${studentsWithAssessments.length > 0 ? (stats.readingProficient / studentsWithAssessments.length) * 100 : 0}%` }}
                 />
               </div>
             </CardContent>
@@ -160,16 +192,16 @@ export default function AssessmentsPage() {
             <CardContent>
               <div className="flex items-center gap-4 mb-4">
                 <div className="text-3xl font-black text-white">
-                  {((stats.mathProficient / students.length) * 100).toFixed(0)}%
+                  {studentsWithAssessments.length > 0 ? ((stats.mathProficient / studentsWithAssessments.length) * 100).toFixed(0) : 0}%
                 </div>
                 <p className="text-sm text-slate-400">
-                  {stats.mathProficient} of {students.length} at or above grade level
+                  {stats.mathProficient} of {studentsWithAssessments.length} at or above grade level
                 </p>
               </div>
               <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full"
-                  style={{ width: `${(stats.mathProficient / students.length) * 100}%` }}
+                  style={{ width: `${studentsWithAssessments.length > 0 ? (stats.mathProficient / studentsWithAssessments.length) * 100 : 0}%` }}
                 />
               </div>
             </CardContent>
@@ -246,6 +278,8 @@ export default function AssessmentsPage() {
           </div>
         </CardContent>
       </Card>
+      </>
+      )}
     </>
   );
 }
