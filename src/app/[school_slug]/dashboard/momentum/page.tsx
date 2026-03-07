@@ -606,9 +606,20 @@ export default function MomentumPage({ params }: MomentumPageProps) {
     resolveParams();
   }, [params]);
 
-  // Get demo data
-  const schoolData = SCHOOL_SEEDS[schoolSlug] || SCHOOL_SEEDS['academy-charter'];
+  // Get demo data - use 'stem-scholars' as fallback since it has assessment data
+  const schoolData = SCHOOL_SEEDS[schoolSlug] || SCHOOL_SEEDS['stem-scholars'];
   const students = schoolData?.students.slice(0, 20) || [];
+
+  // Show loading state while params resolve
+  if (!schoolSlug) {
+    return (
+      <PageFeatureGate featureKey="momentum_dashboard">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-slate-400">Loading momentum data...</div>
+        </div>
+      </PageFeatureGate>
+    );
+  }
 
   // Calculate aggregate metrics
   const aggregateVolatility = useMemo(() => {
@@ -657,34 +668,38 @@ export default function MomentumPage({ params }: MomentumPageProps) {
 
   // Calculate student-level summaries for table
   const studentSummaries = useMemo(() => {
-    return students.slice(0, 10).map((student) => {
-      const readingScores =
-        student.purposeDriven?.assessmentHistory
-          .filter((a) => a.subject === 'reading')
-          .map((a) => a.score) || [];
+    // Filter to students that have assessment data
+    return students
+      .filter((student) => student.reading && student.purposeDriven)
+      .slice(0, 10)
+      .map((student) => {
+        const readingScores =
+          student.purposeDriven?.assessmentHistory
+            .filter((a) => a.subject === 'reading')
+            .map((a) => a.score) || [];
 
-      const volatility = calculateVolatilityIndex(readingScores);
-      const momentum = calculateMomentumScore(
-        student.reading.winterRit,
-        student.reading.fallRit,
-        student.purposeDriven?.expectedGrowthPoints || 4,
-        18
-      );
-      const dosage = calculateDosageMetrics(
-        student.purposeDriven?.interventionSessions.map((s) => ({
-          date: s.date,
-          durationMinutes: s.durationMinutes,
-        })) || [],
-        student.purposeDriven?.targetInterventionMinutes || 300
-      );
+        const volatility = calculateVolatilityIndex(readingScores);
+        const momentum = calculateMomentumScore(
+          student.reading?.winterRit || 0,
+          student.reading?.fallRit || 0,
+          student.purposeDriven?.expectedGrowthPoints || 4,
+          18
+        );
+        const dosage = calculateDosageMetrics(
+          student.purposeDriven?.interventionSessions.map((s) => ({
+            date: s.date,
+            durationMinutes: s.durationMinutes,
+          })) || [],
+          student.purposeDriven?.targetInterventionMinutes || 300
+        );
 
-      return {
-        name: student.displayName,
-        volatility,
-        momentum,
-        dosage,
-      };
-    });
+        return {
+          name: student.displayName,
+          volatility,
+          momentum,
+          dosage,
+        };
+      });
   }, [students]);
 
   const dataSufficiency = calculateDataSufficiency(
