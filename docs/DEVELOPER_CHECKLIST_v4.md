@@ -1,36 +1,15 @@
-# EduNode Analytics - Developer Checklist v4.1
-## MTSS Early Warning and Intervention Platform
+# EduNode Developer Checklist v4.0
+## MTSS Early Warning Platform — Pilot Readiness
 
-**Last Updated:** March 7, 2026
-**Branch:** `claude/edunode-analytics-saas-9l0uE`
-**Stack:** Next.js 16.1.6 | Supabase (Postgres) | TypeScript | Clerk | Stripe | Vitest
-
----
-
-## Changelog from v4.0
-
-| Section | Change |
-|---------|--------|
-| Sprint 4 | Marked COMPLETE - all dashboard components, hooks, and interpreter implemented |
-| Go/No-Go | Dashboard and plain language interpretation blockers resolved |
-
-## Changelog from v3.0
-
-| Section | Change |
-|---------|--------|
-| Sprint 1A | Marked COMPLETE with commit references |
-| Sprint 1B | Marked COMPLETE with commit references |
-| Sprint 2 | Updated with implemented API endpoints |
-| Sprint 3 | Added dosage analysis tasks |
-| Sprint 4 | Added dashboard component tasks |
-| Section G | Expanded with component specifications |
-| New Section I | Added Alignment Matrix reference |
+**Updated:** 2026-03-06
+**Sprint 1:** Complete (Database + Engine Refactor)
+**Sprint 2:** In Progress (API Routes + Orchestrator)
 
 ---
 
-## Scope
+## Scope Statement
 
-**In scope:** Data Integration > Risk Engine > Alerts > Intervention Workflow > Dosage Analysis > Evidence/Compliance > Early Warning Dashboard
+**In scope:** Data Integration → Risk Engine → Alerts → Intervention Workflow → Evidence/Compliance → Early Warning Dashboard
 
 **Out of scope (this phase):** Parent portal, parent notifications, multilingual parent messaging, SMS/push
 
@@ -38,395 +17,368 @@
 
 ## A) Repo and Build Health
 
-### A1. Source Control
+### A1. Source control
+
+- [x] git status shows clean working tree
 - [x] Branch naming consistent (`claude/edunode-analytics-saas-9l0uE`)
-- [x] `build-info.json` generated and served from `/build-info.json`
-- [ ] Commit message convention enforced (feat/fix/chore)
-- [ ] `git status` clean before each sprint
+- [x] build-info.json generated and served from /build-info.json
+- [x] Commit message convention used (feat/fix/chore)
 
-### A2. Build Must Succeed
-- [x] `npm ci` completes
-- [x] `npm run build` succeeds with 0 TypeScript errors
-- [x] BigQuery warning handled (optional import with catch fallback)
-- [ ] `npm run lint` passes clean
-- [ ] `npx tsc --noEmit` passes clean (blocked by `database.types.ts` regen)
+### A2. Local build must succeed
 
-### A3. Type Safety
-- [ ] **BLOCKER:** `database.types.ts` must be regenerated via Supabase CLI
-  - Current file is stale (missing 5 risk engine tables + views)
-  - Supabase CLI auth required: `npx supabase login` then `npx supabase gen types`
-  - Once regenerated: remove `@ts-nocheck` from 7 files
-- [ ] 7 files have `@ts-nocheck` due to missing table types:
-  - `src/lib/risk/detection-engine.ts` (Sprint 1B - needs risk tables)
-  - `src/lib/risk/early-warning.ts` (Sprint 1B - needs risk tables)
-  - `src/lib/compliance/evidence-logger.ts` (pre-existing)
-  - `src/lib/compliance/ferpa-compliance.ts` (pre-existing)
-  - `src/lib/data/integration/orchestrator.ts` (pre-existing)
-  - `src/lib/data/integration/pipeline.ts` (pre-existing)
-  - `src/lib/interventions/workflow-manager.ts` (pre-existing)
+- [x] npm ci completes
+- [x] npm run build succeeds (compiled successfully)
+- [x] TypeScript passes (with @ts-nocheck on known files — see A5)
+- [ ] npm run lint succeeds
+- [ ] npx tsc --noEmit succeeds (blocked by @ts-nocheck removals)
+- [x] BigQuery optional import handled cleanly (warning only)
 
-### A4. Runtime
-- [x] `npm run dev` starts cleanly
-- [x] `/api/health`, `/api/health/ready`, `/api/health/live` return expected responses
-- [x] `.env.local` present with 20 environment variables validated
-- [x] Node v22.18.0, npm 11.7.0
+### A3. Runtime checks
+
+- [x] npm run dev starts cleanly
+- [x] /api/health, /api/health/ready, /api/health/live return expected responses
+- [x] .env.local present and validated (20 vars)
+
+### A4. Database types
+
+- [x] database.types.ts regenerated via Supabase CLI (includes all 26 tables)
+- [x] Convenience aliases added (School, Student, Intervention, Notification, Payment, etc.)
+- [ ] Remove @ts-nocheck from detection-engine.ts and early-warning.ts (risk tables now in types)
+- [ ] Audit and fix remaining @ts-nocheck files (20 files total — see A5)
+
+### A5. Known @ts-nocheck Files (Tech Debt)
+
+**Risk engine files (removable now — tables are in database.types.ts):**
+- [ ] `src/lib/risk/detection-engine.ts` — remove @ts-nocheck, should compile clean
+- [ ] `src/lib/risk/early-warning.ts` — remove @ts-nocheck, should compile clean
+
+**Pre-existing missing table refs (need their own migrations):**
+- [ ] `src/lib/compliance/evidence-logger.ts` — compliance_events, consent_records, compliance_reports
+- [ ] `src/lib/compliance/ferpa-compliance.ts` — directory_opt_outs, amendment_requests, section_enrollments, sections, iep_team_members
+- [ ] `src/app/api/ferpa-audit/route.ts` — ferpa_audit_log
+- [ ] `src/lib/data/integration/orchestrator.ts` — school_data_sources
+- [ ] `src/lib/data/integration/pipeline.ts` — data_quality_issues
+- [ ] `src/lib/interventions/team-collaboration.ts` — intervention_comments
+- [ ] `src/lib/interventions/workflow-manager.ts` — intervention_audit_log
+
+**Demo data strict typing (regen side effect):**
+- [ ] `src/lib/db/queries/audit.ts`
+- [ ] `src/lib/db/queries/dashboards.ts`
+- [ ] `src/lib/db/queries/data-sources.ts`
+- [ ] `src/lib/db/queries/interventions.ts`
+- [ ] `src/lib/db/queries/notifications.ts`
+- [ ] `src/lib/db/queries/payments.ts`
+- [ ] `src/lib/db/queries/resource-progress.ts`
+- [ ] `src/lib/db/queries/schools.ts`
+- [ ] `src/lib/db/queries/students.ts`
+- [ ] `src/lib/db/queries/users.ts`
+- [ ] `src/lib/db/queries/webhook-events.ts`
 
 ---
 
-## B) Data Integration Layer
+## B) Data Integration Layer (Adapters + Sync)
 
-### B1. Adapter Registry (COMPLETE)
-- [x] 8 adapters: Canvas, PowerSchool, Clever, ClassLink, Google Classroom, NWEA MAP, iReady, Renaissance STAR
-- [x] Registry pattern: `src/lib/data/sources/registry.ts`
-- [x] Integration orchestrator and pipeline
-- [ ] Adapter shared contract verification (testConnection, syncRosters)
-- [ ] Adapter error standardization
+### B1. Adapter registry + contracts
 
-### B2. Sync Reliability
-- [x] Cron endpoints exist and are idempotent
-- [x] `sync_history` table tracks sync operations
-- [ ] Partial failure isolation (per-source)
+- [x] Adapters implement shared contract (testConnection, syncRosters, etc.)
+- [x] Canvas adapter
+- [x] Clever adapter
+- [x] ClassLink adapter
+- [x] PowerSchool adapter
+- [x] NWEA MAP adapter
+- [x] iReady adapter
+- [x] Renaissance STAR adapter
+- [x] Google Classroom adapter
+- [x] Adapter errors standardized
+- [x] Returns normalized data shapes
+
+### B2. Sync reliability
+
+- [x] Cron endpoints exist and are idempotent: /api/cron/sync-rosters
+- [x] Scheduled reports cron
+- [x] Stale interventions cron
+- [x] Sync status persisted (sync_history table)
+- [ ] Partial failures isolated per-source
 - [ ] Rate limiting and backoff for external APIs
 
-### B3. Data Fallback
-- [ ] CSV import path for students (Sprint 5)
-- [ ] CSV import path for rosters (Sprint 5)
-- [ ] CSV import path for attendance (Sprint 5)
+### B3. Data fallback
+
+- [ ] CSV import path for students
+- [ ] CSV import path for rosters
+- [ ] CSV import path for attendance
 - [ ] Import validates schema and logs row-level errors
 
-### B4. Data Quality Score
-- [x] `student_metrics.data_completeness` field exists (NUMERIC 0-1)
-- [x] Bootstrap query calculates completeness from 8 indicators
-- [ ] Dashboard widget showing per-school data completeness (Sprint 4)
-- [ ] "What's missing" plain-language display (Sprint 4)
+### B4. Data quality score
+
+- [x] Data completeness computed per student (student_metrics.data_completeness)
+- [ ] Per-school Data Completeness Score (0-100)
+- [ ] Dashboard shows "what's missing" plainly
 
 ---
 
-## C) Risk Detection Engine
+## C) Automated Risk Detection Engine (Core Value)
 
-### C1. Database Foundation (SPRINT 1A - COMPLETE)
-- [x] `risk_model_configs` table - per-school weights, thresholds, indicator params
-- [x] `student_metrics` table - 27 columns of normalized indicators
-- [x] `student_metric_history` table - weekly snapshots for trend regression
-- [x] `risk_evaluations` table - immutable audit trail with factor snapshots
-- [x] `risk_alerts` table - full lifecycle (new/acknowledged/in_review/resolved/dismissed)
-- [x] `current_risk_scores` view - latest evaluation per active student
-- [x] `get_user_school_ids()` SECURITY DEFINER function
-- [x] 15 RLS policies (school-scoped + service role bypass)
-- [x] 11 performance indexes
-- [x] 3 `updated_at` triggers
-- [x] `risk_level` enum extended with `watch` tier
-- [x] Migration: `supabase/migrations/00006_risk_engine_tables.sql`
+### C1. Risk model readiness
 
-**Commits:** `eb14189`, `98943dc`
-
-### C2. Engine Core (SPRINT 1B - COMPLETE)
-- [x] `src/lib/risk-engine/types.ts` - 326 lines of bridge types
-- [x] `detection-engine.ts` loads config from `risk_model_configs` table
-- [x] Risk score computed automatically (weighted multi-factor)
-- [x] 5 indicators: attendance, academic performance, academic growth, chronic absence, engagement
+- [x] Risk score is computed, not manually set
+- [x] Multi-indicator aggregation: attendance
+- [x] Multi-indicator aggregation: academic performance
+- [x] Multi-indicator aggregation: academic growth
+- [x] Multi-indicator aggregation: engagement
+- [x] Multi-indicator aggregation: chronic absence
+- [ ] Multi-indicator aggregation: assignments/missing work (field exists, normalizer pending)
+- [ ] Multi-indicator aggregation: behavior incidents (field exists, normalizer pending)
 - [x] Risk factors are explainable (name, category, rawValue, normalizedScore, weight, description, trend)
-- [x] Evaluations persist to `risk_evaluations` with full factor snapshot
-- [x] `students` table still updated (backward compatibility)
-- [x] Level change tracking (`previousLevel`, `levelChanged`)
-- [x] Trajectory computed from `risk_evaluations` history
-- [x] Confidence calculated from data completeness
-- [x] Recommended actions generated per factor
-- [x] 4-tier classification when DB config loaded (on_track/watch/at_risk/critical)
-- [x] Legacy 3-tier fallback when no DB config
 
-**Commits:** `c0dbea4`, `e528b13`
+### C2. Configurability
 
-### C3. Batch Orchestration (SPRINT 2 - COMPLETE)
-- [x] `src/lib/risk-engine/metrics-aggregator.ts` - 455 lines
-- [x] `src/lib/risk-engine/orchestrator.ts` - 230 lines
-- [x] `evaluateSchoolRisk()` coordinates full pipeline
-- [x] Nightly batch cron: `/api/cron/risk-evaluation`
+- [x] Config stored in database (risk_model_configs table)
+- [x] Per-school configuration
+- [x] Configurable weights (attendance, academic, assignments, behavior, trend)
+- [x] Configurable thresholds (on_track, watch, at_risk, critical)
+- [x] Configurable indicator parameters (attendance_floor, assessment_floor_pct, etc.)
+- [x] Defaults exist and work out of the box (3 schools seeded)
+- [x] Weights auto-normalize to sum 1.0
+- [x] CHECK constraint ensures weights sum and thresholds ordered
 
-### C4. Configurability
-- [x] Weights configurable per school (stored in `risk_model_configs`)
-- [x] Thresholds configurable per school
-- [x] Indicator parameters configurable
-- [x] Weights constrained to sum to 1.0 (CHECK constraint)
-- [x] Thresholds constrained to ascending order (CHECK constraint)
-- [x] Defaults work out of the box
-- [ ] Admin UI for config editing (`/[school_slug]/settings/risk-model`) - Sprint 5
+### C3. Trend detection
 
-### C5. Trend Detection
-- [x] `student_metric_history` table exists for weekly snapshots
-- [x] Trajectory detection from evaluation history (improving/stable/declining)
-- [ ] Linear regression slope computation over configurable lookback window (Sprint 3)
-- [ ] Trend-based flagging before threshold breach (Sprint 3)
-- [x] Weekly snapshot creation in metrics-aggregator
+- [x] student_metric_history table for weekly snapshots
+- [x] Trajectory computed from risk_evaluations history (improving/stable/declining)
+- [ ] Linear regression slope computation (trend-detector.ts — Sprint 2)
+- [ ] Student can be flagged for declining trend before threshold breach
 
-### C6. Missing Indicators (Future)
-- [ ] `missing_assignment_rate` - needs LMS sync to populate
-- [ ] `behavior_incident_count` - needs PBIS connector
-- [ ] `suspensions_count` - needs SIS discipline data
-- [ ] Assignment completion factor in risk calculation
-- [ ] Behavior factor in risk calculation
+### C4. Recalculation strategy
+
+- [x] risk_evaluations stores every computation (immutable audit trail)
+- [x] trigger_type tracked (sync_event, batch_nightly, manual, config_change)
+- [ ] Nightly batch cron (/api/cron/risk-evaluation — Sprint 2, created)
+- [ ] Post-sync hook triggers risk recalculation
+- [ ] Manual "recompute now" admin action
+- [x] Recompute is deterministic and logged
+
+### C5. Level change tracking (NEW — Sprint 1B)
+
+- [x] previous_level stored on each evaluation
+- [x] level_changed boolean flag
+- [x] 4-tier classification: on_track, watch, at_risk, critical
+- [x] 'watch' added to risk_level Postgres enum
 
 ---
 
 ## D) Alerts and Trigger System
 
-### D1. Alert Engine (SPRINT 1B - COMPLETE)
-- [x] `early-warning.ts` refactored to use `risk_alerts` table
-- [x] 5 default alert rules: attendance drop, chronic absence, critical risk, grade decline, consecutive absences
-- [x] Alert types: threshold_breach, rapid_decline, chronic_absence, intervention_overdue, new_risk_detected, trend_warning, attendance_drop, grade_decline, consecutive_absences
-- [x] Severity levels: info, warning, urgent, critical
-- [x] DB-level cooldown deduplication via `cooldown_key`
-- [x] In-memory cooldown cache (per-process)
-- [x] Role-based notification dispatch via `school_memberships`
-- [x] Notifications created in `notifications` table
+### D1. Trigger events
 
-### D2. Alert Lifecycle (SPRINT 1B - COMPLETE)
-- [x] Alert creation with rule_id, student context, risk data
-- [x] Acknowledge alert (userId + timestamp)
-- [x] Resolve alert (userId + timestamp + notes)
-- [x] Dismiss alert
-- [x] Alert statistics (by severity, by type, by status, avg resolution time)
+- [x] Alert on risk threshold breach
+- [x] Alert on chronic absence detected
+- [x] Alert on attendance drop (change detection)
+- [x] Alert on grade decline
+- [x] Alert on consecutive absences
+- [x] Alert on critical risk level
+- [x] Alerts have severity (info, warning, urgent, critical) and alert_type
+- [x] Alerts stored in risk_alerts table (replaces missing early_warning_alerts)
 
-### D3. Alert API (SPRINT 2 - COMPLETE)
-- [x] `GET /api/schools/[schoolId]/risk/alerts` - list with filters
-- [x] `PATCH /api/schools/[schoolId]/risk/alerts/[alertId]` - acknowledge/resolve/dismiss
+### D2. Notifications center
 
-### D4. Notification Center
-- [x] `notifications` table exists (18 columns)
-- [x] Notifications API: `/api/schools/[schoolId]/notifications`
-- [x] Mark as read / resolved
-- [ ] Alert deduplication visible in UI (Sprint 4)
-- [ ] Notification preferences respected (Sprint 5)
+- [x] Staff notifications created in notifications table
+- [x] Role-based notification dispatch (via school_memberships)
+- [x] Cooldown deduplication (in-memory + DB-level via cooldown_key)
+- [x] Alert acknowledge workflow
+- [x] Alert resolve workflow (with resolution_notes)
+- [x] Alert dismiss workflow
+- [ ] Alert linked to intervention (intervention_id FK exists, workflow pending)
+
+### D3. Audit trail
+
+- [x] risk_evaluations: immutable record of every computation
+- [x] metrics_snapshot JSONB on each evaluation
+- [x] risk_factors JSONB with full explainability
+- [x] config_id links evaluation to the config used
 
 ---
 
-## E) MTSS Workflow: Tiering and Interventions
+## E) MTSS Workflow: Tiering + Interventions
 
-### E1. Intervention System (EXISTING - STRONG)
-- [x] `interventions` table (25 columns)
-- [x] Full CRUD API endpoints
-- [x] Stale intervention detection cron
-- [x] Intervention workflow manager (23.1 KB)
-- [x] Team collaboration module (15.8 KB)
-- [x] Progress notes, baseline/target/current values
-- [x] `was_successful` outcome tracking
-- [x] Intervention page: `/[school_slug]/interventions`
+### E1. Tier placement workflow
 
-### E2. Tier Placement
-- [x] Pattern detected: tier references in codebase
-- [ ] Explicit MTSS tier state field on intervention
-- [ ] Tier change requires reason + evidence snapshot + approver
-- [ ] Tier history preserved
-- [ ] Tier placement workflow UI
+- [x] Student has risk_level (on_track, watch, at_risk, critical)
+- [x] Level changes tracked (previous_level, level_changed)
+- [ ] Tier change requires reason and evidence snapshot
+- [ ] Tier change requires approver/owner (role-based)
+- [ ] Tier history preserved as separate records
 
-### E3. Intervention Templates
-- [x] Pattern detected: intervention templates referenced
-- [ ] Template library (academic, attendance, behavior, SEL)
-- [ ] Create intervention from template in <30 seconds
-- [ ] Template management UI
+### E2. Intervention management
 
-### E4. Dosage Analysis (Sprint 3)
-- [ ] `intervention_dosage_metrics` table migration
-- [ ] `dosage-analyzer.ts` core computation
-- [ ] 10 inference rules implemented
-- [ ] Session logging in progress_notes
-- [ ] DosagePlan validation in interventions.metadata
-- [ ] Dosage API endpoints
-- [ ] Dashboard dosage widgets
+- [x] Interventions table with full lifecycle (25 columns)
+- [x] Status tracking (intervention_status enum)
+- [x] Type classification (intervention_type enum)
+- [x] Priority levels (notification_priority enum)
+- [x] Assigned to user
+- [x] Stale intervention detection (is_stale, cron job)
+- [ ] Intervention templates library
+- [ ] Creating intervention from template < 30 seconds
+
+### E3. Monitoring + outcomes
+
+- [x] Goals: baseline_value, target_value, current_value
+- [x] progress_notes (JSONB, timestamped)
+- [x] success_criteria field
+- [x] outcome_summary field
+- [x] was_successful boolean
+- [ ] Effectiveness metrics: pre/post risk score delta
+- [ ] Attendance delta computation
+- [ ] Assessment delta computation
 
 ---
 
 ## F) Evidence, Compliance, and Auditability
 
-### F1. Audit Trail (STRONG)
-- [x] `audit_logs` table (12 columns)
-- [x] Admin audit logs page: `/admin/audit-logs`
-- [x] Evidence logger module
-- [x] Risk evaluations provide immutable audit trail
-- [ ] Audit log export endpoint (CSV/JSON) - Sprint 5
-- [ ] Risk evaluation export endpoint - Sprint 5
+### F1. Audit logs
 
-### F2. FERPA Compliance (STRONG)
-- [x] FERPA compliance module
-- [x] FERPA page: `/ferpa`
-- [x] FERPA audit API
-- [x] Privacy audit API
-- [x] No-cache headers on student data routes
+- [x] audit_logs table with action, resource_type, resource_id, old/new values
+- [x] IP address and user_agent captured
+- [ ] Audit log viewer UI for admins (page exists at /admin/audit-logs)
+- [ ] Export endpoint (CSV/JSON) for interventions, tier history, alerts, evaluations
 
-### F3. Privacy and Access Control (STRONG)
-- [x] PII anonymizer module
-- [x] Secure AI proxy
-- [x] RBAC module
-- [x] `school_memberships` with role-based access
-- [x] RLS on all risk engine tables
+### F2. Privacy and access control
+
+- [x] RBAC via school_memberships.role
+- [x] RLS on all risk engine tables (15 policies)
+- [x] SECURITY DEFINER function to avoid RLS recursion
+- [x] PII anonymization (pii-anonymizer.ts, 14.8 KB)
+- [x] Secure AI proxy (secure-ai-proxy.ts, 21.6 KB)
+- [x] FERPA compliance infrastructure (ferpa-compliance.ts, 17.2 KB)
+- [x] Evidence logger (evidence-logger.ts, 18.5 KB)
 - [ ] Data retention rules documented
-- [ ] Consent tracking
+- [ ] Consent tracking (consent_records table pending)
 
 ---
 
 ## G) Early Warning Dashboard
 
-### G1. Existing Dashboard Infrastructure
-- [x] Dashboard page: `/[school_slug]/dashboard`
-- [x] Dashboard sub-pages: pulse, momentum, assessments, attendance, reports, students
-- [x] Student 360 view: `/[school_slug]/student-360/[student_id]`
-- [x] Charts: attendance trend, confidence band, mastery curve, maturity radar
-- [x] Banners: confounding risk, data freshness, weak data pulse
+### G1. Dashboard must answer 4 questions instantly
 
-### G2. Risk API Endpoints (SPRINT 2 - COMPLETE)
-- [x] `GET /api/schools/[schoolId]/risk/scores` - paginated, filterable, enriched with interventions
-- [x] `GET /api/schools/[schoolId]/risk/distribution` - tier counts, grade breakdown, weekly trend
-- [x] `GET /api/schools/[schoolId]/risk/drivers` - aggregated factors
-- [x] `GET /api/schools/[schoolId]/risk/config` - read model config
-- [x] `PUT /api/schools/[schoolId]/risk/config` - update model config
-- [x] `GET /api/schools/[schoolId]/risk/alerts` - alert list with filters
-- [x] `PATCH /api/schools/[schoolId]/risk/alerts/[alertId]` - acknowledge/resolve
-- [x] `GET /api/schools/[schoolId]/risk/history/[studentId]` - score history
+- [ ] How many students are at risk today? (counts by tier + risk band)
+- [ ] Who are the top 20 highest risk? (sortable table)
+- [ ] Why are they at risk? (driver breakdown)
+- [ ] What are we doing about it? (interventions pipeline)
 
-### G3. Early Warning Dashboard Page (Sprint 4)
+### G2. API endpoints for dashboard (Sprint 2)
 
-**Route:** `/[school_slug]/dashboard/early-warning`
+- [x] GET /api/schools/[schoolId]/risk/scores — paginated, filterable
+- [x] GET /api/schools/[schoolId]/risk/distribution — counts by tier, trend, by grade
+- [x] GET /api/schools/[schoolId]/risk/drivers — aggregated risk factors
+- [x] GET+PUT /api/schools/[schoolId]/risk/config — read/update config
+- [x] GET+PATCH /api/schools/[schoolId]/risk/alerts — list + manage alerts
+- [ ] GET /api/schools/[schoolId]/risk/history/[studentId] — student risk history
 
-**Required Components:**
-- [x] `RiskDistributionChart` - donut chart of tier counts
-- [x] `RiskTrendChart` - stacked bar over time (weekly)
-- [x] `StudentRiskTable` - sortable, filterable list of at-risk students
-- [x] `AlertFeed` - real-time alert list with acknowledge/resolve
-- [x] `RiskDriverBreakdown` - top drivers school-wide
-- [x] `InterventionPipeline` - visual workflow: planned/active/stale
-- [x] `StudentRiskCard` - individual student with factors + actions
-- [x] `MeetingPrepExport` - generate MTSS agenda
+### G3. Dashboard UI components (Sprint 4)
 
-**Required Hooks:**
-- [x] `useRiskScores(schoolId, filters)` - fetch paginated scores
-- [x] `useRiskDistribution(schoolId)` - fetch distribution + trends
-- [x] `useRiskAlerts(schoolId, filters)` - fetch alerts
-- [x] `useRiskConfig(schoolId)` - fetch/update config
-
-**Interpretation Layer:**
-- [x] `src/lib/risk-engine/interpreter.ts` - plain language converter
-- [x] `interpretRiskScore()` - "Maria needs support"
-- [x] `interpretFactor()` - "Attendance is the primary concern (72%)"
-- [x] `interpretTrajectory()` - "Getting worse - was on track 4 weeks ago"
-- [x] `interpretConfidence()` - "Limited data - connect your LMS"
-- [x] `generateActionPrompt()` - "Schedule family meeting"
-
-### G4. Dashboard Answers These Questions
-- [x] **How many students are at risk today?** - distribution counts
-- [x] **Who are the top 20 highest risk?** - sortable table
-- [x] **Why are they at risk?** - driver breakdown per student
-- [x] **What are we doing about it?** - intervention pipeline
+- [ ] Early warning page (/[school_slug]/dashboard/early-warning)
+- [ ] Risk distribution visualization (donut + trend chart)
+- [ ] At-risk student table with sort/filter
+- [ ] Risk driver breakdown panel
+- [ ] Alert feed component
+- [ ] "No intervention yet" list
+- [ ] Intervention pipeline view (planned/in progress/completed/stale)
 
 ---
 
-## H) Testing and QA
+## H) Testing and QA Gates
 
-### H1. Test Infrastructure
-- [x] Vitest configured
-- [x] Test directories exist with existing tests
-- [x] Existing tests: interventions, stripe webhook, students, RBAC, feature gates
+### H1. Automated tests
 
-### H2. Risk Engine Tests (Sprint 5)
-- [ ] Unit tests for each normalizer function
-- [ ] Unit tests for composite score calculator
-- [ ] Unit tests for threshold classification (4-tier)
+- [x] Test framework configured (Vitest)
+- [x] Existing tests: API tests (interventions, stripe webhook, students)
+- [x] Existing tests: Component tests (metric-card, page-feature-gate)
+- [x] Existing tests: Lib tests (errors, validation, rbac, feature-gates, fetcher)
+- [ ] Unit tests for risk scoring normalizers
+- [ ] Unit tests for threshold evaluation
 - [ ] Unit tests for trend detection
-- [ ] Unit tests for dosage inference rules
-- [ ] Integration test for batch evaluation
-- [ ] Integration test for alert generation
-- [ ] Integration test for API endpoints
+- [ ] Integration tests for risk API routes
+- [ ] Smoke tests for dashboard page loads
 
-### H3. Demo and Seed Data
-- [ ] Seed data generator with realistic scenarios
-- [ ] Demo school walkthrough flow
-- [ ] Student flagged > alert > tier decision > intervention > outcome
+### H2. Demo data / demo mode
 
----
-
-## I) Alignment Status
-
-See `docs/ALIGNMENT_MATRIX.md` for full cross-reference of documentation vs implementation.
-
-**Summary:**
-- 27 items IMPLEMENTED
-- 17 items PARTIAL
-- 37 items MISSING
-- 0 CONFLICTS between documents
-
-**Top Priority Gaps:**
-1. Early Warning Dashboard page
-2. Plain language interpretation layer
-3. Dosage analysis foundation
-4. Mobility/placement tracking
-5. database.types.ts regeneration
+- [ ] Seed data with realistic school scenarios (chronic absence, declining math, missing assignments)
+- [ ] Demo school workflow: student flagged → alert → tier decision → intervention → outcome
+- [ ] Demo mode accessible without real data connections
 
 ---
 
-## Go/No-Go Criteria (Pilot Readiness)
+## I) Deployment (Staging → Pilot)
 
-| Criteria | Status | Sprint | Blocker |
-|----------|--------|--------|---------|
-| Risk is computed automatically and explainable | PASS | 1B | None |
-| Alerts trigger on risk changes | PASS | 1B | None |
-| Risk API endpoints operational | PASS | 2 | None |
-| Dashboard gives clear who/why/what-next view | PASS | 4 | None |
-| Plain language interpretation | PASS | 4 | None |
-| Dosage analysis computed | NOT STARTED | 3 | Enhancement |
-| Audit logs persist and export | PARTIAL | 5 | None |
-| Seed data for demo school | NOT STARTED | 5 | None |
-| database.types.ts regenerated | BLOCKED | 2 | Supabase CLI |
-
----
-
-## Database Tables (31 total)
-
-### Original (21 tables)
-`ai_usage`, `ai_usage_limits`, `audit_logs`, `authorizers`, `dashboard_configs`, `data_sources`, `generated_reports`, `interventions`, `notifications`, `payments`, `resource_progress`, `scheduled_reports`, `school_memberships`, `schools`, `students`, `sync_history`, `user_preferences`, `users`, `webhook_events`
-
-Views: `v_ai_usage_monthly`, `v_report_summary`
-
-### Sprint 1A (5 new tables)
-`risk_model_configs`, `student_metrics`, `student_metric_history`, `risk_evaluations`, `risk_alerts`
-
-View: `current_risk_scores`
-
-Function: `get_user_school_ids()`
-
-### Sprint 3 (Planned - 1 new table)
-`intervention_dosage_metrics`
-
-### Tables Still Missing from DB (Referenced in Code)
-`compliance_events`, `consent_records`, `compliance_reports`, `directory_opt_outs`, `section_enrollments`, `sections`, `iep_team_members`, `amendment_requests`, `school_data_sources`, `data_quality_issues`, `intervention_comments`, `intervention_audit_log`, `ferpa_audit_log`
+- [x] Vercel deployment configured (vercel.json, output: standalone)
+- [x] Docker configuration (Dockerfile, docker-compose.yml)
+- [x] Security headers configured (X-Frame-Options, CSP, etc.)
+- [x] FERPA cache headers on student data routes
+- [x] Stripe webhook endpoint
+- [ ] Staging environment configured
+- [x] DB migrations tracked (supabase/migrations/ — 6 files)
+- [x] Secrets managed (not in repo, .env.local)
+- [ ] Error monitoring enabled (Sentry configured in code, deployment pending)
+- [ ] Feature flags for optional connectors
 
 ---
 
-## Key File Inventory
+## J) Sprint Completion Tracker
 
-### Risk Engine (Sprint 1-2)
-| File | Lines | Status |
-|------|-------|--------|
-| `src/lib/risk-engine/types.ts` | 326 | NEW |
-| `src/lib/risk-engine/metrics-aggregator.ts` | 455 | NEW |
-| `src/lib/risk-engine/orchestrator.ts` | 230 | NEW |
-| `src/lib/risk-engine/index.ts` | 11 | NEW |
-| `src/lib/risk/detection-engine.ts` | 680 | REFACTORED |
-| `src/lib/risk/early-warning.ts` | 569 | REFACTORED |
-| `src/lib/risk/index.ts` | 24 | UPDATED |
-| `supabase/migrations/00006_risk_engine_tables.sql` | 391 | NEW |
+### Sprint 1A: Database Foundation — COMPLETE
+- [x] risk_model_configs table + 3 school configs seeded
+- [x] student_metrics table
+- [x] student_metric_history table
+- [x] risk_evaluations table
+- [x] risk_alerts table
+- [x] current_risk_scores view
+- [x] get_user_school_ids() SECURITY DEFINER function
+- [x] 15 RLS policies
+- [x] 11 indexes
+- [x] 3 updated_at triggers
+- [x] 'watch' added to risk_level enum
+- [x] Migration: supabase/migrations/00006_risk_engine_tables.sql
 
-### Risk API Routes (Sprint 2)
-| Route | Method | Status |
-|-------|--------|--------|
-| `/api/schools/[schoolId]/risk/scores` | GET | COMPLETE |
-| `/api/schools/[schoolId]/risk/distribution` | GET | COMPLETE |
-| `/api/schools/[schoolId]/risk/drivers` | GET | COMPLETE |
-| `/api/schools/[schoolId]/risk/config` | GET, PUT | COMPLETE |
-| `/api/schools/[schoolId]/risk/alerts` | GET | COMPLETE |
-| `/api/schools/[schoolId]/risk/alerts/[alertId]` | PATCH | COMPLETE |
-| `/api/schools/[schoolId]/risk/history/[studentId]` | GET | COMPLETE |
-| `/api/cron/risk-evaluation` | GET | COMPLETE |
+### Sprint 1B: Engine Refactor — COMPLETE
+- [x] src/lib/risk-engine/types.ts (bridge types)
+- [x] detection-engine.ts loads config from risk_model_configs
+- [x] detection-engine.ts writes to risk_evaluations
+- [x] detection-engine.ts tracks previousLevel/levelChanged
+- [x] detection-engine.ts calculateTrajectory reads risk_evaluations
+- [x] early-warning.ts writes to risk_alerts
+- [x] early-warning.ts DB cooldown via cooldown_key
+- [x] early-warning.ts reads student_metric_history
+- [x] early-warning.ts uses school_memberships for notifications
+- [x] index.ts re-exports all new types
+- [x] Build passes clean
+
+### Sprint 2: API + Orchestrator — IN PROGRESS
+- [x] database.types.ts regenerated
+- [x] Convenience type aliases added
+- [x] Risk scores API route
+- [x] Risk distribution API route (needs weeklyTrend fix)
+- [x] Risk drivers API route
+- [x] Risk config API route
+- [x] Risk alerts API route
+- [x] Metrics aggregator (needs cast fixes)
+- [x] Batch orchestrator
+- [x] Nightly cron route
+- [ ] Build passes clean (blocking: metrics-aggregator.ts cast, distribution weeklyTrend)
+- [ ] Remove @ts-nocheck from risk engine files
+- [ ] All routes tested
+
+### Sprint 3: Early Warning Dashboard — NOT STARTED
+### Sprint 4: Demo + Polish — NOT STARTED
 
 ---
 
-*Document Version: 4.1*
-*Previous: v4.0 (March 7, 2026)*
+## Go/No-Go Criteria (5 Gates)
+
+| Gate | Status | Notes |
+|------|--------|-------|
+| Risk computed automatically and explainable | PASS | Engine refactored, writes to risk_evaluations with full factors |
+| Alerts trigger on risk changes | PASS | 6 alert rules, DB persistence, cooldown dedup |
+| Tiering + interventions fully tracked | PARTIAL | Level changes tracked, intervention linking pending |
+| Dashboard gives clear who/why/what-next | NOT YET | API routes built, UI pending (Sprint 3) |
+| Audit logs persist and export | PARTIAL | risk_evaluations audit trail complete, export endpoint pending |
+
+**Current readiness: 2.5/5 gates passed. Target: 5/5 by Sprint 4.**
