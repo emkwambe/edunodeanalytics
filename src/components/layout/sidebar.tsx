@@ -22,6 +22,7 @@ import {
   Target,
   Dna,
   Shield,
+  ShieldAlert,
   Lock,
   Zap,
   Crown,
@@ -118,6 +119,12 @@ export function Sidebar({
       href: `/${schoolSlug}/dashboard/students`,
       icon: <Users className="w-5 h-5" />,
       featureKey: 'student_360',
+    },
+    {
+      label: 'Early Warning',
+      href: `/${schoolSlug}/dashboard/early-warning`,
+      icon: <ShieldAlert className="w-5 h-5" />,
+      featureKey: 'mtss_management',
     },
     {
       label: 'MTSS Interventions',
