@@ -33,12 +33,14 @@ import {
   AlertTriangle,
   CheckCircle2,
   TrendingUp,
+  TrendingDown,
   Calendar,
   BookOpen,
   Target,
   GraduationCap,
   Activity,
   Shield,
+  ShieldAlert,
   Clock,
   FileText,
   MessageSquare,
@@ -49,7 +51,16 @@ import {
   Timer,
   Gauge,
   Zap,
+  Bell,
+  Plus,
 } from 'lucide-react';
+import {
+  useStudentRiskProfile,
+  useStudentRiskHistory,
+  useRiskAlerts,
+} from '@/lib/hooks/use-risk';
+import { StatusBadge } from '@/components/dashboard/status-indicator';
+import { Progress } from '@/components/ui/progress';
 import {
   calculateVolatilityIndex,
   calculateTimeToImpact,
@@ -110,6 +121,11 @@ export default function Student360DeepDivePage() {
 
   // FERPA Audit: Log this page view for compliance
   useStudent360Audit(student_id, school_slug);
+
+  // Risk Engine Integration
+  const { profile: riskProfile, isLoading: riskLoading } = useStudentRiskProfile(school_slug, student_id);
+  const { history: riskHistory, isLoading: historyLoading } = useStudentRiskHistory(school_slug, student_id, { days: 90 });
+  const { alerts: studentAlerts, isLoading: alertsLoading } = useRiskAlerts(school_slug, { studentId: student_id, limit: 5 });
 
   // Get student data from seed
   const schoolSeed = getSchoolSeed(school_slug);
@@ -385,6 +401,207 @@ export default function Student360DeepDivePage() {
 
         {/* Right Column - Vitals & Actions */}
         <div className="lg:col-span-4 space-y-4">
+          {/* Risk Profile Card */}
+          <Card className={cn(
+            "bg-slate-800/30 border-slate-700",
+            riskProfile?.riskLevel === 'critical' && "border-red-500/30",
+            riskProfile?.riskLevel === 'at_risk' && "border-orange-500/30"
+          )}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-cyan-400">
+                  <ShieldAlert className="w-4 h-4" />
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider">
+                    Risk Profile
+                  </CardTitle>
+                </div>
+                {riskProfile && (
+                  <StatusBadge status={riskProfile.riskLevel} />
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {riskLoading ? (
+                <div className="space-y-3 animate-pulse">
+                  <div className="h-8 w-24 bg-slate-700 rounded" />
+                  <div className="h-2 w-full bg-slate-700 rounded" />
+                  <div className="h-16 w-full bg-slate-700 rounded" />
+                </div>
+              ) : riskProfile ? (
+                <div className="space-y-4">
+                  {/* Risk Score */}
+                  <div>
+                    <div className="flex items-baseline justify-between mb-2">
+                      <span className={cn(
+                        'text-3xl font-black',
+                        riskProfile.riskLevel === 'critical' ? 'text-red-400' :
+                        riskProfile.riskLevel === 'at_risk' ? 'text-orange-400' :
+                        riskProfile.riskLevel === 'watch' ? 'text-yellow-400' :
+                        'text-emerald-400'
+                      )}>
+                        {(riskProfile.riskScore * 100).toFixed(0)}
+                      </span>
+                      <div className="flex items-center gap-1 text-sm">
+                        {riskProfile.trajectory === 'improving' ? (
+                          <><TrendingDown className="w-4 h-4 text-emerald-400" /><span className="text-emerald-400">Improving</span></>
+                        ) : riskProfile.trajectory === 'declining' ? (
+                          <><TrendingUp className="w-4 h-4 text-red-400" /><span className="text-red-400">Declining</span></>
+                        ) : (
+                          <span className="text-slate-400">Stable</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          riskProfile.riskLevel === 'critical' ? 'bg-red-500' :
+                          riskProfile.riskLevel === 'at_risk' ? 'bg-orange-500' :
+                          riskProfile.riskLevel === 'watch' ? 'bg-yellow-500' :
+                          'bg-emerald-500'
+                        )}
+                        style={{ width: `${riskProfile.riskScore * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Risk Factors */}
+                  {riskProfile.factors && riskProfile.factors.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        Contributing Factors
+                      </h4>
+                      <div className="space-y-2">
+                        {riskProfile.factors.slice(0, 3).map((factor, idx) => (
+                          <div key={idx}>
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="text-slate-300 capitalize">{factor.name.replace(/_/g, ' ')}</span>
+                              <span className="text-slate-500">{(factor.weightedScore * 100).toFixed(0)}%</span>
+                            </div>
+                            <Progress value={factor.weightedScore * 100} className="h-1" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Level Change Alert */}
+                  {riskProfile.levelChanged && riskProfile.previousLevel && (
+                    <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20">
+                      <p className="text-[10px] text-amber-400">
+                        Risk level changed from {riskProfile.previousLevel.replace('_', ' ')} to {riskProfile.riskLevel.replace('_', ' ')}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Create Intervention Link */}
+                  {(riskProfile.riskLevel === 'critical' || riskProfile.riskLevel === 'at_risk') && (
+                    <Link href={`/${school_slug}/interventions/new?studentId=${student_id}`}>
+                      <Button size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-xs">
+                        <Plus className="w-3 h-3 mr-1" />
+                        Create Intervention
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <div className="py-4 text-center">
+                  <ShieldAlert className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                  <p className="text-xs text-slate-400">No risk data available</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Active Alerts for Student */}
+          {!alertsLoading && studentAlerts && studentAlerts.length > 0 && (
+            <Card className="bg-slate-800/30 border-amber-500/30">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-amber-400">
+                    <Bell className="w-4 h-4" />
+                    <CardTitle className="text-xs font-bold uppercase tracking-wider">
+                      Active Alerts
+                    </CardTitle>
+                  </div>
+                  <Badge variant="warning" className="text-[10px]">
+                    {studentAlerts.length}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {studentAlerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    className="p-2 rounded-lg bg-slate-900/50 border border-slate-700/50"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <Badge className={cn(
+                        'text-[9px]',
+                        alert.severity === 'critical' ? 'bg-red-500/20 text-red-400' :
+                        alert.severity === 'urgent' ? 'bg-orange-500/20 text-orange-400' :
+                        alert.severity === 'warning' ? 'bg-amber-500/20 text-amber-400' :
+                        'bg-blue-500/20 text-blue-400'
+                      )}>
+                        {alert.severity}
+                      </Badge>
+                      <span className="text-[9px] text-slate-500">
+                        {new Date(alert.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300">{alert.title}</p>
+                  </div>
+                ))}
+                <Link href={`/${school_slug}/dashboard/early-warning?studentId=${student_id}`}>
+                  <Button variant="outline" size="sm" className="w-full text-xs mt-2">
+                    View All Alerts
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Risk History Chart */}
+          {!historyLoading && riskHistory && riskHistory.length > 1 && (
+            <Card className="bg-slate-800/30 border-slate-700">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2 text-cyan-400">
+                  <TrendingUp className="w-4 h-4" />
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider">
+                    Risk History (90 days)
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[120px]">
+                  <Line
+                    data={{
+                      labels: riskHistory.map(h => new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+                      datasets: [{
+                        label: 'Risk Score',
+                        data: riskHistory.map(h => h.riskScore * 100),
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 2,
+                      }]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: { legend: { display: false } },
+                      scales: {
+                        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 0 } }
+                      }
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Student Vitals */}
           <Card className="bg-slate-800/30 border-slate-700">
             <CardHeader className="pb-2">
