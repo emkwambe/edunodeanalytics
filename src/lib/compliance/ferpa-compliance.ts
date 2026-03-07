@@ -1,4 +1,4 @@
-// @ts-nocheck - directory_opt_outs table migration pending
+// @ts-nocheck - references tables not yet migrated (compliance_events, consent_records, etc.)
 /**
  * FERPA Compliance Module
  * =======================

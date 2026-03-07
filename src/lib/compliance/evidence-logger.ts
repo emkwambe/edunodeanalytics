@@ -1,4 +1,4 @@
-// @ts-nocheck - compliance_events table migration pending (Sprint 2)
+// @ts-nocheck - references tables not yet migrated (compliance_events, consent_records, etc.)
 /**
  * Evidence and Compliance Logger
  * ===============================

@@ -1,4 +1,3 @@
-// @ts-nocheck - risk engine tables not yet in database.types.ts (regen pending)
 /**
  * Student Risk Detection Engine
  * =============================
