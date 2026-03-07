@@ -43,6 +43,9 @@ import {
  * - Integrations (Clever, BigQuery)
  */
 
+import Link from 'next/link';
+import { Sliders } from 'lucide-react';
+
 type SettingsTab = 'general' | 'cadence' | 'team' | 'integrations' | 'billing';
 
 const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
@@ -51,6 +54,28 @@ const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { id: 'team', label: 'Team & RBAC', icon: <Users size={16} /> },
   { id: 'integrations', label: 'Integrations', icon: <Database size={16} /> },
   { id: 'billing', label: 'Billing', icon: <CreditCard size={16} /> },
+];
+
+interface NavLink {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+}
+
+const getNavLinks = (schoolSlug: string): NavLink[] => [
+  {
+    href: `/${schoolSlug}/settings/import`,
+    label: 'Import Data',
+    icon: <Upload size={16} />,
+    description: 'Import CSV files',
+  },
+  {
+    href: `/${schoolSlug}/settings/risk-model`,
+    label: 'Risk Model',
+    icon: <Sliders size={16} />,
+    description: 'Configure risk weights',
+  },
 ];
 
 const COLOR_OPTIONS = [
@@ -140,6 +165,23 @@ export default function SettingsPage() {
               {tab.icon}
               {tab.label}
             </button>
+          ))}
+
+          {/* Divider */}
+          <div className="py-2">
+            <div className="border-t border-slate-700" />
+          </div>
+
+          {/* Additional Pages */}
+          {getNavLinks(school_slug).map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition text-slate-400 hover:bg-slate-800 hover:text-white"
+            >
+              {link.icon}
+              {link.label}
+            </Link>
           ))}
         </div>
 
