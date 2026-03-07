@@ -20,9 +20,10 @@ const badgeVariants = cva(
         destructive: 'bg-red-500/20 text-red-400 border border-red-500/30',
         warning: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
         outline: 'bg-transparent text-slate-300 border border-slate-600',
-        // Status variants for student risk levels
+        // Status variants for student risk levels (4-tier MTSS model)
         'on-track': 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
-        'at-risk': 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
+        watch: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+        'at-risk': 'bg-orange-500/20 text-orange-400 border border-orange-500/30',
         critical: 'bg-red-500/20 text-red-400 border border-red-500/30',
       },
       size: {

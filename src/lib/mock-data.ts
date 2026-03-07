@@ -34,7 +34,7 @@ const LAST_NAMES = [
   'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson',
 ];
 
-type StatusLevel = 'on_track' | 'at_risk' | 'critical' | 'no_data';
+type StatusLevel = 'on_track' | 'watch' | 'at_risk' | 'critical' | 'no_data';
 
 /**
  * Generate mock student data
@@ -144,16 +144,18 @@ export function generateMockAttendanceTrend(weeks: number = 16): AttendanceTrend
 }
 
 /**
- * Generate mock risk distribution data
+ * Generate mock risk distribution data (4-tier MTSS model)
  */
 export function generateMockRiskDistribution(totalStudents: number = 450): RiskDistributionData {
-  // Typical distribution: 70% on-track, 20% at-risk, 10% critical
-  const onTrackPct = randomFloat(0.65, 0.75);
-  const criticalPct = randomFloat(0.08, 0.15);
-  const atRiskPct = 1 - onTrackPct - criticalPct;
+  // Typical distribution: 60% on-track, 15% watch, 15% at-risk, 10% critical
+  const onTrackPct = randomFloat(0.55, 0.65);
+  const watchPct = randomFloat(0.12, 0.18);
+  const criticalPct = randomFloat(0.08, 0.12);
+  const atRiskPct = 1 - onTrackPct - watchPct - criticalPct;
 
   return {
     onTrack: Math.round(totalStudents * onTrackPct),
+    watch: Math.round(totalStudents * watchPct),
     atRisk: Math.round(totalStudents * atRiskPct),
     critical: Math.round(totalStudents * criticalPct),
   };

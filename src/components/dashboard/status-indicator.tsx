@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
  * Using Unicode/CSS for lightweight rendering (no SVG per design spec)
  */
 
-export type StatusLevel = 'on_track' | 'at_risk' | 'critical' | 'no_data';
+export type StatusLevel = 'on_track' | 'watch' | 'at_risk' | 'critical' | 'no_data';
 
 interface StatusIndicatorProps {
   status: StatusLevel;
@@ -37,11 +37,18 @@ const STATUS_CONFIG: Record<
     borderColor: 'border-emerald-500/30',
     icon: '\u2714', // Check mark
   },
+  watch: {
+    label: 'Watch',
+    color: 'text-yellow-400',
+    bgColor: 'bg-yellow-500/20',
+    borderColor: 'border-yellow-500/30',
+    icon: '\u25CB', // Circle
+  },
   at_risk: {
     label: 'At Risk',
-    color: 'text-amber-400',
-    bgColor: 'bg-amber-500/20',
-    borderColor: 'border-amber-500/30',
+    color: 'text-orange-400',
+    bgColor: 'bg-orange-500/20',
+    borderColor: 'border-orange-500/30',
     icon: '\u26A0', // Warning sign
   },
   critical: {

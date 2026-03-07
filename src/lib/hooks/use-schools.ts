@@ -46,9 +46,9 @@ export function useSchools(options: UseSchoolsOptions = {}) {
   };
 }
 
-export function useSchool(schoolId: string | null) {
+export function useSchool(schoolIdOrSlug: string | null) {
   const { data, error, isLoading, mutate } = useSWR<School>(
-    schoolId ? `/api/schools/${schoolId}` : null,
+    schoolIdOrSlug ? `/api/schools/${schoolIdOrSlug}` : null,
     fetcher
   );
 

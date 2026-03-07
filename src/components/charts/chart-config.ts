@@ -50,9 +50,18 @@ export const EDUNODE_COLORS = {
     400: '#34d399',
     300: '#6ee7b7',
   },
+  yellow: {
+    500: '#eab308',
+    400: '#facc15',
+    300: '#fde047',
+  },
   amber: {
     500: '#f59e0b',
     400: '#fbbf24',
+  },
+  orange: {
+    500: '#f97316',
+    400: '#fb923c',
   },
   red: {
     500: '#ef4444',

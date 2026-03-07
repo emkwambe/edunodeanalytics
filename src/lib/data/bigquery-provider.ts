@@ -573,17 +573,17 @@ class BigQueryProvider {
   }
 
   /**
-   * Get risk distribution data
+   * Get risk distribution data (4-tier MTSS model)
    */
   async getRiskDistribution(
     schoolSlug: string
-  ): Promise<QueryResult<{ onTrack: number; atRisk: number; critical: number }>> {
+  ): Promise<QueryResult<{ onTrack: number; watch: number; atRisk: number; critical: number }>> {
     const startTime = performance.now();
     const school = getSchoolSeed(schoolSlug);
 
     if (!school) {
       return {
-        data: { onTrack: 0, atRisk: 0, critical: 0 },
+        data: { onTrack: 0, watch: 0, atRisk: 0, critical: 0 },
         metadata: {
           cached: false,
           queryTime: performance.now() - startTime,

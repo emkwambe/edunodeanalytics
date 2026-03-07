@@ -10,12 +10,13 @@ import type { ChartData, ChartOptions } from 'chart.js';
 /**
  * Risk Distribution Chart
  *
- * Doughnut chart showing student distribution by risk level
+ * Doughnut chart showing student distribution by risk level (4-tier MTSS model)
  * Center displays total student count
  */
 
 export interface RiskDistributionData {
   onTrack: number;
+  watch: number;
   atRisk: number;
   critical: number;
 }
@@ -39,22 +40,24 @@ export function RiskDistributionChart({
   className,
   showPercentages = true,
 }: RiskDistributionChartProps) {
-  const total = data.onTrack + data.atRisk + data.critical;
+  const total = data.onTrack + data.watch + data.atRisk + data.critical;
 
   // Prepare chart data
   const chartData: ChartData<'doughnut'> = React.useMemo(() => ({
-    labels: ['On Track', 'At Risk', 'Critical'],
+    labels: ['On Track', 'Watch', 'At Risk', 'Critical'],
     datasets: [
       {
-        data: [data.onTrack, data.atRisk, data.critical],
+        data: [data.onTrack, data.watch, data.atRisk, data.critical],
         backgroundColor: [
           EDUNODE_COLORS.emerald[500],
-          EDUNODE_COLORS.amber[500],
+          EDUNODE_COLORS.yellow[500],
+          EDUNODE_COLORS.orange[500],
           EDUNODE_COLORS.red[500],
         ],
         borderColor: [
           EDUNODE_COLORS.emerald[500],
-          EDUNODE_COLORS.amber[500],
+          EDUNODE_COLORS.yellow[500],
+          EDUNODE_COLORS.orange[500],
           EDUNODE_COLORS.red[500],
         ],
         borderWidth: 0,
@@ -84,6 +87,7 @@ export function RiskDistributionChart({
   // Calculate percentages
   const percentages = {
     onTrack: total > 0 ? ((data.onTrack / total) * 100).toFixed(0) : '0',
+    watch: total > 0 ? ((data.watch / total) * 100).toFixed(0) : '0',
     atRisk: total > 0 ? ((data.atRisk / total) * 100).toFixed(0) : '0',
     critical: total > 0 ? ((data.critical / total) * 100).toFixed(0) : '0',
   };
@@ -111,7 +115,7 @@ export function RiskDistributionChart({
 
         {/* Legend with numbers */}
         {showPercentages && (
-          <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-700/50">
+          <div className="grid grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-700/50">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1.5 mb-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -127,10 +131,23 @@ export function RiskDistributionChart({
 
             <div className="text-center">
               <div className="flex items-center justify-center gap-1.5 mb-1">
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                <span className="text-xs text-slate-400">Watch</span>
+              </div>
+              <div className="text-lg font-bold text-yellow-400">
+                {percentages.watch}%
+              </div>
+              <div className="text-xs text-slate-500">
+                {formatNumber(data.watch)}
+              </div>
+            </div>
+
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <span className="w-2 h-2 rounded-full bg-orange-500" />
                 <span className="text-xs text-slate-400">At Risk</span>
               </div>
-              <div className="text-lg font-bold text-amber-400">
+              <div className="text-lg font-bold text-orange-400">
                 {percentages.atRisk}%
               </div>
               <div className="text-xs text-slate-500">
@@ -179,8 +196,8 @@ export function RiskDistributionChartSkeleton({
           className="animate-pulse bg-slate-800/50 rounded-full mx-auto"
           style={{ height, width: height }}
         />
-        <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-700/50 animate-pulse">
-          {[1, 2, 3].map((i) => (
+        <div className="grid grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-700/50 animate-pulse">
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className="text-center space-y-2">
               <div className="h-3 w-16 bg-slate-700 rounded mx-auto" />
               <div className="h-6 w-12 bg-slate-700 rounded mx-auto" />

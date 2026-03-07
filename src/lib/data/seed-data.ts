@@ -56,6 +56,7 @@ export interface SchoolMetrics {
   avgProficiency: number;
   riskDistribution: {
     onTrack: number;
+    watch: number;
     atRisk: number;
     critical: number;
   };
@@ -73,7 +74,7 @@ export interface StudentSeedData {
   daysPresent: number;
   proficiencyLevel: number;
   growthPercentile: number;
-  riskLevel: 'on_track' | 'at_risk' | 'critical';
+  riskLevel: 'on_track' | 'watch' | 'at_risk' | 'critical';
   riskScore: number;
   hasIep: boolean;
   has504Plan: boolean;
@@ -206,7 +207,7 @@ function calculateRiskLevel(
   proficiency: number,
   growth: number,
   attendance: number
-): 'on_track' | 'at_risk' | 'critical' {
+): 'on_track' | 'watch' | 'at_risk' | 'critical' {
   let riskScore = 0;
 
   // Proficiency factor
@@ -226,8 +227,10 @@ function calculateRiskLevel(
   else if (attendance < 0.90) riskScore += 20;
   else if (attendance < 0.95) riskScore += 10;
 
+  // 4-tier MTSS model thresholds
   if (riskScore >= 50) return 'critical';
-  if (riskScore >= 30) return 'at_risk';
+  if (riskScore >= 35) return 'at_risk';
+  if (riskScore >= 20) return 'watch';
   return 'on_track';
 }
 
@@ -280,7 +283,7 @@ function generateNweaScores(
  */
 function generateLmsEngagementData(
   rng: SeededRandom,
-  riskLevel: 'on_track' | 'at_risk' | 'critical',
+  riskLevel: 'on_track' | 'watch' | 'at_risk' | 'critical',
   proficiency: number
 ): LmsEngagementData {
   // Base GPA influenced by proficiency and risk level
@@ -292,6 +295,10 @@ function generateLmsEngagementData(
     baseGPA = 2.8 + rng.next() * 1.2; // 2.8-4.0
     baseCompletionRate = 0.85 + rng.next() * 0.15; // 85-100%
     baseMissing = rng.nextInt(0, 2);
+  } else if (riskLevel === 'watch') {
+    baseGPA = 2.4 + rng.next() * 1.0; // 2.4-3.4
+    baseCompletionRate = 0.75 + rng.next() * 0.20; // 75-95%
+    baseMissing = rng.nextInt(1, 4);
   } else if (riskLevel === 'at_risk') {
     baseGPA = 2.0 + rng.next() * 1.0; // 2.0-3.0
     baseCompletionRate = 0.65 + rng.next() * 0.25; // 65-90%
@@ -307,12 +314,14 @@ function generateLmsEngagementData(
   baseGPA = Math.min(4.0, Math.max(0.5, baseGPA + proficiencyAdjust * 0.5));
   baseCompletionRate = Math.min(1.0, Math.max(0.3, baseCompletionRate + proficiencyAdjust * 0.1));
 
-  // Last activity: on-track students more recent, critical students less recent
+  /// Last activity: on-track students more recent, critical students less recent
   const daysAgo = riskLevel === 'on_track'
     ? rng.nextInt(0, 2)
-    : riskLevel === 'at_risk'
-      ? rng.nextInt(1, 5)
-      : rng.nextInt(3, 10);
+    : riskLevel === 'watch'
+      ? rng.nextInt(0, 3)
+      : riskLevel === 'at_risk'
+        ? rng.nextInt(1, 5)
+        : rng.nextInt(3, 10);
 
   const lastActivity = new Date();
   lastActivity.setDate(lastActivity.getDate() - daysAgo);
@@ -330,7 +339,7 @@ function generatePurposeDrivenMetrics(
   rng: SeededRandom,
   reading: AssessmentScores,
   math: AssessmentScores,
-  riskLevel: 'on_track' | 'at_risk' | 'critical',
+  riskLevel: 'on_track' | 'watch' | 'at_risk' | 'critical',
   hasIep: boolean
 ): PurposeDrivenMetrics {
   const now = new Date();
@@ -338,7 +347,7 @@ function generatePurposeDrivenMetrics(
 
   // Generate assessment history with some volatility
   const assessmentHistory: AssessmentHistory[] = [];
-  const volatilityFactor = riskLevel === 'critical' ? 8 : riskLevel === 'at_risk' ? 5 : 2;
+  const volatilityFactor = riskLevel === 'critical' ? 8 : riskLevel === 'at_risk' ? 5 : riskLevel === 'watch' ? 3 : 2;
 
   // Reading assessments
   const readingScores = [
@@ -378,7 +387,7 @@ function generatePurposeDrivenMetrics(
 
   // Generate intervention sessions for at-risk and critical students
   const interventionSessions: InterventionSession[] = [];
-  const targetMinutes = hasIep ? 600 : riskLevel === 'critical' ? 450 : riskLevel === 'at_risk' ? 300 : 0;
+  const targetMinutes = hasIep ? 600 : riskLevel === 'critical' ? 450 : riskLevel === 'at_risk' ? 300 : riskLevel === 'watch' ? 150 : 0;
 
   if (targetMinutes > 0) {
     const numSessions = rng.nextInt(8, 18);
@@ -534,6 +543,7 @@ export function generateSchoolSeed(
   const avgProficiency = students.reduce((s, st) => s + st.proficiencyLevel, 0) / totalEnrollment;
 
   const onTrack = students.filter((s) => s.riskLevel === 'on_track').length;
+  const watch = students.filter((s) => s.riskLevel === 'watch').length;
   const atRisk = students.filter((s) => s.riskLevel === 'at_risk').length;
   const critical = students.filter((s) => s.riskLevel === 'critical').length;
 
@@ -551,7 +561,7 @@ export function generateSchoolSeed(
       chronicAbsenceRate: Math.round((chronicAbsenceCount / totalEnrollment) * 1000) / 1000,
       avgGrowthPercentile: Math.round(avgGrowthPercentile * 10) / 10,
       avgProficiency: Math.round(avgProficiency * 10) / 10,
-      riskDistribution: { onTrack, atRisk, critical },
+      riskDistribution: { onTrack, watch, atRisk, critical },
     },
     students,
     dataAvailability,
