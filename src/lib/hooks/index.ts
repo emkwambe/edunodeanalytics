@@ -6,4 +6,5 @@ export * from './use-dashboard';
 export * from './use-school-context';
 export * from './use-toast';
 export * from './use-keyboard-shortcut';
+export * from './use-risk';
 export * from './providers';

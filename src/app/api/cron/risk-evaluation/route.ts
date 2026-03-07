@@ -131,6 +131,7 @@ export async function GET(request: NextRequest) {
             aggregation: { studentsProcessed: 0, metricsUpserted: 0, historySnapshotted: 0, errors: [msg] },
             evaluation: { studentsEvaluated: 0, distribution: { on_track: 0, watch: 0, at_risk: 0, critical: 0 }, levelChanges: 0, errors: [msg] },
             alerts: { studentsChecked: 0, alertsGenerated: 0, errors: [] },
+            trends: { studentsAnalyzed: 0, decliningCount: 0, improvingCount: 0, earlyWarnings: 0, errors: [] },
             success: false,
             errors: [msg],
           },

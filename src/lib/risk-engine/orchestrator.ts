@@ -22,6 +22,7 @@
 import { createRiskEngine } from '@/lib/risk/detection-engine';
 import { createEarlyWarningSystem } from '@/lib/risk/early-warning';
 import { aggregateSchoolMetrics } from '@/lib/risk-engine/metrics-aggregator';
+import { createTrendDetector } from '@/lib/risk-engine/trend-detector';
 import type { TriggerType, RiskLevel } from '@/lib/risk-engine/types';
 
 // ============================================================
@@ -55,6 +56,15 @@ export interface BatchEvaluationResult {
   alerts: {
     studentsChecked: number;
     alertsGenerated: number;
+    errors: string[];
+  };
+
+  // Trend detection phase (nightly batch only)
+  trends: {
+    studentsAnalyzed: number;
+    decliningCount: number;
+    improvingCount: number;
+    earlyWarnings: number;
     errors: string[];
   };
 
@@ -100,6 +110,13 @@ export async function evaluateSchoolRisk(
     alerts: {
       studentsChecked: 0,
       alertsGenerated: 0,
+      errors: [],
+    },
+    trends: {
+      studentsAnalyzed: 0,
+      decliningCount: 0,
+      improvingCount: 0,
+      earlyWarnings: 0,
       errors: [],
     },
     success: false,
@@ -204,6 +221,40 @@ export async function evaluateSchoolRisk(
       result.alerts.errors.push(msg);
       allErrors.push(`[Alerts] ${msg}`);
       console.error(`[Orchestrator] Alert phase error:`, msg);
+    }
+
+    // -------------------------------------------------------
+    // PHASE 4: Trend Detection (nightly batch only)
+    // -------------------------------------------------------
+    if (triggerType === 'batch_nightly') {
+      console.log(`[Orchestrator] Phase 4: Running trend detection`);
+
+      try {
+        const trendDetector = createTrendDetector(schoolId);
+        await trendDetector.loadConfigFromDb();
+        const trendResult = await trendDetector.analyzeSchoolTrends();
+
+        result.trends = {
+          studentsAnalyzed: trendResult.studentsAnalyzed,
+          decliningCount: trendResult.decliningStudents.length,
+          improvingCount: trendResult.improvingStudents.length,
+          earlyWarnings: trendResult.earlyWarnings.length,
+          errors: [],
+        };
+
+        console.log(
+          `[Orchestrator] Trends complete: ${trendResult.studentsAnalyzed} analyzed, ` +
+          `${trendResult.decliningStudents.length} declining, ` +
+          `${trendResult.earlyWarnings.length} early warnings`
+        );
+      } catch (trendErr) {
+        const msg = trendErr instanceof Error ? trendErr.message : String(trendErr);
+        result.trends.errors.push(msg);
+        allErrors.push(`[Trends] ${msg}`);
+        console.error(`[Orchestrator] Trend detection error:`, msg);
+      }
+    } else {
+      console.log(`[Orchestrator] Skipping trend detection (not nightly batch)`);
     }
 
     // -------------------------------------------------------
