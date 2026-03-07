@@ -9,3 +9,17 @@ export { aggregateSchoolMetrics, aggregateStudentMetrics } from './metrics-aggre
 export { evaluateSchoolRisk } from './orchestrator';
 export type { BatchEvaluationResult } from './orchestrator';
 export type { AggregationResult } from './metrics-aggregator';
+
+// Trend Detection (Sprint 3)
+export {
+  TrendDetector,
+  createTrendDetector,
+  linearRegression,
+  determineTrajectory,
+  determineConfidence,
+} from './trend-detector';
+export type {
+  TrendResult,
+  StudentTrendAnalysis,
+  LinearRegressionResult,
+} from './trend-detector';

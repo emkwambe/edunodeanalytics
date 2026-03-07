@@ -1,7 +1,7 @@
 # EduNode Analytics — Developer Checklist v3.0
 ## MTSS Early Warning and Intervention Platform
 
-**Last Updated:** March 6, 2026
+**Last Updated:** March 7, 2026
 **Branch:** `claude/edunode-analytics-saas-9l0uE`
 **Stack:** Next.js 16.1.6 | Supabase (Postgres) | TypeScript | Clerk | Stripe | Vitest
 
@@ -31,10 +31,10 @@
 - [ ] `npx tsc --noEmit` passes clean (blocked by `database.types.ts` regen)
 
 ### A3. Type Safety
-- [ ] **BLOCKER:** `database.types.ts` must be regenerated via Supabase CLI
-  - Current file is stale (1346 lines, missing 5 risk engine tables + views)
-  - Supabase CLI auth required: `npx supabase login` then `npx supabase gen types`
-  - Once regenerated: remove `@ts-nocheck` from `detection-engine.ts` and `early-warning.ts`
+- [x] **RESOLVED:** `database.types.ts` regenerated via Supabase CLI (Sprint 2)
+  - All 26 tables + 3 views present
+  - `@ts-nocheck` removed from `detection-engine.ts` and `early-warning.ts`
+  - Custom type aliases added: `AuditLogInsert`, `Student`
 - [ ] 7 files have `@ts-nocheck` due to pre-existing missing table references:
   - `evidence-logger.ts` (needs `compliance_events`, `consent_records`, `compliance_reports`)
   - `ferpa-compliance.ts` (needs `directory_opt_outs`, `section_enrollments`, `sections`, `iep_team_members`, `amendment_requests`)
@@ -142,27 +142,28 @@
 - [ ] Admin UI for config editing (`/[school_slug]/settings/risk-model`)
 - [ ] Config change triggers re-evaluation (`trigger_type: 'config_change'`)
 
-### C4. Trend Detection
+### C4. Trend Detection (SPRINT 3 - COMPLETE)
 - [x] `student_metric_history` table exists for weekly snapshots
 - [x] Trajectory detection from evaluation history (improving/stable/declining)
-- [ ] Linear regression slope computation over configurable lookback window
-- [ ] Trend-based flagging before threshold breach
-- [ ] Weekly snapshot cron job
+- [x] Linear regression slope computation over configurable lookback window (`trend-detector.ts`)
+- [x] Trend-based flagging before threshold breach (`predictThresholdCrossing`)
+- [ ] Weekly snapshot cron job (integrate with nightly batch)
 
-### C5. Recalculation Strategy
-- [ ] Nightly batch cron: `/api/cron/risk-evaluation` (Sprint 2)
+### C5. Recalculation Strategy (SPRINT 2 - COMPLETE)
+- [x] Nightly batch cron: `/api/cron/risk-evaluation` (runs at 2AM)
+- [x] Batch orchestrator: `evaluateSchoolRisk()` in `orchestrator.ts`
 - [ ] Post-sync trigger: after successful data sync
 - [ ] Manual recompute: admin action
 - [x] Trigger type tracked: `sync_event | batch_nightly | manual | config_change`
 - [x] Recompute is deterministic (same inputs = same outputs)
 - [x] Recompute is logged (every evaluation is immutable in `risk_evaluations`)
 
-### C6. Missing Indicators (Future)
-- [ ] `missing_assignment_rate` — needs LMS sync to populate
-- [ ] `behavior_incident_count` — needs PBIS connector
+### C6. Missing Indicators (SPRINT 3 - STUBS READY)
+- [x] `missing_assignment_rate` — stub in detection-engine (awaiting LMS sync data)
+- [x] `behavior_incident_count` — stub in detection-engine (awaiting PBIS/SIS sync data)
 - [ ] `suspensions_count` — needs SIS discipline data
-- [ ] Assignment completion factor in risk calculation
-- [ ] Behavior factor in risk calculation
+- [x] Assignment completion factor in risk calculation (zero-weighted until data available)
+- [x] Behavior factor in risk calculation (zero-weighted until data available)
 
 ---
 
@@ -186,10 +187,10 @@
 - [x] Alert statistics (by severity, by type, by status, avg resolution time)
 - [x] Previous state comparison from `student_metric_history`
 
-### D3. Alert API (Sprint 2)
-- [ ] `GET /api/schools/[schoolId]/risk/alerts` — list with filters
-- [ ] `PATCH /api/schools/[schoolId]/risk/alerts/[alertId]` — acknowledge/resolve/dismiss
-- [ ] Alert feed component for dashboard
+### D3. Alert API (SPRINT 2 - COMPLETE)
+- [x] `GET /api/schools/[schoolId]/risk/alerts` — list with filters
+- [x] `PATCH /api/schools/[schoolId]/risk/alerts/[alertId]` — acknowledge/resolve/dismiss
+- [ ] Alert feed component for dashboard (Sprint 4)
 
 ### D4. Notification Center
 - [x] `notifications` table exists (18 columns)
@@ -302,13 +303,13 @@ Required widgets:
 - [ ] Intervention pipeline view (planned/in progress/completed/stale)
 - [ ] Risk config admin UI
 
-### G3. Risk API Endpoints (Sprint 2)
-- [ ] `GET /api/schools/[schoolId]/risk/scores` — paginated, filterable
-- [ ] `GET /api/schools/[schoolId]/risk/distribution` — tier counts + trends
-- [ ] `GET /api/schools/[schoolId]/risk/drivers` — aggregated factors
-- [ ] `GET+PUT /api/schools/[schoolId]/risk/config` — read/update model config
-- [ ] `GET+PATCH /api/schools/[schoolId]/risk/alerts` — alert management
-- [ ] `GET /api/schools/[schoolId]/risk/history/[studentId]` — score history
+### G3. Risk API Endpoints (SPRINT 2 - COMPLETE)
+- [x] `GET /api/schools/[schoolId]/risk/scores` — paginated, filterable
+- [x] `GET /api/schools/[schoolId]/risk/distribution` — tier counts + trends
+- [x] `GET /api/schools/[schoolId]/risk/drivers` — aggregated factors
+- [x] `GET+PUT /api/schools/[schoolId]/risk/config` — read/update model config
+- [x] `GET+PATCH /api/schools/[schoolId]/risk/alerts` — alert management
+- [x] `GET /api/schools/[schoolId]/risk/history/[studentId]` — score history
 
 ---
 
@@ -321,14 +322,14 @@ Required widgets:
 - [x] Lib tests: `src/lib/api/__tests__/`, `src/lib/auth/__tests__/`, `src/lib/features/__tests__/`, `src/lib/hooks/__tests__/`
 - [x] Existing tests: interventions, stripe webhook, students, RBAC, feature gates, validation, errors, fetcher, metric card, page feature gate
 
-### H2. Risk Engine Tests (Sprint 2-3)
-- [ ] Unit tests for each normalizer function
-- [ ] Unit tests for composite score calculator
-- [ ] Unit tests for threshold classification (4-tier)
-- [ ] Unit tests for trend detection
-- [ ] Integration test for batch evaluation
-- [ ] Integration test for alert generation
-- [ ] Integration test for API endpoints
+### H2. Risk Engine Tests (SPRINT 3 - COMPLETE)
+- [x] Unit tests for each normalizer function (`detection-engine.test.ts`)
+- [x] Unit tests for composite score calculator
+- [x] Unit tests for threshold classification (4-tier) (`types.test.ts`)
+- [x] Unit tests for trend detection (`trend-detector.test.ts`)
+- [x] Integration test for batch evaluation (`integration.test.ts`)
+- [x] Integration test for alert generation
+- [ ] Integration test for API endpoints (requires E2E framework)
 
 ### H3. Demo and Seed Data
 - [ ] Seed data with realistic scenarios:
@@ -366,9 +367,11 @@ Required widgets:
 | Tiering + interventions fully tracked with history | PARTIAL | Tier state field needed |
 | Dashboard gives clear who/why/what-next view | NOT STARTED | Sprint 4 |
 | Audit logs persist and export for compliance demos | PARTIAL | Export endpoint needed |
-| Risk API endpoints operational | NOT STARTED | Sprint 2 |
+| Risk API endpoints operational | PASS (Sprint 2) | None |
 | Seed data for demo school | NOT STARTED | Sprint 5 |
-| database.types.ts regenerated and ts-nocheck removed | BLOCKED | Supabase CLI auth |
+| database.types.ts regenerated and ts-nocheck removed | PASS (Sprint 2) | None |
+| Risk engine unit tests | PASS (Sprint 3) | None |
+| Trend detection with linear regression | PASS (Sprint 3) | None |
 
 ---
 
@@ -379,19 +382,20 @@ Required widgets:
 - [x] 1B: Engine refactor (detection-engine.ts, early-warning.ts, bridge types)
 - [x] Build verified passing
 
-### Sprint 2: API Layer + Orchestrator (IN PROGRESS)
-- [ ] Regenerate `database.types.ts`
-- [ ] 6 Risk API endpoints
-- [ ] Batch orchestrator (`evaluateSchoolRisk`)
-- [ ] Nightly cron (`/api/cron/risk-evaluation`)
-- [ ] Student metrics aggregator
+### Sprint 2: API Layer + Orchestrator (COMPLETE)
+- [x] Regenerate `database.types.ts`
+- [x] 6 Risk API endpoints (scores, distribution, drivers, config, alerts, history)
+- [x] Batch orchestrator (`evaluateSchoolRisk` in `orchestrator.ts`)
+- [x] Nightly cron (`/api/cron/risk-evaluation` at 2AM)
+- [x] Student metrics aggregator (`metrics-aggregator.ts`)
+- [x] Shared auth helper (`_shared/auth.ts`)
 
-### Sprint 3: Testing + Missing Indicators
-- [ ] Unit tests for normalizers, calculator, threshold classification
-- [ ] Integration tests for batch evaluation + alert generation
-- [ ] Assignment completion indicator (from LMS sync)
-- [ ] Behavior indicator (from PBIS/SIS sync)
-- [ ] Trend detector with linear regression
+### Sprint 3: Testing + Missing Indicators (COMPLETE)
+- [x] Unit tests for normalizers, calculator, threshold classification (371 tests passing)
+- [x] Integration tests for batch evaluation + alert generation
+- [x] Assignment completion indicator stub (awaiting LMS sync data)
+- [x] Behavior indicator stub (awaiting PBIS/SIS sync data)
+- [x] Trend detector with linear regression (`trend-detector.ts`)
 
 ### Sprint 4: Early Warning Dashboard
 - [ ] `/[school_slug]/dashboard/early-warning` page

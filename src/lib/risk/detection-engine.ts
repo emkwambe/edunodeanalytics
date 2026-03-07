@@ -208,6 +208,12 @@ export class RiskDetectionEngine {
     // 5. Engagement Factor
     factors.push(this.calculateEngagementFactor(student));
 
+    // 6. Missing Assignments Factor (Sprint 3 - requires LMS sync)
+    factors.push(this.calculateMissingAssignmentsFactor(student));
+
+    // 7. Behavior Incidents Factor (Sprint 3 - requires PBIS/SIS sync)
+    factors.push(this.calculateBehaviorFactor(student));
+
     // Calculate total risk score
     const riskScore = Math.min(1, Math.max(0,
       factors.reduce((sum, f) => sum + f.weightedScore, 0)
@@ -392,6 +398,117 @@ export class RiskDetectionEngine {
       weight: this.weights.engagementScore,
       weightedScore: normalizedScore * this.weights.engagementScore,
       description: `${Math.round(engagementScore * 100)}% engagement`,
+      trend: 'stable',
+    };
+  }
+
+  /**
+   * Calculate missing assignments factor.
+   * Sprint 3: Stub implementation - requires LMS sync to populate data.
+   * Data source: student_metrics.missing_assignment_rate (from LMS sync)
+   */
+  private calculateMissingAssignmentsFactor(student: Student): RiskFactor {
+    // Get missing assignment rate from student_metrics via purpose_driven_metrics
+    // This will be populated by LMS sync (Canvas, Google Classroom, etc.)
+    const metrics = student.purpose_driven_metrics as Record<string, number> | null;
+    const missingRate = metrics?.missing_assignment_rate ?? null;
+    const config = this.config;
+
+    // If no data available, return zero-weighted factor
+    if (missingRate === null) {
+      return {
+        name: 'Missing Assignments',
+        category: 'assignments',
+        rawValue: 0,
+        normalizedScore: 0,
+        weight: this.weights.missingAssignments,
+        weightedScore: 0,
+        description: 'No assignment data available (awaiting LMS sync)',
+        trend: 'stable',
+      };
+    }
+
+    let normalizedScore = 0;
+    if (config) {
+      // Use DB config threshold
+      const warnThreshold = config.indicators.assignmentMissingWarn / 100;
+      if (missingRate >= warnThreshold * 2) normalizedScore = 1.0;
+      else if (missingRate >= warnThreshold) normalizedScore = 0.6;
+      else if (missingRate >= warnThreshold / 2) normalizedScore = 0.3;
+      else normalizedScore = 0.1;
+    } else {
+      // Legacy thresholds
+      if (missingRate >= 0.4) normalizedScore = 1.0;
+      else if (missingRate >= 0.2) normalizedScore = 0.6;
+      else if (missingRate >= 0.1) normalizedScore = 0.3;
+      else normalizedScore = 0.1;
+    }
+
+    return {
+      name: 'Missing Assignments',
+      category: 'assignments',
+      rawValue: missingRate,
+      normalizedScore,
+      weight: this.weights.missingAssignments,
+      weightedScore: normalizedScore * this.weights.missingAssignments,
+      description: `${Math.round(missingRate * 100)}% assignments missing`,
+      trend: 'stable',
+    };
+  }
+
+  /**
+   * Calculate behavior incidents factor.
+   * Sprint 3: Stub implementation - requires PBIS/SIS sync to populate data.
+   * Data source: student_metrics.behavior_incident_count (from PBIS/SIS sync)
+   */
+  private calculateBehaviorFactor(student: Student): RiskFactor {
+    // Get behavior incident count from student_metrics via purpose_driven_metrics
+    // This will be populated by PBIS/SIS discipline data sync
+    const metrics = student.purpose_driven_metrics as Record<string, number> | null;
+    const incidentCount = metrics?.behavior_incident_count ?? null;
+    const config = this.config;
+
+    // If no data available, return zero-weighted factor
+    if (incidentCount === null) {
+      return {
+        name: 'Behavior Incidents',
+        category: 'behavior',
+        rawValue: 0,
+        normalizedScore: 0,
+        weight: this.weights.behaviorIncidents,
+        weightedScore: 0,
+        description: 'No behavior data available (awaiting PBIS/SIS sync)',
+        trend: 'stable',
+      };
+    }
+
+    let normalizedScore = 0;
+    if (config) {
+      // Use DB config cap
+      const cap = config.indicators.behaviorIncidentCap;
+      if (incidentCount >= cap) normalizedScore = 1.0;
+      else if (incidentCount >= cap * 0.6) normalizedScore = 0.7;
+      else if (incidentCount >= cap * 0.3) normalizedScore = 0.4;
+      else if (incidentCount > 0) normalizedScore = 0.2;
+      else normalizedScore = 0;
+    } else {
+      // Legacy thresholds (cap at 5)
+      if (incidentCount >= 5) normalizedScore = 1.0;
+      else if (incidentCount >= 3) normalizedScore = 0.7;
+      else if (incidentCount >= 1) normalizedScore = 0.4;
+      else normalizedScore = 0;
+    }
+
+    return {
+      name: 'Behavior Incidents',
+      category: 'behavior',
+      rawValue: incidentCount,
+      normalizedScore,
+      weight: this.weights.behaviorIncidents,
+      weightedScore: normalizedScore * this.weights.behaviorIncidents,
+      description: incidentCount === 0
+        ? 'No behavior incidents'
+        : `${incidentCount} behavior incident${incidentCount === 1 ? '' : 's'}`,
       trend: 'stable',
     };
   }
