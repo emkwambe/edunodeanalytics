@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import { LegalPageLayout } from '@/components/layout/legal-page-layout';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Terms of Service | EduNode Analytics',
   description: 'Terms of Service governing your use of EduNode Analytics platform.',

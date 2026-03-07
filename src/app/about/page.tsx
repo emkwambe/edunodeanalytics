@@ -11,6 +11,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'About Us | EduNode Analytics',
   description: 'Learn about EduNode Analytics - our mission, values, and the team building the future of educational data.',

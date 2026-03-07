@@ -1,4 +1,3 @@
-// @ts-nocheck - Type generation blocked by Supabase CLI auth
 /**
  * Student Risk Detection Engine
  * =============================
@@ -23,7 +22,7 @@
  */
 
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server';
-import type { Student } from '@/lib/database.types';
+import type { Student, Json } from '@/lib/database.types';
 import {
   type RiskModelConfig,
   type RiskModelConfigRow,
@@ -581,7 +580,8 @@ export class RiskDetectionEngine {
         trigger_type: a.triggerType,
       }));
 
-      const { error } = await supabase.from('risk_evaluations').insert(records);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await supabase.from('risk_evaluations').insert(records as any);
       if (error) {
         console.error('[RiskEngine] Failed to insert evaluations:', error.message);
       }
@@ -605,7 +605,7 @@ export class RiskDetectionEngine {
         .update({
           risk_score: assessment.riskScore,
           risk_level: assessment.riskLevel,
-          risk_factors: assessment.factors,
+          risk_factors: assessment.factors as unknown as Json,
           updated_at: new Date().toISOString(),
         })
         .eq('id', assessment.studentId);

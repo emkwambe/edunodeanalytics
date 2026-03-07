@@ -14,6 +14,8 @@ import {
   Database,
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 const COMPLIANCE_FEATURES = [
   {
     icon: Shield,

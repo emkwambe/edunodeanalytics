@@ -1,4 +1,3 @@
-// @ts-nocheck - Type generation blocked by Supabase CLI auth
 /**
  * Early Warning System
  * ====================
@@ -21,7 +20,7 @@
  */
 
 import { createAdminSupabaseClient, createServerSupabaseClient } from '@/lib/supabase/server';
-import type { Student } from '@/lib/database.types';
+import type { Student, Json } from '@/lib/database.types';
 import type {
   AlertType,
   AlertSeverity,
@@ -228,7 +227,7 @@ export class EarlyWarningSystem {
 
       case 'change':
         if (!previous) {
-          previous = await this.getPreviousState(current.id, condition.windowDays || 7);
+          previous = (await this.getPreviousState(current.id, condition.windowDays || 7)) ?? undefined;
         }
         if (!previous) return false;
         const previousValue = this.getFieldValue(previous, condition.field);
@@ -331,21 +330,22 @@ export class EarlyWarningSystem {
   private async storeAlerts(alerts: Alert[]): Promise<void> {
     const supabase = createAdminSupabaseClient();
 
-    const inserts: RiskAlertInsert[] = alerts.map((a) => ({
+    const inserts = alerts.map((a) => ({
       student_id: a.studentId,
       school_id: a.schoolId,
-      rule_id: a.ruleId,
+      rule_id: a.ruleId ?? null,
       alert_type: a.alertType,
       severity: a.severity,
       title: a.title,
       message: a.message,
-      risk_score: typeof a.data.riskScore === 'number' ? a.data.riskScore : undefined,
-      risk_level: a.data.riskLevel as string | undefined,
-      data: a.data,
-      cooldown_key: a.data.cooldownKey as string | undefined,
+      risk_score: typeof a.data.riskScore === 'number' ? a.data.riskScore : null,
+      risk_level: (a.data.riskLevel as string) ?? null,
+      data: a.data as unknown as Json,
+      cooldown_key: (a.data.cooldownKey as string) ?? null,
     }));
 
-    const { error } = await supabase.from('risk_alerts').insert(inserts);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await supabase.from('risk_alerts').insert(inserts as any);
     if (error) {
       console.error('[EarlyWarning] Failed to store alerts:', error.message);
     }
@@ -366,23 +366,24 @@ export class EarlyWarningSystem {
         .select('user_id, role')
         .eq('school_id', this.schoolId)
         .eq('is_active', true)
-        .in('role', rule.notifyRoles);
+        .in('role', rule.notifyRoles as ('school_admin' | 'principal' | 'teacher' | 'counselor' | 'data_manager' | 'viewer')[]);
 
       if (!members) continue;
 
       const notifications = members.map((member) => ({
         school_id: this.schoolId,
         user_id: member.user_id,
-        type: 'early_warning' as const,
+        type: 'alert' as const,
         title: alert.title,
         message: alert.message,
-        priority: alert.severity === 'critical' ? 'critical' : alert.severity === 'warning' ? 'high' : 'medium',
-        metadata: { alertId: alert.id, studentId: alert.studentId, alertType: alert.alertType },
+        priority: (alert.severity === 'critical' ? 'urgent' : alert.severity === 'warning' ? 'high' : 'medium') as 'low' | 'medium' | 'high' | 'urgent',
+        metadata: { alertId: alert.id, studentId: alert.studentId, alertType: alert.alertType } as unknown as Json,
         is_read: false,
         is_dismissed: false,
       }));
 
-      await supabase.from('notifications').insert(notifications);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await supabase.from('notifications').insert(notifications as any);
     }
   }
 
@@ -425,7 +426,7 @@ export class EarlyWarningSystem {
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    return (data || []).map((d: RiskAlertRow) => this.mapRowToAlert(d));
+    return (data || []).map((d) => this.mapRowToAlert(d as unknown as RiskAlertRow));
   }
 
   /**

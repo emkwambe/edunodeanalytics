@@ -12,6 +12,8 @@ import {
   Mail,
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Partners | EduNode Analytics',
   description: 'Join the EduNode Partner Ecosystem - Technology partners, implementation consultants, and resellers.',

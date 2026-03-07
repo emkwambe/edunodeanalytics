@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import { LegalPageLayout } from '@/components/layout/legal-page-layout';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Accessibility Statement | EduNode Analytics',
   description: 'Our commitment to digital accessibility and WCAG 2.1 compliance.',

@@ -21,6 +21,8 @@ import {
   CheckCircle,
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Help Center | EduNode Analytics',
   description: 'Get help with EduNode Analytics - guides, tutorials, and support resources.',

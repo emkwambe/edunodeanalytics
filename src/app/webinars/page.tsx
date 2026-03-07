@@ -13,6 +13,8 @@ import {
   Bell,
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Webinars & Events | EduNode Analytics',
   description: 'Join our live webinars and events to learn best practices for educational data analytics, MTSS implementation, and data-driven decision making.',

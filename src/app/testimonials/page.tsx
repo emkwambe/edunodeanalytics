@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Quote, Star, ArrowRight, Users, TrendingUp, Clock } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Testimonials | EduNode Analytics',
   description: 'See what educators are saying about EduNode Analytics and how it\'s transforming their schools.',

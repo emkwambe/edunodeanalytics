@@ -1,4 +1,3 @@
-// @ts-nocheck - Type generation blocked by Supabase CLI auth
 // src/lib/risk-engine/metrics-aggregator.ts
 /**
  * Student Metrics Aggregator
@@ -433,7 +432,7 @@ export async function aggregateStudentMetrics(
     return { success: false, error: fetchError?.message || 'Student not found' };
   }
 
-  const metrics = computeStudentMetrics(student as StudentRawData);
+  const metrics = computeStudentMetrics(student as unknown as StudentRawData);
 
   // Add sync timestamp
   const syncTimestamp = new Date().toISOString();

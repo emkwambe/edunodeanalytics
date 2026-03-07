@@ -11,6 +11,8 @@ import {
   Database,
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 interface Integration {
   name: string;
   category: 'sis' | 'lms' | 'assessment' | 'rostering' | 'behavior';

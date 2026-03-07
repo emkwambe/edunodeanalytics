@@ -17,6 +17,8 @@ import {
   Headphones,
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Compare Plans | EduNode Analytics',
   description: 'Detailed feature comparison across all EduNode Analytics plans.',

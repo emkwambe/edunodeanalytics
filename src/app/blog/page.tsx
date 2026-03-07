@@ -1,5 +1,8 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+
+// Use dynamic rendering to avoid Clerk initialization during static build
+export const dynamic = 'force-dynamic';
 import { Card } from '@/components/ui/card';
 import {
   BookOpen,

@@ -3,6 +3,10 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
+// Force dynamic rendering for all pages to avoid Clerk build-time errors
+// when NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not available during static generation
+export const dynamic = 'force-dynamic';
+
 // CSS font variables are set in globals.css using system font stack
 // This avoids font loading issues in restricted network environments
 

@@ -17,6 +17,8 @@ import {
   Shield,
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Careers | EduNode Analytics',
   description: 'Join EduNode Analytics and help transform how schools use data to support student success. View open positions and learn about our culture.',

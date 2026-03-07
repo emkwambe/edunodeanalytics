@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import { LegalPageLayout } from '@/components/layout/legal-page-layout';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Cookie Policy | EduNode Analytics',
   description: 'Learn how EduNode Analytics uses cookies and similar technologies.',

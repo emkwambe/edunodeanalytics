@@ -12,6 +12,8 @@ import {
   BarChart3,
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 interface CaseStudy {
   id: string;
   school: string;

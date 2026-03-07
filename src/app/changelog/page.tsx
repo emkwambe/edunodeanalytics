@@ -12,6 +12,8 @@ import {
   Bell,
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Changelog | EduNode Analytics',
   description: 'See what\'s new in EduNode Analytics - features, improvements, and fixes.',
