@@ -1,4 +1,4 @@
-# EduNode Analytics - Developer Checklist v4.0
+# EduNode Analytics - Developer Checklist v4.1
 ## MTSS Early Warning and Intervention Platform
 
 **Last Updated:** March 7, 2026
@@ -6,6 +6,13 @@
 **Stack:** Next.js 16.1.6 | Supabase (Postgres) | TypeScript | Clerk | Stripe | Vitest
 
 ---
+
+## Changelog from v4.0
+
+| Section | Change |
+|---------|--------|
+| Sprint 4 | Marked COMPLETE - all dashboard components, hooks, and interpreter implemented |
+| Go/No-Go | Dashboard and plain language interpretation blockers resolved |
 
 ## Changelog from v3.0
 
@@ -281,34 +288,34 @@
 **Route:** `/[school_slug]/dashboard/early-warning`
 
 **Required Components:**
-- [ ] `RiskDistributionChart` - donut chart of tier counts
-- [ ] `RiskTrendChart` - stacked bar over time (weekly)
-- [ ] `StudentRiskTable` - sortable, filterable list of at-risk students
-- [ ] `AlertFeed` - real-time alert list with acknowledge/resolve
-- [ ] `RiskDriverBreakdown` - top drivers school-wide
-- [ ] `InterventionPipeline` - visual workflow: planned/active/stale
-- [ ] `StudentRiskCard` - individual student with factors + actions
-- [ ] `MeetingPrepExport` - generate MTSS agenda
+- [x] `RiskDistributionChart` - donut chart of tier counts
+- [x] `RiskTrendChart` - stacked bar over time (weekly)
+- [x] `StudentRiskTable` - sortable, filterable list of at-risk students
+- [x] `AlertFeed` - real-time alert list with acknowledge/resolve
+- [x] `RiskDriverBreakdown` - top drivers school-wide
+- [x] `InterventionPipeline` - visual workflow: planned/active/stale
+- [x] `StudentRiskCard` - individual student with factors + actions
+- [x] `MeetingPrepExport` - generate MTSS agenda
 
 **Required Hooks:**
-- [ ] `useRiskScores(schoolId, filters)` - fetch paginated scores
-- [ ] `useRiskDistribution(schoolId)` - fetch distribution + trends
-- [ ] `useRiskAlerts(schoolId, filters)` - fetch alerts
-- [ ] `useRiskConfig(schoolId)` - fetch/update config
+- [x] `useRiskScores(schoolId, filters)` - fetch paginated scores
+- [x] `useRiskDistribution(schoolId)` - fetch distribution + trends
+- [x] `useRiskAlerts(schoolId, filters)` - fetch alerts
+- [x] `useRiskConfig(schoolId)` - fetch/update config
 
 **Interpretation Layer:**
-- [ ] `src/lib/risk-engine/interpreter.ts` - plain language converter
-- [ ] `interpretRiskScore()` - "Maria needs support"
-- [ ] `interpretFactor()` - "Attendance is the primary concern (72%)"
-- [ ] `interpretTrajectory()` - "Getting worse - was on track 4 weeks ago"
-- [ ] `interpretConfidence()` - "Limited data - connect your LMS"
-- [ ] `generateActionPrompt()` - "Schedule family meeting"
+- [x] `src/lib/risk-engine/interpreter.ts` - plain language converter
+- [x] `interpretRiskScore()` - "Maria needs support"
+- [x] `interpretFactor()` - "Attendance is the primary concern (72%)"
+- [x] `interpretTrajectory()` - "Getting worse - was on track 4 weeks ago"
+- [x] `interpretConfidence()` - "Limited data - connect your LMS"
+- [x] `generateActionPrompt()` - "Schedule family meeting"
 
 ### G4. Dashboard Answers These Questions
-- [ ] **How many students are at risk today?** - distribution counts
-- [ ] **Who are the top 20 highest risk?** - sortable table
-- [ ] **Why are they at risk?** - driver breakdown per student
-- [ ] **What are we doing about it?** - intervention pipeline
+- [x] **How many students are at risk today?** - distribution counts
+- [x] **Who are the top 20 highest risk?** - sortable table
+- [x] **Why are they at risk?** - driver breakdown per student
+- [x] **What are we doing about it?** - intervention pipeline
 
 ---
 
@@ -362,8 +369,8 @@ See `docs/ALIGNMENT_MATRIX.md` for full cross-reference of documentation vs impl
 | Risk is computed automatically and explainable | PASS | 1B | None |
 | Alerts trigger on risk changes | PASS | 1B | None |
 | Risk API endpoints operational | PASS | 2 | None |
-| Dashboard gives clear who/why/what-next view | NOT STARTED | 4 | **BLOCKER** |
-| Plain language interpretation | NOT STARTED | 4 | **BLOCKER** |
+| Dashboard gives clear who/why/what-next view | PASS | 4 | None |
+| Plain language interpretation | PASS | 4 | None |
 | Dosage analysis computed | NOT STARTED | 3 | Enhancement |
 | Audit logs persist and export | PARTIAL | 5 | None |
 | Seed data for demo school | NOT STARTED | 5 | None |
@@ -421,5 +428,5 @@ Function: `get_user_school_ids()`
 
 ---
 
-*Document Version: 4.0*
-*Previous: v3.0 (March 6, 2026)*
+*Document Version: 4.1*
+*Previous: v4.0 (March 7, 2026)*
