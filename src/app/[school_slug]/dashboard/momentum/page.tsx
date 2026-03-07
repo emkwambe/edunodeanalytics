@@ -621,8 +621,8 @@ export default function MomentumPage({ params }: MomentumPageProps) {
   }, [students]);
 
   const aggregateMomentum = useMemo(() => {
-    const avgFallRit = students.reduce((sum, s) => sum + s.reading.fallRit, 0) / students.length;
-    const avgWinterRit = students.reduce((sum, s) => sum + s.reading.winterRit, 0) / students.length;
+    const avgFallRit = students.reduce((sum, s) => sum + (s.reading?.fallRit || 0), 0) / students.length;
+    const avgWinterRit = students.reduce((sum, s) => sum + (s.reading?.winterRit || 0), 0) / students.length;
     const avgExpectedGrowth = students.reduce(
       (sum, s) => sum + (s.purposeDriven?.expectedGrowthPoints || 4),
       0
