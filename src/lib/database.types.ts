@@ -2270,8 +2270,6 @@ export const Constants = {
 } as const
 
 // ============================================================
-
-// ============================================================
 // Convenience type aliases (used across codebase)
 // ============================================================
 export type School = Database['public']['Tables']['schools']['Row'];
