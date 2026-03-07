@@ -114,6 +114,13 @@ interface ImportResult {
   rowsUpdated: number;
   errors: Array<{ row: number; message: string }>;
   importedStudentIds?: string[];
+  riskAnalysis?: {
+    studentsEvaluated: number;
+    atRiskCount: number;
+    criticalCount: number;
+    alertsGenerated: number;
+    evaluationTimeMs: number;
+  };
 }
 
 export default function CSVImportPage() {
@@ -265,18 +272,7 @@ export default function CSVImportPage() {
       const result: ImportResult = await response.json();
       setImportResult(result);
       setStep('result');
-
-      // If successful and we have student IDs, trigger metrics computation
-      if (result.success && result.importedStudentIds && result.importedStudentIds.length > 0) {
-        // Trigger background metrics computation (fire and forget)
-        fetch(`/api/schools/${schoolId}/risk/evaluate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        }).catch(() => {
-          // Ignore errors - this is a background operation
-        });
-      }
+      // Risk evaluation is handled by the API - no need for separate call
     } catch (err) {
       setImportResult({
         success: false,
@@ -644,6 +640,47 @@ export default function CSVImportPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Risk Analysis Results */}
+          {importResult.riskAnalysis && (
+            <Card className="bg-cyan-900/10 border-cyan-500/30">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <AlertTriangle className="w-5 h-5 text-cyan-400" />
+                  <h3 className="font-bold text-white">Risk Analysis Complete</h3>
+                </div>
+                <div className="grid grid-cols-4 gap-4 p-4 bg-slate-900/50 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">
+                      {importResult.riskAnalysis.studentsEvaluated}
+                    </div>
+                    <div className="text-xs text-slate-500">Students Evaluated</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-400">
+                      {importResult.riskAnalysis.atRiskCount}
+                    </div>
+                    <div className="text-xs text-slate-500">At Risk</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-400">
+                      {importResult.riskAnalysis.criticalCount}
+                    </div>
+                    <div className="text-xs text-slate-500">Critical</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-amber-400">
+                      {importResult.riskAnalysis.alertsGenerated}
+                    </div>
+                    <div className="text-xs text-slate-500">Alerts Generated</div>
+                  </div>
+                </div>
+                <p className="mt-3 text-sm text-slate-400">
+                  Risk scores have been calculated and alerts generated for flagged students.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Errors */}
           {importResult.errors.length > 0 && (

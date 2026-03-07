@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateSchoolRequest, isAdmin, type RiskRouteParams } from '../risk/_shared/auth';
+import { evaluateSchoolRisk } from '@/lib/risk-engine/orchestrator';
 
 // ============================================================
 // TYPES
@@ -58,6 +59,13 @@ interface ImportResult {
   rowsUpdated: number;
   errors: Array<{ row: number; message: string }>;
   importedStudentIds?: string[];
+  riskAnalysis?: {
+    studentsEvaluated: number;
+    atRiskCount: number;
+    criticalCount: number;
+    alertsGenerated: number;
+    evaluationTimeMs: number;
+  };
 }
 
 // ============================================================
@@ -406,6 +414,28 @@ export async function POST(request: NextRequest, { params }: RiskRouteParams) {
       })),
       metadata: JSON.parse(JSON.stringify({ trigger: 'csv_import' })),
     } as any);
+
+    // Run risk evaluation if we imported data successfully
+    if (result.importedStudentIds && result.importedStudentIds.length > 0) {
+      try {
+        console.log(`[CSV Import] Running risk evaluation for ${result.importedStudentIds.length} students`);
+        const evalStart = Date.now();
+        const evalResult = await evaluateSchoolRisk(schoolId, 'sync_event');
+
+        result.riskAnalysis = {
+          studentsEvaluated: evalResult.evaluation.studentsEvaluated,
+          atRiskCount: (evalResult.evaluation.distribution.at_risk || 0),
+          criticalCount: (evalResult.evaluation.distribution.critical || 0),
+          alertsGenerated: evalResult.alerts.alertsGenerated,
+          evaluationTimeMs: Date.now() - evalStart,
+        };
+
+        console.log(`[CSV Import] Risk evaluation complete: ${evalResult.evaluation.studentsEvaluated} students, ${evalResult.alerts.alertsGenerated} alerts`);
+      } catch (evalErr) {
+        // Log but don't fail the import
+        console.error('[CSV Import] Risk evaluation failed:', evalErr);
+      }
+    }
 
     return NextResponse.json(result);
   } catch (err) {
