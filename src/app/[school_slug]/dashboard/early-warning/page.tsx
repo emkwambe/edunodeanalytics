@@ -20,6 +20,14 @@ import {
   RiskDriverBreakdown,
   RiskDriverBreakdownSkeleton,
 } from '@/components/risk';
+import {
+  DosageSummary,
+  DosageSummarySkeleton,
+} from '@/components/dashboard/dosage-summary';
+import {
+  DosageAlerts,
+  DosageAlertsSkeleton,
+} from '@/components/dashboard/dosage-alerts';
 import { Button } from '@/components/ui/button';
 import { useRiskScores } from '@/lib/hooks/use-risk-scores';
 import { useRiskDistribution } from '@/lib/hooks/use-risk-distribution';
@@ -275,6 +283,24 @@ export default function EarlyWarningDashboardPage() {
               maxItems={5}
             />
           )}
+        </GridItem>
+      </DashboardGrid>
+
+      {/* Dosage Section */}
+      <DashboardGrid className="mb-6">
+        <GridItem span={6}>
+          <DosageSummary
+            schoolId={schoolId}
+            schoolSlug={schoolSlug}
+            maxIssues={5}
+          />
+        </GridItem>
+        <GridItem span={6}>
+          <DosageAlerts
+            schoolId={schoolId}
+            schoolSlug={schoolSlug}
+            maxItems={5}
+          />
         </GridItem>
       </DashboardGrid>
 
