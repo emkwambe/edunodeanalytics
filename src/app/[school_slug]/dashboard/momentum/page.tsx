@@ -610,16 +610,7 @@ export default function MomentumPage({ params }: MomentumPageProps) {
   const schoolData = SCHOOL_SEEDS[schoolSlug] || SCHOOL_SEEDS['stem-scholars'];
   const students = schoolData?.students.slice(0, 20) || [];
 
-  // Show loading state while params resolve
-  if (!schoolSlug) {
-    return (
-      <PageFeatureGate featureKey="momentum_dashboard">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-slate-400">Loading momentum data...</div>
-        </div>
-      </PageFeatureGate>
-    );
-  }
+// Loading guard moved after hooks (React rules-of-hooks)
 
   // Calculate aggregate metrics
   const aggregateVolatility = useMemo(() => {
@@ -707,7 +698,18 @@ export default function MomentumPage({ params }: MomentumPageProps) {
     students.length
   );
 
-  return (
+  // Show loading state while params resolve
+  if (!schoolSlug) {
+    return (
+      <PageFeatureGate featureKey="momentum_dashboard">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-slate-400">Loading momentum data...</div>
+        </div>
+      </PageFeatureGate>
+    );
+  }
+
+    return (
     <PageFeatureGate featureKey="momentum_dashboard">
       <PageHeader
         title="Instructional Momentum"
