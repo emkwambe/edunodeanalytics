@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -103,6 +103,7 @@ function generateMockInterventions(students: StudentSeedData[]): Intervention[] 
 export default function InterventionsPage() {
   const params = useParams();
   const school_slug = params.school_slug as string;
+  const router = useRouter();
 
   const [filterTier, setFilterTier] = React.useState<'all' | 2 | 3>('all');
   const [filterStatus, setFilterStatus] = React.useState<'all' | 'active' | 'stale'>('all');
@@ -167,7 +168,7 @@ export default function InterventionsPage() {
           <h1 className="text-3xl font-black text-white">MTSS Intervention Hub</h1>
           <p className="text-slate-400 mt-1">Tier 2 and Tier 3 intervention tracking with diagnostic validity monitoring.</p>
         </div>
-        <Button className="bg-indigo-600 hover:bg-indigo-700">
+        <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={() => router.push(`/${school_slug}/interventions/new`)}>
           <Plus className="w-4 h-4 mr-2" />
           New Intervention
         </Button>
