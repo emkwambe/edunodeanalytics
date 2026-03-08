@@ -78,11 +78,9 @@ function generateMockInterventions(students: StudentSeedData[]): Intervention[] 
   const atRiskStudents = students.filter((s) => s.riskLevel !== 'on_track').slice(0, 8);
 
   return atRiskStudents.map((student, idx) => {
-    const daysAgo = Math.floor(Math.random() * 30);
+    const daysAgo = ((idx * 7 + 3) % 30) + 1;
     // Ensure some are stale (>21 days)
-    const lastDataDaysAgo = idx < 2 ? Math.floor(Math.random() * 7) + 1 : // Fresh
-                            idx < 5 ? Math.floor(Math.random() * 10) + 8 : // Warning
-                            Math.floor(Math.random() * 5) + 22; // Stale
+    const lastDataDaysAgo = idx < 2 ? (idx * 3 + 2) : idx < 5 ? (idx * 2 + 9) : (idx + 22);
 
     return {
       id: `int-${idx}`,
@@ -94,7 +92,7 @@ function generateMockInterventions(students: StudentSeedData[]): Intervention[] 
       startDate: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000),
       lastDataEntry: new Date(Date.now() - lastDataDaysAgo * 24 * 60 * 60 * 1000),
       targetGoal: 'Achieve 80% mastery on targeted skills',
-      currentProgress: Math.floor(Math.random() * 50) + 20,
+      currentProgress: ((idx * 13 + 27) % 50) + 20,
       status: lastDataDaysAgo > DIAGNOSTIC_WINDOW_DAYS ? 'stale' : 'active',
     };
   });
