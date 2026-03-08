@@ -108,6 +108,12 @@ export default function InterventionsPage() {
   const [filterStatus, setFilterStatus] = React.useState<'all' | 'active' | 'stale'>('all');
   const [loadingFlightPlan, setLoadingFlightPlan] = React.useState<string | null>(null);
   const [flightPlans, setFlightPlans] = React.useState<Record<string, InterventionFlightPlan>>({});
+  const [mounted, setMounted] = React.useState(false);
+
+  // Prevent hydration mismatch from date calculations
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Get student data and generate interventions
   const schoolSeed = getSchoolSeed(school_slug);
@@ -125,12 +131,12 @@ export default function InterventionsPage() {
     return true;
   });
 
-  // Stats
+  // Stats (use mounted check to prevent hydration mismatch from date calculations)
   const stats = {
     total: interventions.length,
     tier2: interventions.filter((i) => i.tier === 2).length,
     tier3: interventions.filter((i) => i.tier === 3).length,
-    stale: interventions.filter((i) => getInterventionStatus(i.lastDataEntry) === 'stale').length,
+    stale: mounted ? interventions.filter((i) => getInterventionStatus(i.lastDataEntry) === 'stale').length : 0,
   };
 
   // Generate AI Flight Plan
@@ -267,8 +273,8 @@ export default function InterventionsPage() {
       {/* Intervention List */}
       <div className="space-y-3">
         {filteredInterventions.map((intervention) => {
-          const dataStatus = getInterventionStatus(intervention.lastDataEntry);
-          const daysSinceData = daysSinceDate(intervention.lastDataEntry);
+          const dataStatus = mounted ? getInterventionStatus(intervention.lastDataEntry) : 'fresh';
+          const daysSinceData = mounted ? daysSinceDate(intervention.lastDataEntry) : 0;
           const isStale = dataStatus === 'stale';
           const flightPlan = flightPlans[intervention.id];
           const isLoading = loadingFlightPlan === intervention.id;
