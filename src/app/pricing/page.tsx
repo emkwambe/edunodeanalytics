@@ -227,18 +227,18 @@ const PRICING_TIERS: PricingTier[] = [
 const VALUE_PROPS = [
   {
     icon: Shield,
-    title: 'FERPA Compliant',
-    description: 'Enterprise-grade security with complete audit trails',
+    title: 'Protect Your Renewal',
+    description: 'Documented interventions and timely actions earn longer grace periods when outcomes dip',
   },
   {
     icon: Building2,
-    title: 'Built for Charters',
-    description: 'Purpose-built for charter school accountability',
+    title: 'No Data Science Team Needed',
+    description: 'Enterprise-grade analytics without the six-figure hires',
   },
   {
     icon: Users,
-    title: '500+ Schools',
-    description: 'Trusted by charter networks nationwide',
+    title: 'Statistically Sound',
+    description: 'Make data decisions backed by proper analysis, not gut feelings',
   },
 ];
 
@@ -276,10 +276,11 @@ export default function PricingPage() {
       <section className="py-16 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">
-            Simple, transparent pricing
+            Top-Tier Analytics. Zero Data Scientists.
           </h1>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-6">
-            Choose the plan that fits your school&apos;s needs. All plans include a 30-day free trial.
+            Protect your renewal, improve student outcomes, and make statistically sound decisions
+            without hiring a data science team. Start free for 30 days.
           </p>
           <div className="flex items-center justify-center gap-4 text-sm mb-2">
             <Link href="/compare-plans" className="text-blue-600 hover:underline">
@@ -483,10 +484,11 @@ export default function PricingPage() {
       <section className="py-16 bg-gradient-to-r from-blue-600 to-indigo-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to transform your school&apos;s data?
+            Stop spending on data scientists. Start investing in students.
           </h2>
           <p className="text-blue-100 mb-8">
-            Start your 30-day free trial today. No credit card required.
+            Get enterprise-grade analytics that protect your renewal, improve operational efficiency,
+            and deliver the outcomes your students deserve. 30 days free.
           </p>
           <Link
             href="/checkout?tier=pro&period=annual"

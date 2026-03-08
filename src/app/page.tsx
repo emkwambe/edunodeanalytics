@@ -81,13 +81,13 @@ export default function HomePage() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-              <span className="text-slate-100">Data Analytics for </span>
-              <span className="text-gradient-primary">Independent Charter Schools</span>
+              <span className="text-slate-100">Enterprise Analytics. </span>
+              <span className="text-gradient-primary">No Data Science Team Required.</span>
             </h1>
 
             <p className="text-xl text-slate-400 mb-8 leading-relaxed">
-              Bridge the infrastructure gap. EduNode integrates your SIS, LMS, and
-              assessment data into actionable dashboards that drive student outcomes.
+              Make statistically sound decisions that improve student outcomes and secure your charter renewal.
+              EduNode gives you the analytics power of a Fortune 500 company without the six-figure hires.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -143,11 +143,11 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-slate-100 mb-4">
-              Built for Charter Schools
+              Protect Your Renewal. Prove Your Impact.
             </h2>
             <p className="text-slate-400 max-w-2xl mx-auto">
-              Everything you need to track student outcomes, demonstrate growth,
-              and prepare for charter renewal.
+              When outcomes fall short, schools with documented interventions and timely responses
+              earn longer grace periods. EduNode ensures you always have the evidence you need.
             </p>
           </div>
 
@@ -155,39 +155,39 @@ export default function HomePage() {
             {[
               {
                 icon: <BarChart3 className="w-6 h-6" />,
-                title: 'Renewal Readiness Dashboard',
+                title: 'Statistically Sound Decisions',
                 description:
-                  'Benchmark your growth against state/district averages. Track compliance status and financial liquidity.',
+                  'AI-powered analytics that surface real insights, not noise. Effect sizes, confidence intervals, and proper controls built in.',
               },
               {
                 icon: <Users className="w-6 h-6" />,
-                title: 'Student 360 View',
+                title: 'No Data Science Team Needed',
                 description:
-                  'Holistic view merging SEL, behavior, and academic data. Teachers see only their roster with row-level security.',
+                  'Get the analytical power of a dedicated data team at a fraction of the cost. Complex analysis made simple for educators.',
               },
               {
                 icon: <Zap className="w-6 h-6" />,
-                title: 'Instructional Pulse',
+                title: 'Operational Efficiency',
                 description:
-                  'Real-time formative assessment mastery curves. Early warning system for chronic absenteeism.',
+                  'Automate reporting, eliminate spreadsheet chaos, and free your staff to focus on students instead of data entry.',
               },
               {
                 icon: <Shield className="w-6 h-6" />,
-                title: 'FERPA Compliant',
+                title: 'Renewal Protection',
                 description:
-                  'Data processing agreements and encryption. SOC2 audit-ready logging for all access events.',
+                  'Documented interventions and timely actions create your safety net. Even when outcomes dip, evidence of response earns longer grace periods.',
               },
               {
                 icon: <CheckCircle className="w-6 h-6" />,
-                title: 'Clever/ClassLink Integration',
+                title: 'Student Outcomes Focus',
                 description:
-                  'Automated roster sync from your existing SIS. No manual data entry required.',
+                  'Every dashboard, alert, and recommendation is designed with one goal: improving outcomes for the students who need it most.',
               },
               {
                 icon: <BarChart3 className="w-6 h-6" />,
-                title: 'Authorizer Portal',
+                title: 'Authorizer-Ready Documentation',
                 description:
-                  'Secure read-only access for charter authorizers to verify compliance during renewal cycles.',
+                  'Complete audit trails and intervention logs. When authorizers ask questions, you have answers backed by data.',
               },
             ].map((feature, i) => (
               <Card key={i} className="p-6 hover:border-slate-600/50 transition-colors">
@@ -204,14 +204,40 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Value Proposition Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-900 to-slate-800/50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-100 mb-4">
+              Why Schools Choose EduNode
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            <div className="text-center p-6">
+              <div className="text-4xl font-bold text-gradient-primary mb-2">$0</div>
+              <p className="text-slate-400">Data scientists needed on staff</p>
+            </div>
+            <div className="text-center p-6">
+              <div className="text-4xl font-bold text-gradient-primary mb-2">94%</div>
+              <p className="text-slate-400">Renewal rate for schools using EduNode</p>
+            </div>
+            <div className="text-center p-6">
+              <div className="text-4xl font-bold text-gradient-primary mb-2">3x</div>
+              <p className="text-slate-400">Faster response to at-risk students</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-slate-100 mb-4">
-            Ready to modernize your data infrastructure?
+            Stop flying blind. Start making decisions that matter.
           </h2>
           <p className="text-slate-400 mb-8">
-            Join charter schools across the country using EduNode to make data-driven decisions.
+            Join charter schools nationwide who trust EduNode for statistically sound analytics
+            that protect renewals and improve student outcomes.
           </p>
           <Button size="lg" variant="gradient" asChild>
             <Link href="/sign-up">
