@@ -55,7 +55,11 @@
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/coverage-v8": "^4.0.18",
     "autoprefixer": "^10.4.16",
+<<<<<<< Updated upstream
     "cross-env": "^7.0.3",
+=======
+    "cross-env": "^10.1.0",
+>>>>>>> Stashed changes
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.6",
     "jsdom": "^28.1.0",
