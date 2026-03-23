@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Search, User, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,30 +11,13 @@ import { useSchoolBySlug } from '@/lib/hooks/use-school-context';
 import { useCreateIntervention } from '@/lib/hooks/use-interventions';
 import { useToast } from '@/lib/hooks/use-toast';
 import { getSchoolSeed, type StudentSeedData } from '@/lib/data/seed-data';
+import { MTSSInterventionForm } from '@/components/interventions';
+import type { MTSSInterventionFormState, MTSSInterventionMetadata } from '@/lib/mtss/types';
+import { calculateDosage } from '@/lib/mtss/validation';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const INTERVENTION_TYPES = [
-  { value: 'academic', label: 'Academic' },
-  { value: 'attendance', label: 'Attendance' },
-  { value: 'behavior', label: 'Behavior' },
-  { value: 'sel', label: 'Social-Emotional (SEL)' },
-  { value: 'family_engagement', label: 'Family Engagement' },
-] as const;
-
-const PRIORITIES = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' },
-] as const;
-
-const TIERS = [
-  { value: 2, label: 'Tier 2 - Targeted' },
-  { value: 3, label: 'Tier 3 - Intensive' },
-] as const;
 
 const RISK_BADGE_VARIANT: Record<string, 'on-track' | 'watch' | 'at-risk' | 'critical'> = {
   on_track: 'on-track',
@@ -48,48 +31,6 @@ const RISK_LABEL: Record<string, string> = {
   watch: 'Watch',
   at_risk: 'At Risk',
   critical: 'Critical',
-};
-
-// ---------------------------------------------------------------------------
-// Form state type
-// ---------------------------------------------------------------------------
-
-interface FormState {
-  student_id: string;
-  title: string;
-  type: string;
-  priority: string;
-  description: string;
-  goal: string;
-  success_criteria: string;
-  baseline_value: string;
-  target_value: string;
-  start_date: string;
-  target_end_date: string;
-  tier: number;
-  sessions_per_week: string;
-  minutes_per_session: string;
-  total_weeks: string;
-  status: 'planned' | 'in_progress';
-}
-
-const INITIAL_FORM: FormState = {
-  student_id: '',
-  title: '',
-  type: 'academic',
-  priority: 'medium',
-  description: '',
-  goal: '',
-  success_criteria: '',
-  baseline_value: '',
-  target_value: '',
-  start_date: new Date().toISOString().slice(0, 10),
-  target_end_date: '',
-  tier: 2,
-  sessions_per_week: '3',
-  minutes_per_session: '30',
-  total_weeks: '8',
-  status: 'planned',
 };
 
 // ---------------------------------------------------------------------------
@@ -221,61 +162,6 @@ function StudentSelector({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
-
-interface ValidationErrors {
-  student_id?: string;
-  title?: string;
-  target_end_date?: string;
-  baseline_value?: string;
-  target_value?: string;
-  sessions_per_week?: string;
-  minutes_per_session?: string;
-  total_weeks?: string;
-}
-
-function validate(form: FormState): ValidationErrors {
-  const errors: ValidationErrors = {};
-
-  if (!form.student_id) {
-    errors.student_id = 'Please select a student.';
-  }
-
-  if (!form.title.trim()) {
-    errors.title = 'Title is required.';
-  }
-
-  if (form.target_end_date && form.start_date && form.target_end_date < form.start_date) {
-    errors.target_end_date = 'Target end date must be after the start date.';
-  }
-
-  if (form.baseline_value && isNaN(Number(form.baseline_value))) {
-    errors.baseline_value = 'Must be a number.';
-  }
-
-  if (form.target_value && isNaN(Number(form.target_value))) {
-    errors.target_value = 'Must be a number.';
-  }
-
-  const spw = Number(form.sessions_per_week);
-  if (form.sessions_per_week && (isNaN(spw) || spw < 1 || spw > 7)) {
-    errors.sessions_per_week = 'Must be between 1 and 7.';
-  }
-
-  const mps = Number(form.minutes_per_session);
-  if (form.minutes_per_session && (isNaN(mps) || mps < 5 || mps > 180)) {
-    errors.minutes_per_session = 'Must be between 5 and 180.';
-  }
-
-  const tw = Number(form.total_weeks);
-  if (form.total_weeks && (isNaN(tw) || tw < 1 || tw > 52)) {
-    errors.total_weeks = 'Must be between 1 and 52.';
-  }
-
-  return errors;
-}
 
 // ---------------------------------------------------------------------------
 // Main page component
@@ -293,87 +179,131 @@ export default function NewInterventionPage() {
   const schoolSeed = getSchoolSeed(schoolSlug);
   const students = schoolSeed?.students ?? [];
 
-  // Form state
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [submitted, setSubmitted] = useState(false);
+  // Selected student state (step 1)
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [studentError, setStudentError] = useState<string>('');
 
-  // Mutation hook - schoolId may be null while loading, pass empty string as
-  // fallback since the hook won't fire without a valid ID anyway.
+  // Mutation hook
   const { createIntervention, isCreating } = useCreateIntervention(schoolId ?? '');
 
-  // Helpers
-  const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    // Clear field error on change
-    if (errors[key as keyof ValidationErrors]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[key as keyof ValidationErrors];
-        return next;
-      });
-    }
-  };
+  // Get selected student info
+  const selectedStudent = useMemo(() => {
+    return students.find((s) => s.id === selectedStudentId);
+  }, [students, selectedStudentId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
-
-    const validationErrors = validate(form);
-    setErrors(validationErrors);
-
-    if (Object.keys(validationErrors).length > 0) {
-      return;
-    }
-
+  // Handle MTSS form submission
+  const handleFormSubmit = useCallback(async (formData: MTSSInterventionFormState) => {
     if (!schoolId) {
       toast.error('School not found', 'Unable to resolve the current school.');
       return;
     }
 
+    // Build the enhanced metadata structure
+    const dosage = calculateDosage(
+      formData.sessionsPerWeek,
+      formData.minutesPerSession,
+      formData.totalWeeks,
+      formData.customizationEnabled
+        ? { totalSessions: formData.overrideTotalSessions, totalMinutes: formData.overrideTotalMinutes }
+        : undefined
+    );
+
+    const metadata: MTSSInterventionMetadata = {
+      tier: formData.tier,
+      groupSize: formData.groupSize,
+      strategy: formData.strategy,
+      setting: formData.setting,
+      primaryGoal: {
+        description: formData.primaryGoalDescription,
+        baseline: formData.baseline,
+        target: formData.target,
+        unit: formData.unit,
+        successCriteria: formData.successCriteria,
+      },
+      progressMonitoring: {
+        tool: formData.monitoringTool,
+        frequency: formData.monitoringFrequency,
+        notes: formData.monitoringNotes,
+        showGraph: formData.showProgressGraph,
+      },
+      dosagePlan: {
+        sessionsPerWeek: formData.sessionsPerWeek,
+        minutesPerSession: formData.minutesPerSession,
+        totalWeeks: formData.totalWeeks,
+        totalSessions: dosage.totalSessions,
+        totalMinutes: dosage.totalMinutes,
+      },
+      nextReviewDate: formData.nextReviewDate || undefined,
+    };
+
+    // Tier 3 specific fields
+    if (formData.tier === 3) {
+      metadata.fidelityTracking = {
+        implementedAsDesigned: formData.fidelityImplementedAsDesigned ?? true,
+        missedSessions: 0,
+        notes: formData.fidelityNotes,
+      };
+      metadata.teamInvolvement = {
+        staffList: formData.teamStaff || [],
+        parentContact: {
+          name: formData.parentContactName || '',
+          relationship: formData.parentContactRelationship || '',
+          phone: formData.parentContactPhone,
+          email: formData.parentContactEmail,
+          preferredContactMethod: formData.parentPreferredContact,
+        },
+        notes: formData.teamNotes,
+      };
+    }
+
+    // Customization
+    if (formData.customizationEnabled) {
+      metadata.customization = {
+        enabled: true,
+        customFields: formData.customFields,
+        extendedNotes: formData.extendedNotes,
+        dosageOverrides: {
+          totalSessions: formData.overrideTotalSessions,
+          totalMinutes: formData.overrideTotalMinutes,
+        },
+      };
+    }
+
     try {
       await createIntervention({
-        student_id: form.student_id,
-        type: form.type as 'academic' | 'attendance' | 'behavior' | 'sel' | 'family_engagement',
-        title: form.title.trim(),
-        description: form.description.trim() || undefined,
-        status: form.status,
-        priority: form.priority as 'low' | 'medium' | 'high' | 'urgent',
-        start_date: form.start_date || undefined,
-        target_end_date: form.target_end_date || undefined,
-        goal: form.goal.trim() || undefined,
-        success_criteria: form.success_criteria.trim() || undefined,
-        baseline_value: form.baseline_value ? Number(form.baseline_value) : undefined,
-        target_value: form.target_value ? Number(form.target_value) : undefined,
-        metadata: {
-          tier: form.tier,
-          dosage_plan: {
-            sessions_per_week: Number(form.sessions_per_week) || 3,
-            minutes_per_session: Number(form.minutes_per_session) || 30,
-            total_weeks: Number(form.total_weeks) || 8,
-          },
-        },
+        student_id: selectedStudentId,
+        type: formData.type,
+        title: formData.title.trim(),
+        description: formData.description.trim() || undefined,
+        status: formData.status,
+        priority: formData.priority,
+        start_date: formData.startDate || undefined,
+        target_end_date: formData.targetEndDate || undefined,
+        goal: formData.primaryGoalDescription.trim() || undefined,
+        success_criteria: formData.successCriteria.trim() || undefined,
+        baseline_value: formData.baseline || undefined,
+        target_value: formData.target || undefined,
+        metadata,
       } as Record<string, unknown>);
 
-      toast.success('Intervention created', `"${form.title}" has been created successfully.`);
+      toast.success('Intervention created', `"${formData.title}" has been created successfully.`);
       router.push(`/${schoolSlug}/interventions`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
       toast.error('Failed to create intervention', message);
     }
-  };
+  }, [schoolId, selectedStudentId, createIntervention, toast, router, schoolSlug]);
 
-  // ---------------------------------------------------------------------------
-  // Render helpers
-  // ---------------------------------------------------------------------------
+  // Handle cancel
+  const handleCancel = useCallback(() => {
+    router.push(`/${schoolSlug}/interventions`);
+  }, [router, schoolSlug]);
 
-  const fieldError = (key: keyof ValidationErrors) =>
-    submitted && errors[key] ? (
-      <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
-        <AlertCircle className="w-3 h-3" />
-        {errors[key]}
-      </p>
-    ) : null;
+  // Handle student selection
+  const handleStudentSelect = useCallback((id: string) => {
+    setSelectedStudentId(id);
+    setStudentError('');
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -381,7 +311,7 @@ export default function NewInterventionPage() {
 
   return (
     <PageFeatureGate featureKey="intervention_hub">
-      <div className="max-w-3xl mx-auto space-y-6 pb-12">
+      <div className="max-w-4xl mx-auto space-y-6 pb-12">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button
@@ -393,9 +323,9 @@ export default function NewInterventionPage() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-black text-white">New Intervention</h1>
+            <h1 className="text-3xl font-black text-white">New MTSS Intervention</h1>
             <p className="text-slate-400 mt-1">
-              Create a Tier 2 or Tier 3 intervention for a student.
+              Create a Tier 2 or Tier 3 intervention with comprehensive planning and monitoring.
             </p>
           </div>
         </div>
@@ -406,352 +336,81 @@ export default function NewInterventionPage() {
             <span className="ml-2 text-slate-400">Loading school data...</span>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-            {/* ---- Student ---- */}
+          <div className="space-y-6">
+            {/* Step 1: Student Selection */}
             <Card variant="solid">
               <CardContent className="pt-6">
                 <fieldset>
-                  <legend className="text-base font-semibold text-white mb-4">Student</legend>
+                  <legend className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                    <User className="w-5 h-5 text-indigo-400" />
+                    Select Student
+                  </legend>
 
                   <div>
-                    <label className={LABEL_CLASS}>Select Student</label>
+                    <label className={LABEL_CLASS}>Student <span className="text-red-400">*</span></label>
                     <StudentSelector
                       students={students}
-                      selectedId={form.student_id}
-                      onSelect={(id) => updateField('student_id', id)}
+                      selectedId={selectedStudentId}
+                      onSelect={handleStudentSelect}
                     />
-                    {fieldError('student_id')}
-                  </div>
-                </fieldset>
-              </CardContent>
-            </Card>
-
-            {/* ---- Intervention Details ---- */}
-            <Card variant="solid">
-              <CardContent className="pt-6">
-                <fieldset className="space-y-4">
-                  <legend className="text-base font-semibold text-white mb-4">
-                    Intervention Details
-                  </legend>
-
-                  {/* Title */}
-                  <div>
-                    <label htmlFor="title" className={LABEL_CLASS}>
-                      Title <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      id="title"
-                      type="text"
-                      required
-                      value={form.title}
-                      onChange={(e) => updateField('title', e.target.value)}
-                      className={INPUT_CLASS}
-                      placeholder="e.g., Small Group Reading Instruction"
-                    />
-                    {fieldError('title')}
-                  </div>
-
-                  {/* Type & Priority row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="type" className={LABEL_CLASS}>
-                        Type
-                      </label>
-                      <select
-                        id="type"
-                        value={form.type}
-                        onChange={(e) => updateField('type', e.target.value)}
-                        className={INPUT_CLASS}
-                      >
-                        {INTERVENTION_TYPES.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="priority" className={LABEL_CLASS}>
-                        Priority
-                      </label>
-                      <select
-                        id="priority"
-                        value={form.priority}
-                        onChange={(e) => updateField('priority', e.target.value)}
-                        className={INPUT_CLASS}
-                      >
-                        {PRIORITIES.map((p) => (
-                          <option key={p.value} value={p.value}>
-                            {p.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Tier & Status row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="tier" className={LABEL_CLASS}>
-                        Tier
-                      </label>
-                      <select
-                        id="tier"
-                        value={form.tier}
-                        onChange={(e) => updateField('tier', Number(e.target.value))}
-                        className={INPUT_CLASS}
-                      >
-                        {TIERS.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="status" className={LABEL_CLASS}>
-                        Initial Status
-                      </label>
-                      <select
-                        id="status"
-                        value={form.status}
-                        onChange={(e) =>
-                          updateField('status', e.target.value as 'planned' | 'in_progress')
-                        }
-                        className={INPUT_CLASS}
-                      >
-                        <option value="planned">Planned</option>
-                        <option value="in_progress">In Progress</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <div>
-                    <label htmlFor="description" className={LABEL_CLASS}>
-                      Description
-                    </label>
-                    <textarea
-                      id="description"
-                      value={form.description}
-                      onChange={(e) => updateField('description', e.target.value)}
-                      rows={3}
-                      className={INPUT_CLASS}
-                      placeholder="Describe the intervention plan, strategies, and expected approach..."
-                    />
-                  </div>
-
-                  {/* Dates row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="start_date" className={LABEL_CLASS}>
-                        Start Date
-                      </label>
-                      <input
-                        id="start_date"
-                        type="date"
-                        value={form.start_date}
-                        onChange={(e) => updateField('start_date', e.target.value)}
-                        className={INPUT_CLASS}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="target_end_date" className={LABEL_CLASS}>
-                        Target End Date
-                      </label>
-                      <input
-                        id="target_end_date"
-                        type="date"
-                        value={form.target_end_date}
-                        onChange={(e) => updateField('target_end_date', e.target.value)}
-                        className={INPUT_CLASS}
-                      />
-                      {fieldError('target_end_date')}
-                    </div>
-                  </div>
-                </fieldset>
-              </CardContent>
-            </Card>
-
-            {/* ---- Goals & Metrics ---- */}
-            <Card variant="solid">
-              <CardContent className="pt-6">
-                <fieldset className="space-y-4">
-                  <legend className="text-base font-semibold text-white mb-4">
-                    Goals &amp; Metrics
-                  </legend>
-
-                  {/* Goal */}
-                  <div>
-                    <label htmlFor="goal" className={LABEL_CLASS}>
-                      Goal
-                    </label>
-                    <input
-                      id="goal"
-                      type="text"
-                      value={form.goal}
-                      onChange={(e) => updateField('goal', e.target.value)}
-                      className={INPUT_CLASS}
-                      placeholder="e.g., Improve reading fluency from 85 to 120 WPM"
-                    />
-                  </div>
-
-                  {/* Success Criteria */}
-                  <div>
-                    <label htmlFor="success_criteria" className={LABEL_CLASS}>
-                      Success Criteria
-                    </label>
-                    <textarea
-                      id="success_criteria"
-                      value={form.success_criteria}
-                      onChange={(e) => updateField('success_criteria', e.target.value)}
-                      rows={2}
-                      className={INPUT_CLASS}
-                      placeholder="e.g., Student reads at 120+ WPM with 95% accuracy on three consecutive probes"
-                    />
-                  </div>
-
-                  {/* Baseline & Target row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="baseline_value" className={LABEL_CLASS}>
-                        Baseline Value
-                      </label>
-                      <input
-                        id="baseline_value"
-                        type="number"
-                        value={form.baseline_value}
-                        onChange={(e) => updateField('baseline_value', e.target.value)}
-                        className={INPUT_CLASS}
-                        placeholder="e.g., 85"
-                      />
-                      <p className="mt-1 text-xs text-slate-500">
-                        Current performance level before intervention
+                    {studentError && (
+                      <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {studentError}
                       </p>
-                      {fieldError('baseline_value')}
-                    </div>
-                    <div>
-                      <label htmlFor="target_value" className={LABEL_CLASS}>
-                        Target Value
-                      </label>
-                      <input
-                        id="target_value"
-                        type="number"
-                        value={form.target_value}
-                        onChange={(e) => updateField('target_value', e.target.value)}
-                        className={INPUT_CLASS}
-                        placeholder="e.g., 120"
-                      />
-                      <p className="mt-1 text-xs text-slate-500">
-                        Expected performance level after intervention
-                      </p>
-                      {fieldError('target_value')}
-                    </div>
-                  </div>
-                </fieldset>
-              </CardContent>
-            </Card>
-
-            {/* ---- Dosage Plan ---- */}
-            <Card variant="solid">
-              <CardContent className="pt-6">
-                <fieldset className="space-y-4">
-                  <legend className="text-base font-semibold text-white mb-4">Dosage Plan</legend>
-                  <p className="text-sm text-slate-400 -mt-2 mb-2">
-                    Define how frequently and for how long the intervention will be delivered.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label htmlFor="sessions_per_week" className={LABEL_CLASS}>
-                        Sessions / Week
-                      </label>
-                      <input
-                        id="sessions_per_week"
-                        type="number"
-                        min={1}
-                        max={7}
-                        value={form.sessions_per_week}
-                        onChange={(e) => updateField('sessions_per_week', e.target.value)}
-                        className={INPUT_CLASS}
-                      />
-                      {fieldError('sessions_per_week')}
-                    </div>
-                    <div>
-                      <label htmlFor="minutes_per_session" className={LABEL_CLASS}>
-                        Minutes / Session
-                      </label>
-                      <input
-                        id="minutes_per_session"
-                        type="number"
-                        min={5}
-                        max={180}
-                        value={form.minutes_per_session}
-                        onChange={(e) => updateField('minutes_per_session', e.target.value)}
-                        className={INPUT_CLASS}
-                      />
-                      {fieldError('minutes_per_session')}
-                    </div>
-                    <div>
-                      <label htmlFor="total_weeks" className={LABEL_CLASS}>
-                        Total Weeks
-                      </label>
-                      <input
-                        id="total_weeks"
-                        type="number"
-                        min={1}
-                        max={52}
-                        value={form.total_weeks}
-                        onChange={(e) => updateField('total_weeks', e.target.value)}
-                        className={INPUT_CLASS}
-                      />
-                      {fieldError('total_weeks')}
-                    </div>
+                    )}
                   </div>
 
-                  {/* Summary */}
-                  {form.sessions_per_week && form.minutes_per_session && form.total_weeks && (
-                    <div className="rounded-lg bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-slate-300">
-                      Total dosage:{' '}
-                      <span className="font-semibold text-white">
-                        {Number(form.sessions_per_week) * Number(form.total_weeks)} sessions
-                      </span>{' '}
-                      over{' '}
-                      <span className="font-semibold text-white">{form.total_weeks} weeks</span> (
-                      {(
-                        Number(form.sessions_per_week) *
-                        Number(form.minutes_per_session) *
-                        Number(form.total_weeks)
-                      ).toLocaleString()}{' '}
-                      total minutes)
+                  {/* Selected student info */}
+                  {selectedStudent && (
+                    <div className="mt-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-sm font-medium text-white">{selectedStudent.displayName}</span>
+                          <span className="text-xs text-slate-500 ml-2">Grade {selectedStudent.gradeLevel}</span>
+                        </div>
+                        <Badge variant={RISK_BADGE_VARIANT[selectedStudent.riskLevel]} size="sm">
+                          {formatRiskLevel(selectedStudent.riskLevel)}
+                        </Badge>
+                      </div>
+                      {(selectedStudent.hasIep || selectedStudent.has504Plan) && (
+                        <div className="mt-2 flex gap-2">
+                          {selectedStudent.hasIep && (
+                            <Badge variant="primary" size="sm">IEP</Badge>
+                          )}
+                          {selectedStudent.has504Plan && (
+                            <Badge variant="secondary" size="sm">504</Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </fieldset>
               </CardContent>
             </Card>
 
-            {/* ---- Actions ---- */}
-            <div className="flex items-center gap-3 pt-2">
-              <Button type="submit" disabled={isCreating || !schoolId} size="lg">
-                {isCreating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Intervention'
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                onClick={() => router.push(`/${schoolSlug}/interventions`)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
+            {/* Step 2: MTSS Intervention Form (shown after student selection) */}
+            {selectedStudentId ? (
+              <MTSSInterventionForm
+                schoolId={schoolId}
+                initialValues={{ studentId: selectedStudentId }}
+                onSubmit={handleFormSubmit}
+                onCancel={handleCancel}
+                isSubmitting={isCreating}
+                mode="create"
+              />
+            ) : (
+              <Card variant="solid" className="border-dashed border-slate-600">
+                <CardContent className="py-12 text-center">
+                  <User className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-bold text-slate-400 mb-2">Select a Student First</h3>
+                  <p className="text-sm text-slate-500">
+                    Choose a student above to begin creating the intervention plan.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
       </div>
     </PageFeatureGate>
