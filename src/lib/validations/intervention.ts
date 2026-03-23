@@ -1,17 +1,11 @@
 import { z } from 'zod';
 
 export const interventionTypeSchema = z.enum([
-  'academic_support',
-  'behavioral',
+  'academic',
   'attendance',
-  'social_emotional',
+  'behavior',
+  'sel',
   'family_engagement',
-  'health_services',
-  'counseling',
-  'mentoring',
-  'tutoring',
-  'enrichment',
-  'other',
 ]);
 
 export const interventionStatusSchema = z.enum([
@@ -66,6 +60,17 @@ export const interventionQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+export const createDosageMetricsSchema = z.object({
+  intervention_id: z.string().uuid(),
+  school_id: z.string().uuid(),
+  student_id: z.string().uuid(),
+  planned_sessions_per_week: z.number().min(1).max(7),
+  planned_minutes_per_session: z.number().min(5).max(120),
+  planned_total_weeks: z.number().min(1).max(52),
+  dosage_status: z.enum(['not_started', 'on_track', 'behind', 'critical', 'completed', 'discontinued']).default('not_started'),
+});
+
 export type CreateInterventionInput = z.infer<typeof createInterventionSchema>;
 export type UpdateInterventionInput = z.infer<typeof updateInterventionSchema>;
 export type InterventionQueryParams = z.infer<typeof interventionQuerySchema>;
+export type CreateDosageMetricsInput = z.infer<typeof createDosageMetricsSchema>;

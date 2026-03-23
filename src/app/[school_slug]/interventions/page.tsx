@@ -10,6 +10,10 @@ import { getSchoolSeed, type StudentSeedData } from '@/lib/data/seed-data';
 import { PageFeatureGate } from '@/components/features/page-feature-gate';
 import { cn } from '@/lib/utils';
 import { generateFlightPlan, type InterventionFlightPlan } from '@/lib/ai/edunode-advisor';
+import { useCurrentSchool } from '@/lib/hooks/use-school-context';
+import { useInterventions } from '@/lib/hooks/use-interventions';
+import { DosageSummary } from '@/components/dashboard/dosage-summary';
+import { DosageAlerts } from '@/components/dashboard/dosage-alerts';
 import {
   AlertTriangle,
   Clock,
@@ -103,6 +107,9 @@ export default function InterventionsPage() {
   const school_slug = params.school_slug as string;
   const router = useRouter();
 
+  const { schoolId } = useCurrentSchool(school_slug);
+  const { interventions: apiInterventions, isLoading: apiLoading } = useInterventions(schoolId);
+  const [launchingPlan, setLaunchingPlan] = React.useState<string | null>(null);
   const [filterTier, setFilterTier] = React.useState<'all' | 2 | 3>('all');
   const [filterStatus, setFilterStatus] = React.useState<'all' | 'active' | 'stale'>('all');
   const [loadingFlightPlan, setLoadingFlightPlan] = React.useState<string | null>(null);
@@ -114,13 +121,38 @@ export default function InterventionsPage() {
     setMounted(true);
   }, []);
 
-  // Get student data and generate interventions
+  // Get student data for mock fallback
   const schoolSeed = getSchoolSeed(school_slug);
   const students = schoolSeed?.students ?? [];
-  const interventions = React.useMemo(
+  const mockInterventions = React.useMemo(
     () => generateMockInterventions(students),
     [students]
   );
+
+  // Use API data when available, fallback to mock
+  const interventions = React.useMemo(() => {
+    if (apiInterventions.length > 0) {
+      return apiInterventions.map((api: Record<string, unknown>) => {
+        const student = (api as Record<string, Record<string, unknown>>).student;
+        return {
+        id: api.id as string,
+        studentId: api.student_id as string,
+        studentName: (student?.display_name as string) || (api.student_id as string),
+        grade: (student?.grade_level as number) || 0,
+        tier: api.priority === 'urgent' || api.priority === 'high' ? 3 : 2,
+        type: api.title as string,
+        startDate: api.start_date ? new Date(api.start_date as string) : new Date(),
+        lastDataEntry: api.updated_at ? new Date(api.updated_at as string) : new Date(),
+        targetGoal: (api.goal as string) || 'Achieve target outcomes',
+        currentProgress: api.baseline_value != null && api.target_value != null && api.current_value != null
+          ? Math.round(((api.current_value as number) - (api.baseline_value as number)) / ((api.target_value as number) - (api.baseline_value as number)) * 100)
+          : 50,
+        status: api.status === 'completed' ? 'completed' as const :
+                api.status === 'cancelled' ? 'stale' as const : 'active' as const,
+      };}) as Intervention[];
+    }
+    return mockInterventions;
+  }, [apiInterventions, mockInterventions]);
 
   // Filter interventions
   const filteredInterventions = interventions.filter((int) => {
@@ -155,6 +187,51 @@ export default function InterventionsPage() {
 
     setFlightPlans((prev) => ({ ...prev, [intervention.id]: plan }));
     setLoadingFlightPlan(null);
+  };
+
+  const handleAcceptFlightPlan = async (intervention: Intervention, plan: InterventionFlightPlan) => {
+    if (!schoolId) return;
+    setLaunchingPlan(intervention.id);
+    try {
+      const response = await fetch(`/api/schools/${schoolId}/interventions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: intervention.studentId,
+          type: intervention.type === 'Small Group Reading' || intervention.type === 'Comprehension Strategies' ? 'academic' :
+                intervention.type === 'Math Tutoring' || intervention.type === 'Number Sense' ? 'academic' :
+                intervention.type === 'Phonics Intervention' ? 'academic' : 'academic',
+          title: `${plan.strategy} - ${intervention.studentName}`,
+          description: `AI-generated flight plan: ${plan.duration} focused on ${plan.focusArea}. Daily ${plan.dailyMinutes} minutes.`,
+          status: 'in_progress',
+          priority: intervention.tier === 3 ? 'urgent' : 'high',
+          start_date: new Date().toISOString().split('T')[0],
+          target_end_date: plan.checkpointDates?.[plan.checkpointDates.length - 1] ||
+            new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          goal: plan.successCriteria,
+          success_criteria: plan.successCriteria,
+          metadata: {
+            flightPlan: plan,
+            sourceInterventionId: intervention.id,
+            generatedAt: new Date().toISOString(),
+          },
+        }),
+      });
+
+      if (response.ok) {
+        // Remove flight plan from display and show success
+        setFlightPlans(prev => {
+          const next = { ...prev };
+          delete next[intervention.id];
+          return next;
+        });
+        alert(`Flight plan launched for ${intervention.studentName}!`);
+      }
+    } catch (error) {
+      console.error('Failed to launch flight plan:', error);
+    } finally {
+      setLaunchingPlan(null);
+    }
   };
 
   return (
@@ -269,6 +346,12 @@ export default function InterventionsPage() {
         </div>
       </div>
 
+      {/* Dosage Tracking */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <DosageSummary schoolId={schoolId} schoolSlug={school_slug} maxIssues={3} />
+        <DosageAlerts schoolId={schoolId} schoolSlug={school_slug} maxItems={3} />
+      </div>
+
       {/* Intervention List */}
       <div className="space-y-3">
         {filteredInterventions.map((intervention) => {
@@ -308,6 +391,12 @@ export default function InterventionsPage() {
                         className="font-bold text-white hover:text-indigo-400 transition"
                       >
                         {intervention.studentName}
+                      </Link>
+                      <Link
+                        href={`/${school_slug}/interventions/${intervention.id}`}
+                        className="text-[10px] text-indigo-400 hover:text-indigo-300 transition"
+                      >
+                        View Details
                       </Link>
                       <Badge
                         className={cn(
@@ -408,9 +497,14 @@ export default function InterventionsPage() {
                       ))}
                     </div>
                     <div className="flex items-center gap-3">
-                      <Button size="sm" className="text-xs bg-emerald-600 hover:bg-emerald-700">
+                      <Button
+                        size="sm"
+                        className="text-xs bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => handleAcceptFlightPlan(intervention, flightPlan)}
+                        disabled={launchingPlan === intervention.id}
+                      >
                         <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Accept & Launch
+                        {launchingPlan === intervention.id ? 'Launching...' : 'Accept & Launch'}
                       </Button>
                       <Button
                         size="sm"

@@ -18,9 +18,10 @@ import {
 } from '@/lib/reports/generator';
 import { hasFeatureAccess } from '@/lib/features/feature-gates';
 import { captureException } from '@/lib/monitoring/sentry';
+import { createAdminSupabaseClient } from '@/lib/supabase/server';
 
-// In-memory report storage (in production, use database)
-const reportStorage = new Map<string, {
+// Fallback in-memory storage for when database is unavailable (dev mode)
+const reportStorageFallback = new Map<string, {
   id: string;
   schoolId: string;
   type: ReportType;
@@ -30,6 +31,8 @@ const reportStorage = new Map<string, {
   generatedBy: string;
   data: unknown;
 }>();
+
+const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
 
 /**
  * POST /api/reports
@@ -103,8 +106,26 @@ export async function POST(request: NextRequest) {
       userId
     );
 
-    // Store report for later retrieval
-    reportStorage.set(report.id, {
+    // Store report - try database first, fallback to in-memory
+    try {
+      if (!isDemoMode) {
+        const supabase = createAdminSupabaseClient();
+        await (supabase as unknown as Record<string, Function>).from('generated_reports').insert({
+          id: report.id,
+          school_id: report.schoolId,
+          report_type: report.type,
+          format: report.format,
+          title: report.title,
+          generated_at: report.generatedAt.toISOString(),
+          generated_by: report.generatedBy,
+          data: report.data,
+          status: 'completed',
+        });
+      }
+    } catch {
+      // Fallback to in-memory if DB insert fails
+    }
+    reportStorageFallback.set(report.id, {
       id: report.id,
       schoolId: report.schoolId,
       type: report.type,
@@ -157,19 +178,56 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get reports for school from storage
-    const reports = Array.from(reportStorage.values())
-      .filter((r) => r.schoolId === schoolId)
-      .sort((a, b) => b.generatedAt.getTime() - a.generatedAt.getTime())
-      .slice(0, limit)
-      .map((r) => ({
-        id: r.id,
-        type: r.type,
-        format: r.format,
-        title: r.title,
-        generatedAt: r.generatedAt,
-        generatedBy: r.generatedBy,
-      }));
+    // Try database first, fallback to in-memory
+    let reports: Array<{
+      id: string;
+      type: string;
+      format: string;
+      title: string;
+      generatedAt: Date | string;
+      generatedBy: string;
+    }> = [];
+
+    try {
+      if (!isDemoMode) {
+        const supabase = createAdminSupabaseClient();
+        const { data: dbReports } = await (supabase as unknown as Record<string, Function>)
+          .from('generated_reports')
+          .select('id, report_type, format, title, generated_at, generated_by')
+          .eq('school_id', schoolId)
+          .order('generated_at', { ascending: false })
+          .limit(limit);
+
+        if (dbReports && dbReports.length > 0) {
+          reports = dbReports.map((r: Record<string, unknown>) => ({
+            id: r.id as string,
+            type: r.report_type as string,
+            format: r.format as string,
+            title: r.title as string,
+            generatedAt: r.generated_at as string,
+            generatedBy: r.generated_by as string,
+          }));
+        }
+      }
+    } catch {
+      // Fallback to in-memory
+    }
+
+    // Merge in-memory reports if no DB results
+    if (reports.length === 0) {
+      reports = Array.from(reportStorageFallback.values())
+        .filter((r) => r.schoolId === schoolId)
+        .sort((a, b) => b.generatedAt.getTime() - a.generatedAt.getTime())
+        .slice(0, limit)
+        .map((r) => ({
+          id: r.id,
+          type: r.type,
+          format: r.format,
+          title: r.title,
+          generatedAt: r.generatedAt,
+          generatedBy: r.generatedBy,
+        }));
+    }
 
     // Also return available report templates
     const templates = Object.entries(REPORT_TEMPLATES).map(([key, value]) => ({

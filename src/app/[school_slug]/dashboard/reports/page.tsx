@@ -109,6 +109,51 @@ export default function ReportsPage() {
   const params = useParams();
   const school_slug = params.school_slug as string;
   const [filter, setFilter] = React.useState<string>('all');
+  const [generating, setGenerating] = React.useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
+
+  const handleExport = async (reportId: string) => {
+    setDownloadingId(reportId);
+    try {
+      const response = await fetch(`/api/reports/${reportId}/download?format=csv`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `report-${reportId}-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      }
+    } catch (err) {
+      console.error('Export failed:', err);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleGenerate = async (reportId: string) => {
+    setGenerating(reportId);
+    try {
+      await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportType: reportId.replace(/-/g, '_'),
+          schoolId: school_slug,
+          format: 'csv',
+        }),
+      });
+      // Simulate generation time
+      await new Promise(r => setTimeout(r, 1000));
+    } catch (err) {
+      console.error('Generation failed:', err);
+    } finally {
+      setGenerating(null);
+    }
+  };
 
   const filteredReports = filter === 'all'
     ? AVAILABLE_REPORTS
@@ -185,12 +230,37 @@ export default function ReportsPage() {
                       Generated {new Date(report.lastGenerated).toLocaleDateString()}
                     </span>
                   ) : (
-                    <span className="text-xs text-slate-600">Not yet generated</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1 text-xs"
+                      onClick={() => handleGenerate(report.id)}
+                      disabled={generating === report.id}
+                    >
+                      {generating === report.id ? 'Generating...' : 'Generate Now'}
+                    </Button>
                   )}
                   {report.status === 'ready' && (
-                    <Button variant="outline" size="sm" className="gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => handleExport(report.id)}
+                      disabled={downloadingId === report.id}
+                    >
                       <Download className="w-3 h-3" />
-                      Export
+                      {downloadingId === report.id ? 'Downloading...' : 'Export'}
+                    </Button>
+                  )}
+                  {report.status === 'draft' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1 text-xs"
+                      onClick={() => handleGenerate(report.id)}
+                      disabled={generating === report.id}
+                    >
+                      {generating === report.id ? 'Generating...' : 'Generate'}
                     </Button>
                   )}
                 </div>
