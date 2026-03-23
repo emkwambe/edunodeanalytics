@@ -30,6 +30,7 @@ import {
   CreditCard,
   Trash2,
   ExternalLink,
+  Activity,
 } from 'lucide-react';
 
 /**
@@ -75,6 +76,12 @@ const getNavLinks = (schoolSlug: string): NavLink[] => [
     label: 'Risk Model',
     icon: <Sliders size={16} />,
     description: 'Configure risk weights',
+  },
+  {
+    href: `/${schoolSlug}/settings/integration-health`,
+    label: 'Integration Health',
+    icon: <Activity size={16} />,
+    description: 'Monitor connector health',
   },
 ];
 
