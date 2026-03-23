@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { UserButton } from '@clerk/nextjs';
+import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs';
 import {
   LayoutDashboard,
   Users,
@@ -58,6 +58,40 @@ function ClientOnly({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+/**
+ * Error boundary for Clerk components that may fail when session is
+ * invalid, expired, or the user is unauthenticated.
+ */
+class ClerkErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    // Silently handle Clerk auth errors (e.g. expired sessions)
+    console.warn('[Clerk] Auth component error:', error.message);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? (
+        <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
+          <span className="text-slate-500 text-xs font-bold">?</span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 /**
@@ -402,16 +436,25 @@ export function Sidebar({
             collapsed && 'justify-center px-2'
           )}
         >
-          <ClientOnly>
-            <UserButton
-              afterSignOutUrl="/"
-              appearance={{
-                elements: {
-                  avatarBox: 'w-8 h-8',
-                },
-              }}
-            />
-          </ClientOnly>
+          <ClerkErrorBoundary>
+            <ClientOnly>
+              <SignedIn>
+                <UserButton
+                  afterSignOutUrl="/"
+                  appearance={{
+                    elements: {
+                      avatarBox: 'w-8 h-8',
+                    },
+                  }}
+                />
+              </SignedIn>
+              <SignedOut>
+                <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
+                  <span className="text-slate-400 text-xs font-bold">?</span>
+                </div>
+              </SignedOut>
+            </ClientOnly>
+          </ClerkErrorBoundary>
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-200 truncate">
@@ -452,9 +495,18 @@ export function MobileNav({
       </Link>
 
       <div className="flex items-center gap-2">
-        <ClientOnly>
-          <UserButton afterSignOutUrl="/" />
-        </ClientOnly>
+        <ClerkErrorBoundary>
+          <ClientOnly>
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
+            <SignedOut>
+              <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
+                <span className="text-slate-400 text-xs font-bold">?</span>
+              </div>
+            </SignedOut>
+          </ClientOnly>
+        </ClerkErrorBoundary>
         <Button
           variant="ghost"
           size="icon"
