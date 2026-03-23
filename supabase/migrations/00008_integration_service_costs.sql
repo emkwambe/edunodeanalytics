@@ -188,7 +188,7 @@ CREATE POLICY "Platform admins can manage pricing"
         EXISTS (
             SELECT 1 FROM users u
             WHERE u.clerk_user_id = auth.uid()::TEXT
-            AND u.platform_role IN ('superadmin', 'admin')
+            AND u.platform_role = 'platform_admin'
         )
     );
 
