@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user has access to school
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const { data: membership } = await supabase
       .from('school_memberships')
       .select('role')
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user has admin access to school
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const { data: membership } = await supabase
       .from('school_memberships')
       .select('role')

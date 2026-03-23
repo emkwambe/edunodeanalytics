@@ -491,5 +491,6 @@ export function calculateDosage(
 
 export type CreateMTSSInterventionInput = z.infer<typeof createMTSSInterventionSchema>;
 export type MTSSInterventionMetadataInput = z.infer<typeof mtssInterventionMetadataSchema>;
-export type CreateStrategyInput = z.infer<typeof createStrategySchema>;
+// CreateStrategyInput is exported from types.ts - using inferred type only locally
+type _CreateStrategyInput = z.infer<typeof createStrategySchema>;
 export type StrategyQueryParams = z.infer<typeof strategyQuerySchema>;

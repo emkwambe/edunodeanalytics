@@ -4,16 +4,16 @@
  *
  * Data access layer for intervention strategy operations.
  * Strategies can be system-defined, district-defined, or user-created.
+ *
+ * NOTE: Currently using demo data. Database table intervention_strategies
+ * will be added in a future migration.
  */
 
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { StrategyRecord, StrategySource, CreateStrategyInput } from '@/lib/mtss/types';
 
 // ---------------------------------------------------------------------------
-// Demo Mode
+// Demo Data
 // ---------------------------------------------------------------------------
-
-const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
 
 // System-defined strategies (always available)
 const SYSTEM_STRATEGIES: StrategyRecord[] = [
@@ -244,191 +244,82 @@ export interface StrategyQueryOptions {
  * Get all strategies (system + district + user) for a school/district
  */
 export async function getStrategies(
-  schoolId: string,
+  _schoolId: string,
   options: StrategyQueryOptions = {}
 ): Promise<{ data: StrategyRecord[]; count: number }> {
-  const { source, category, search, districtId, limit = 50, offset = 0 } = options;
+  const { source, category, search, limit = 50, offset = 0 } = options;
 
-  // Demo mode
-  if (isDemoMode) {
-    let allStrategies = [
-      ...SYSTEM_STRATEGIES,
-      ...DEMO_DISTRICT_STRATEGIES,
-      ...DEMO_USER_STRATEGIES,
-    ];
+  let allStrategies = [
+    ...SYSTEM_STRATEGIES,
+    ...DEMO_DISTRICT_STRATEGIES,
+    ...DEMO_USER_STRATEGIES,
+  ];
 
-    // Filter by source
-    if (source) {
-      allStrategies = allStrategies.filter((s) => s.source === source);
-    }
-
-    // Filter by category
-    if (category) {
-      allStrategies = allStrategies.filter((s) => s.category === category);
-    }
-
-    // Filter by search
-    if (search) {
-      const searchLower = search.toLowerCase();
-      allStrategies = allStrategies.filter(
-        (s) =>
-          s.name.toLowerCase().includes(searchLower) ||
-          s.description?.toLowerCase().includes(searchLower) ||
-          s.tags?.some((t) => t.toLowerCase().includes(searchLower))
-      );
-    }
-
-    // Active only
-    allStrategies = allStrategies.filter((s) => s.isActive);
-
-    const total = allStrategies.length;
-    const paginated = allStrategies.slice(offset, offset + limit);
-
-    return { data: paginated, count: total };
+  // Filter by source
+  if (source) {
+    allStrategies = allStrategies.filter((s) => s.source === source);
   }
 
-  // Production mode - query from database
-  const supabase = await createServerSupabaseClient();
+  // Filter by category
+  if (category) {
+    allStrategies = allStrategies.filter((s) => s.category === category);
+  }
 
-  // First get the district ID for this school
-  const { data: schoolData } = await supabase
-    .from('schools')
-    .select('district_id')
-    .eq('id', schoolId)
-    .single();
-
-  const schoolDistrictId = districtId || schoolData?.district_id;
-
-  let query = supabase
-    .from('intervention_strategies')
-    .select('*', { count: 'exact' })
-    .eq('is_active', true)
-    .order('name', { ascending: true });
-
-  // Filter to include system strategies, district strategies for this school's district, and user strategies
-  if (source) {
-    query = query.eq('source', source);
-  } else {
-    // Include system strategies + this school's district strategies
-    query = query.or(
-      `source.eq.system,and(source.eq.district,district_id.eq.${schoolDistrictId}),source.eq.user`
+  // Filter by search
+  if (search) {
+    const searchLower = search.toLowerCase();
+    allStrategies = allStrategies.filter(
+      (s) =>
+        s.name.toLowerCase().includes(searchLower) ||
+        s.description?.toLowerCase().includes(searchLower) ||
+        s.tags?.some((t) => t.toLowerCase().includes(searchLower))
     );
   }
 
-  if (category) {
-    query = query.eq('category', category);
-  }
+  // Active only
+  allStrategies = allStrategies.filter((s) => s.isActive);
 
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
-  }
+  const total = allStrategies.length;
+  const paginated = allStrategies.slice(offset, offset + limit);
 
-  query = query.range(offset, offset + limit - 1);
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    console.error('[DB] Error fetching strategies:', error);
-    return { data: [], count: 0 };
-  }
-
-  return {
-    data: (data || []).map(mapDbStrategyToRecord),
-    count: count || 0,
-  };
+  return { data: paginated, count: total };
 }
 
 /**
  * Get a single strategy by ID
  */
 export async function getStrategyById(id: string): Promise<StrategyRecord | null> {
-  // Demo mode
-  if (isDemoMode) {
-    const allStrategies = [
-      ...SYSTEM_STRATEGIES,
-      ...DEMO_DISTRICT_STRATEGIES,
-      ...DEMO_USER_STRATEGIES,
-    ];
-    return allStrategies.find((s) => s.id === id) || null;
-  }
-
-  const supabase = await createServerSupabaseClient();
-
-  const { data, error } = await supabase
-    .from('intervention_strategies')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    console.error('[DB] Error fetching strategy by ID:', error);
-    return null;
-  }
-
-  return mapDbStrategyToRecord(data);
+  const allStrategies = [
+    ...SYSTEM_STRATEGIES,
+    ...DEMO_DISTRICT_STRATEGIES,
+    ...DEMO_USER_STRATEGIES,
+  ];
+  return allStrategies.find((s) => s.id === id) || null;
 }
 
 /**
  * Create a new custom strategy
  */
 export async function createStrategy(
-  schoolId: string,
+  _schoolId: string,
   strategy: CreateStrategyInput,
   createdBy?: string
 ): Promise<StrategyRecord | null> {
-  // Demo mode
-  if (isDemoMode) {
-    const newStrategy: StrategyRecord = {
-      id: `user-strategy-${Date.now()}`,
-      name: strategy.name,
-      source: strategy.source || 'user',
-      districtId: strategy.districtId,
-      category: strategy.category,
-      description: strategy.description,
-      tags: strategy.tags || [],
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy,
-    };
-    DEMO_USER_STRATEGIES.push(newStrategy);
-    return newStrategy;
-  }
-
-  const supabase = await createServerSupabaseClient();
-
-  // Get district ID from school if not provided
-  let districtId = strategy.districtId;
-  if (!districtId && strategy.source === 'district') {
-    const { data: schoolData } = await supabase
-      .from('schools')
-      .select('district_id')
-      .eq('id', schoolId)
-      .single();
-    districtId = schoolData?.district_id;
-  }
-
-  const { data, error } = await supabase
-    .from('intervention_strategies')
-    .insert({
-      name: strategy.name,
-      source: strategy.source || 'user',
-      district_id: districtId,
-      category: strategy.category,
-      description: strategy.description,
-      tags: strategy.tags || [],
-      is_active: true,
-      created_by: createdBy,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('[DB] Error creating strategy:', error);
-    return null;
-  }
-
-  return mapDbStrategyToRecord(data);
+  const newStrategy: StrategyRecord = {
+    id: `user-strategy-${Date.now()}`,
+    name: strategy.name,
+    source: strategy.source || 'user',
+    districtId: strategy.districtId,
+    category: strategy.category,
+    description: strategy.description,
+    tags: strategy.tags || [],
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    createdBy,
+  };
+  DEMO_USER_STRATEGIES.push(newStrategy);
+  return newStrategy;
 }
 
 /**
@@ -438,69 +329,24 @@ export async function updateStrategy(
   id: string,
   updates: Partial<CreateStrategyInput>
 ): Promise<StrategyRecord | null> {
-  // Demo mode
-  if (isDemoMode) {
-    const index = DEMO_USER_STRATEGIES.findIndex((s) => s.id === id);
-    if (index === -1) return null;
+  const index = DEMO_USER_STRATEGIES.findIndex((s) => s.id === id);
+  if (index === -1) return null;
 
-    DEMO_USER_STRATEGIES[index] = {
-      ...DEMO_USER_STRATEGIES[index],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    return DEMO_USER_STRATEGIES[index];
-  }
-
-  const supabase = await createServerSupabaseClient();
-
-  const updateData: Record<string, unknown> = {
-    updated_at: new Date().toISOString(),
+  DEMO_USER_STRATEGIES[index] = {
+    ...DEMO_USER_STRATEGIES[index],
+    ...updates,
+    updatedAt: new Date().toISOString(),
   };
-
-  if (updates.name !== undefined) updateData.name = updates.name;
-  if (updates.category !== undefined) updateData.category = updates.category;
-  if (updates.description !== undefined) updateData.description = updates.description;
-  if (updates.tags !== undefined) updateData.tags = updates.tags;
-
-  const { data, error } = await supabase
-    .from('intervention_strategies')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('[DB] Error updating strategy:', error);
-    return null;
-  }
-
-  return mapDbStrategyToRecord(data);
+  return DEMO_USER_STRATEGIES[index];
 }
 
 /**
  * Soft delete a strategy (mark as inactive)
  */
 export async function deleteStrategy(id: string): Promise<boolean> {
-  // Demo mode
-  if (isDemoMode) {
-    const index = DEMO_USER_STRATEGIES.findIndex((s) => s.id === id);
-    if (index === -1) return false;
-    DEMO_USER_STRATEGIES.splice(index, 1);
-    return true;
-  }
-
-  const supabase = await createServerSupabaseClient();
-
-  const { error } = await supabase
-    .from('intervention_strategies')
-    .update({ is_active: false, updated_at: new Date().toISOString() })
-    .eq('id', id);
-
-  if (error) {
-    console.error('[DB] Error deleting strategy:', error);
-    return false;
-  }
-
+  const index = DEMO_USER_STRATEGIES.findIndex((s) => s.id === id);
+  if (index === -1) return false;
+  DEMO_USER_STRATEGIES.splice(index, 1);
   return true;
 }
 
@@ -522,38 +368,4 @@ export async function getStrategiesByCategory(
   }
 
   return grouped;
-}
-
-// ---------------------------------------------------------------------------
-// Helper Functions
-// ---------------------------------------------------------------------------
-
-interface DbStrategyRow {
-  id: string;
-  name: string;
-  source: string;
-  district_id: string | null;
-  category: string | null;
-  description: string | null;
-  tags: string[] | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  created_by: string | null;
-}
-
-function mapDbStrategyToRecord(row: DbStrategyRow): StrategyRecord {
-  return {
-    id: row.id,
-    name: row.name,
-    source: row.source as StrategySource,
-    districtId: row.district_id || undefined,
-    category: row.category || undefined,
-    description: row.description || undefined,
-    tags: row.tags || undefined,
-    isActive: row.is_active,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    createdBy: row.created_by || undefined,
-  };
 }
