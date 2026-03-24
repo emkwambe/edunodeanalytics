@@ -1,0 +1,25 @@
+# Dependabot configuration for EduNode Analytics
+# Scans npm dependencies weekly, targets development branch
+# Groups minor/patch updates together
+# T3 CI/CD & Developer Velocity
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "main"
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "deps"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
