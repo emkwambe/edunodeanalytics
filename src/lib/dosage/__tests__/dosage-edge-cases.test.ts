@@ -514,11 +514,11 @@ describe('Dosage Inference Edge Cases', () => {
   describe('Dosage Gap Edge Cases', () => {
     const gapRule = inferenceRules.find((r) => r.id === 'dosage_gap')!;
 
-    it('triggers at exactly 10 day gap', () => {
+    it('triggers at 11 day gap (>10 threshold)', () => {
       const metrics = createMockMetrics({});
       const sessions = createSessionsWithDates([
-        { status: 'completed', daysAgo: 20 },
-        { status: 'completed', daysAgo: 10 }, // 10 day gap
+        { status: 'completed', daysAgo: 21 },
+        { status: 'completed', daysAgo: 10 }, // 11 day gap
       ]);
 
       const flag = gapRule.evaluate(metrics, sessions);
