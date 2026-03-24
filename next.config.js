@@ -1,3 +1,5 @@
+const { withSentryConfig } = require('@sentry/nextjs');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Image optimization for production
@@ -141,4 +143,46 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Sentry webpack plugin configuration
+const sentryWebpackPluginOptions = {
+  // For all available options, see:
+  // https://github.com/getsentry/sentry-webpack-plugin#options
+
+  // Suppress source map uploading logs during build
+  silent: true,
+
+  // Project identifier in Sentry
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Auth token for uploading source maps (set in CI/CD)
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Don't upload source maps in development
+  dryRun: !process.env.SENTRY_AUTH_TOKEN,
+
+  // Automatically instrument Next.js
+  autoInstrumentServerFunctions: true,
+  autoInstrumentMiddleware: true,
+  autoInstrumentAppDirectory: true,
+
+  // Hide source maps from users
+  hideSourceMaps: true,
+
+  // Disable telemetry
+  telemetry: false,
+
+  // Widen the upload scope to include all files
+  widenClientFileUpload: true,
+
+  // Tunnel through a proxy to avoid ad blockers
+  tunnelRoute: '/monitoring-tunnel',
+
+  // Disable logger in production
+  disableLogger: process.env.NODE_ENV === 'production',
+};
+
+// Export config with Sentry wrapper (only if DSN is configured)
+module.exports = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? withSentryConfig(nextConfig, sentryWebpackPluginOptions)
+  : nextConfig;

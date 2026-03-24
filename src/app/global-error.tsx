@@ -6,15 +6,29 @@
  * Catches errors thrown at the root layout level (e.g., Clerk auth failures).
  * This is required because the regular error.tsx cannot catch errors from
  * providers in the root layout like ClerkProvider.
+ * Captures errors to Sentry for observability.
  */
 
+import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
+
 export default function GlobalError({
-  _error,
+  error,
   reset,
 }: {
-  _error: Error & { digest?: string };
+  error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    // Capture to Sentry
+    Sentry.captureException(error, {
+      extra: {
+        digest: error.digest,
+        level: 'fatal',
+        boundary: 'global',
+      },
+    });
+  }, [error]);
   return (
     <html lang="en">
       <body className="min-h-screen bg-slate-900 flex items-center justify-center">

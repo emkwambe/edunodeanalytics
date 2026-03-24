@@ -6,11 +6,13 @@
  *
  * Cyber Ocean aesthetic with glassmorphism and dark mode.
  * Provides user-friendly error handling with recovery options.
+ * Captures errors to Sentry for observability.
  */
 
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, Home, RefreshCw, Bug, Shield } from 'lucide-react';
+import * as Sentry from '@sentry/nextjs';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -19,7 +21,15 @@ interface ErrorProps {
 
 export default function Error({ error, reset }: ErrorProps) {
   useEffect(() => {
-    // Log error to monitoring service in production
+    // Capture error to Sentry
+    Sentry.captureException(error, {
+      extra: {
+        digest: error.digest,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    // Also log locally for development
     console.error('[EduNode Error]', {
       message: error.message,
       digest: error.digest,

@@ -10,6 +10,8 @@
  *
  * Security: Validates CRON_SECRET header to prevent unauthorized execution.
  *
+ * Monitoring: Sentry cron check-in for alerting if job stops running.
+ *
  * Pattern: Matches existing cron routes:
  *   - /api/cron/sync-rosters
  *   - /api/cron/stale-interventions
@@ -20,12 +22,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
 import { evaluateSchoolRisk } from '@/lib/risk-engine/orchestrator';
 import type { BatchEvaluationResult } from '@/lib/risk-engine/orchestrator';
+import {
+  captureException,
+  cronCheckInStart,
+  cronCheckInComplete,
+  addBreadcrumb,
+} from '@/lib/monitoring/sentry';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes max for batch processing
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
+
+  // Start Sentry cron check-in
+  const checkInId = cronCheckInStart('risk-evaluation');
 
   // -------------------------------------------------------
   // 1. Verify cron authorization
@@ -39,6 +50,7 @@ export async function GET(request: NextRequest) {
   if (!vercelCronHeader) {
     // Not a Vercel Cron call — check bearer token
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      cronCheckInComplete(checkInId, 'risk-evaluation', 'error', Date.now() - startTime);
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -47,6 +59,11 @@ export async function GET(request: NextRequest) {
   }
 
   console.log('[Cron:RiskEvaluation] Starting nightly risk evaluation batch');
+  addBreadcrumb({
+    category: 'cron',
+    message: 'Starting nightly risk evaluation',
+    level: 'info',
+  });
 
   try {
     // -------------------------------------------------------
@@ -61,6 +78,11 @@ export async function GET(request: NextRequest) {
 
     if (schoolsError) {
       console.error('[Cron:RiskEvaluation] Failed to fetch schools:', schoolsError.message);
+      captureException(new Error(`Failed to fetch active schools: ${schoolsError.message}`), {
+        cronJob: 'risk-evaluation',
+        phase: 'fetch_schools',
+      });
+      cronCheckInComplete(checkInId, 'risk-evaluation', 'error', Date.now() - startTime);
       return NextResponse.json(
         { error: 'Failed to fetch active schools', detail: schoolsError.message },
         { status: 500 }
@@ -69,6 +91,7 @@ export async function GET(request: NextRequest) {
 
     if (!schools || schools.length === 0) {
       console.log('[Cron:RiskEvaluation] No active schools found');
+      cronCheckInComplete(checkInId, 'risk-evaluation', 'ok', Date.now() - startTime);
       return NextResponse.json({
         message: 'No active schools to evaluate',
         schools: 0,
@@ -77,6 +100,12 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`[Cron:RiskEvaluation] Processing ${schools.length} schools`);
+    addBreadcrumb({
+      category: 'cron',
+      message: `Processing ${schools.length} schools`,
+      level: 'info',
+      data: { schoolCount: schools.length },
+    });
 
     // -------------------------------------------------------
     // 3. Run evaluation for each school
@@ -90,6 +119,12 @@ export async function GET(request: NextRequest) {
     for (const school of schools) {
       try {
         console.log(`[Cron:RiskEvaluation] Evaluating: ${school.name} (${school.id})`);
+        addBreadcrumb({
+          category: 'cron',
+          message: `Evaluating school: ${school.name}`,
+          level: 'info',
+          data: { schoolId: school.id, schoolSlug: school.slug },
+        });
 
         const result = await evaluateSchoolRisk(school.id, 'batch_nightly');
 
@@ -115,9 +150,26 @@ export async function GET(request: NextRequest) {
             errorCount: result.errors.length,
           },
         });
+
+        // Capture any per-school errors to Sentry
+        if (!result.success && result.errors.length > 0) {
+          captureException(new Error(`Risk evaluation failed for ${school.name}`), {
+            schoolId: school.id,
+            schoolName: school.name,
+            errors: result.errors,
+            cronJob: 'risk-evaluation',
+          });
+        }
       } catch (schoolErr) {
         const msg = schoolErr instanceof Error ? schoolErr.message : String(schoolErr);
         console.error(`[Cron:RiskEvaluation] Error for ${school.name}:`, msg);
+
+        // Capture per-school exception to Sentry
+        captureException(schoolErr, {
+          schoolId: school.id,
+          schoolName: school.name,
+          cronJob: 'risk-evaluation',
+        });
 
         results.push({
           schoolId: school.id,
@@ -179,10 +231,24 @@ export async function GET(request: NextRequest) {
       `${totalStudents} students, ${totalAlerts} alerts in ${totalDurationMs}ms`
     );
 
+    // Complete Sentry cron check-in
+    const cronStatus = successCount === schools.length ? 'ok' : 'error';
+    cronCheckInComplete(checkInId, 'risk-evaluation', cronStatus, totalDurationMs);
+
     return NextResponse.json(summary);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[Cron:RiskEvaluation] Fatal error:', msg);
+
+    // Capture fatal error to Sentry
+    captureException(err, {
+      cronJob: 'risk-evaluation',
+      phase: 'fatal',
+    });
+
+    // Complete Sentry cron check-in with error
+    cronCheckInComplete(checkInId, 'risk-evaluation', 'error', Date.now() - startTime);
+
     return NextResponse.json(
       { error: 'Cron execution failed', detail: msg },
       { status: 500 }

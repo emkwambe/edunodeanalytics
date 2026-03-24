@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
 import { createReportGenerator, type ReportType, type ReportFormat } from '@/lib/reports/generator';
 import { sendEmail, wrapEmailTemplate } from '@/lib/email/service';
-import { captureException } from '@/lib/monitoring/sentry';
+import {
+  captureException,
+  cronCheckInStart,
+  cronCheckInComplete,
+  addBreadcrumb,
+} from '@/lib/monitoring/sentry';
 
 /**
  * Cron Job: Scheduled Reports
@@ -11,6 +16,9 @@ import { captureException } from '@/lib/monitoring/sentry';
  * Sends generated reports via email to configured recipients.
  *
  * Schedule: 0 * * * * (Every hour at minute 0)
+ *
+ * Monitoring:
+ * - Sentry cron check-in for alerting if job stops running
  */
 
 interface ScheduledReport {
@@ -27,15 +35,20 @@ interface ScheduledReport {
 }
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
+  // Start Sentry cron check-in
+  const checkInId = cronCheckInStart('scheduled-reports');
+
   // Verify cron secret
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    cronCheckInComplete(checkInId, 'scheduled-reports', 'error', Date.now() - startTime);
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const startTime = Date.now();
   const stats = {
     reportsChecked: 0,
     reportsGenerated: 0,
@@ -46,6 +59,12 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createAdminSupabaseClient();
     const now = new Date();
+
+    addBreadcrumb({
+      category: 'cron',
+      message: 'Starting scheduled reports check',
+      level: 'info',
+    });
 
     // Find reports due for generation
     // Note: scheduled_reports table may not exist in all environments
@@ -75,6 +94,7 @@ export async function GET(request: NextRequest) {
 
     if (!dueReports || dueReports.length === 0) {
       console.log('[CRON] No scheduled reports due');
+      cronCheckInComplete(checkInId, 'scheduled-reports', 'ok', Date.now() - startTime);
       return NextResponse.json({
         job: 'scheduled-reports',
         status: 'completed',
@@ -85,6 +105,11 @@ export async function GET(request: NextRequest) {
     }
 
     stats.reportsChecked = dueReports.length;
+    addBreadcrumb({
+      category: 'cron',
+      message: `Found ${dueReports.length} reports due`,
+      level: 'info',
+    });
 
     // Process each due report
     for (const report of dueReports as ScheduledReport[]) {
@@ -94,6 +119,13 @@ export async function GET(request: NextRequest) {
           stats.errors.push(`Report ${report.id}: No school found`);
           continue;
         }
+
+        addBreadcrumb({
+          category: 'cron',
+          message: `Generating report: ${report.title}`,
+          level: 'info',
+          data: { reportId: report.id, schoolSlug: school.slug },
+        });
 
         // Generate the report
         const generator = createReportGenerator(report.school_id, school.slug);
@@ -167,7 +199,11 @@ export async function GET(request: NextRequest) {
           } catch (emailError) {
             const errorMsg = emailError instanceof Error ? emailError.message : 'Unknown error';
             stats.errors.push(`Email to ${recipient.email} exception: ${errorMsg}`);
-            captureException(emailError, { reportId: report.id, recipient: recipient.email });
+            captureException(emailError, {
+              reportId: report.id,
+              recipient: recipient.email,
+              cronJob: 'scheduled-reports',
+            });
           }
         }
 
@@ -198,7 +234,10 @@ export async function GET(request: NextRequest) {
       } catch (reportError) {
         const errorMsg = reportError instanceof Error ? reportError.message : 'Unknown error';
         stats.errors.push(`Report ${report.id}: ${errorMsg}`);
-        captureException(reportError, { reportId: report.id });
+        captureException(reportError, {
+          reportId: report.id,
+          cronJob: 'scheduled-reports',
+        });
 
         // Update with error
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -222,10 +261,22 @@ export async function GET(request: NextRequest) {
 
     console.log('[CRON] Scheduled reports completed:', result);
 
+    // Complete Sentry cron check-in
+    const cronStatus = stats.errors.length === 0 ? 'ok' : 'error';
+    cronCheckInComplete(checkInId, 'scheduled-reports', cronStatus, Date.now() - startTime);
+
     return NextResponse.json(result);
   } catch (error) {
     console.error('[CRON] Scheduled reports failed:', error);
-    captureException(error, { job: 'scheduled-reports' });
+
+    // Capture fatal error to Sentry
+    captureException(error, {
+      cronJob: 'scheduled-reports',
+      phase: 'fatal',
+    });
+
+    // Complete Sentry cron check-in with error
+    cronCheckInComplete(checkInId, 'scheduled-reports', 'error', Date.now() - startTime);
 
     return NextResponse.json(
       {

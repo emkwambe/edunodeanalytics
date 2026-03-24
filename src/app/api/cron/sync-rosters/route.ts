@@ -6,6 +6,12 @@ import {
   createSyncHistory,
   completeSyncHistory,
 } from '@/lib/db/queries/data-sources';
+import {
+  captureException,
+  cronCheckInStart,
+  cronCheckInComplete,
+  addBreadcrumb,
+} from '@/lib/monitoring/sentry';
 
 // Import adapters to register them
 import '@/lib/data/sources/adapters/clever';
@@ -22,21 +28,29 @@ import '@/lib/data/sources/adapters/nwea-map';
  * - Only processes active schools with valid subscriptions
  * - Uses encrypted credentials from data_sources table
  * - Comprehensive audit logging for FERPA compliance
+ *
+ * Monitoring:
+ * - Sentry cron check-in for alerting if job stops running
  */
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
+  // Start Sentry cron check-in
+  const checkInId = cronCheckInStart('sync-rosters');
+
   // Verify cron secret (Vercel sets this automatically)
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    cronCheckInComplete(checkInId, 'sync-rosters', 'error', Date.now() - startTime);
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
     );
   }
 
-  const startTime = Date.now();
   const results: {
     schoolId: string;
     provider: string;
@@ -50,8 +64,14 @@ export async function GET(request: NextRequest) {
     const dataSourcesDue = await getDataSourcesDueForSync();
 
     console.log(`[CRON] Found ${dataSourcesDue.length} data sources due for sync`);
+    addBreadcrumb({
+      category: 'cron',
+      message: `Found ${dataSourcesDue.length} data sources due for sync`,
+      level: 'info',
+    });
 
     if (dataSourcesDue.length === 0) {
+      cronCheckInComplete(checkInId, 'sync-rosters', 'ok', Date.now() - startTime);
       return NextResponse.json({
         job: 'sync-rosters',
         status: 'completed',
@@ -82,6 +102,12 @@ export async function GET(request: NextRequest) {
       }
 
       console.log(`[CRON] Syncing ${dataSource.provider} for school ${dataSource.school_id}`);
+      addBreadcrumb({
+        category: 'cron',
+        message: `Syncing ${dataSource.provider}`,
+        level: 'info',
+        data: { schoolId: dataSource.school_id, provider: dataSource.provider },
+      });
 
       // Create sync history record
       const syncHistoryId = await createSyncHistory({
@@ -139,6 +165,16 @@ export async function GET(request: NextRequest) {
           error: syncResult.errors?.[0]?.message,
         });
 
+        // Capture sync failures to Sentry
+        if (!syncResult.success) {
+          captureException(new Error(`Roster sync failed for ${dataSource.provider}`), {
+            schoolId: dataSource.school_id,
+            provider: dataSource.provider,
+            errors: syncResult.errors,
+            cronJob: 'sync-rosters',
+          });
+        }
+
         console.log(`[CRON] Sync ${syncResult.success ? 'completed' : 'failed'} for ${dataSource.provider}:`, {
           recordsProcessed: syncResult.recordsProcessed,
           created: syncResult.recordsCreated,
@@ -147,6 +183,13 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error(`[CRON] Sync error for ${dataSource.provider}:`, errorMessage);
+
+        // Capture exception to Sentry
+        captureException(error, {
+          schoolId: dataSource.school_id,
+          provider: dataSource.provider,
+          cronJob: 'sync-rosters',
+        });
 
         await updateDataSourceSyncStatus(dataSource.id, 'failed', {
           error: errorMessage,
@@ -196,9 +239,22 @@ export async function GET(request: NextRequest) {
       stats: syncResults.stats,
     });
 
+    // Complete Sentry cron check-in
+    const cronStatus = failedCount === 0 ? 'ok' : 'error';
+    cronCheckInComplete(checkInId, 'sync-rosters', cronStatus, Date.now() - startTime);
+
     return NextResponse.json(syncResults, { status: 200 });
   } catch (error) {
     console.error('[CRON] Roster sync failed:', error);
+
+    // Capture fatal error to Sentry
+    captureException(error, {
+      cronJob: 'sync-rosters',
+      phase: 'fatal',
+    });
+
+    // Complete Sentry cron check-in with error
+    cronCheckInComplete(checkInId, 'sync-rosters', 'error', Date.now() - startTime);
 
     return NextResponse.json(
       {

@@ -14,10 +14,13 @@ import type { Json } from '@/lib/database.types';
  * - Automatic retry with exponential backoff
  * - Rate limiting and throttling
  * - Webhook event handling
+ * - Sentry integration for monitoring
  */
 
 import { DataSourceRegistry, type SyncFrequency, type SyncStatus } from '../sources/registry';
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
+import { withRetry, logToDeadLetter } from '@/lib/data/retry';
+import { addBreadcrumb, captureException } from '@/lib/monitoring/sentry';
 
 export interface OrchestratorConfig {
   schoolId: string;
@@ -208,13 +211,13 @@ export class DataConnectorOrchestrator {
   }
 
   /**
-   * Trigger immediate sync for a data source
+   * Trigger immediate sync for a data source with retry logic
    */
   async triggerSync(
     sourceId: string,
     credentials: Record<string, string>,
     options: { fullSync?: boolean } = {}
-  ): Promise<{ success: boolean; message: string }> {
+  ): Promise<{ success: boolean; message: string; attempts?: number }> {
     const key = `${this.config.schoolId}:${sourceId}`;
 
     // Check if already syncing
@@ -236,7 +239,26 @@ export class DataConnectorOrchestrator {
 
     try {
       console.log(`[Orchestrator] Starting sync for ${sourceId}`);
-      const result = await adapter.sync(this.config.schoolId, credentials, options);
+      addBreadcrumb({
+        category: 'sync',
+        message: `Starting sync for ${sourceId}`,
+        level: 'info',
+        data: { schoolId: this.config.schoolId, sourceId },
+      });
+
+      // Execute sync with retry logic
+      const retryResult = await withRetry(
+        () => adapter.sync(this.config.schoolId, credentials, options),
+        {
+          maxRetries: this.config.retryAttempts,
+          baseDelayMs: this.config.retryDelayMs,
+          context: {
+            adapterName: sourceId,
+            schoolId: this.config.schoolId,
+            operation: options.fullSync ? 'full_sync' : 'incremental_sync',
+          },
+        }
+      );
 
       // Update next sync time
       const scheduled = this.scheduledSyncs.get(key);
@@ -245,23 +267,43 @@ export class DataConnectorOrchestrator {
         scheduled.retryCount = 0;
       }
 
+      if (retryResult.success && retryResult.data) {
+        const result = retryResult.data;
+        return {
+          success: result.success,
+          message: result.success
+            ? `Synced ${result.recordsProcessed} records`
+            : `Sync failed: ${result.errors[0]?.message || 'Unknown error'}`,
+          attempts: retryResult.attempts,
+        };
+      }
+
+      // All retries failed - log to dead letter
+      const errorMessage = retryResult.error?.message || 'Unknown error after retries';
+      await logToDeadLetter({
+        adapterName: sourceId,
+        schoolId: this.config.schoolId,
+        operation: options.fullSync ? 'full_sync' : 'incremental_sync',
+        error: errorMessage,
+        attempts: retryResult.attempts,
+        payload: { credentials: '[REDACTED]', options },
+      });
+
       return {
-        success: result.success,
-        message: result.success
-          ? `Synced ${result.recordsProcessed} records`
-          : `Sync failed: ${result.errors[0]?.message || 'Unknown error'}`,
+        success: false,
+        message: `Sync failed after ${retryResult.attempts} attempts: ${errorMessage}`,
+        attempts: retryResult.attempts,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[Orchestrator] Sync error for ${sourceId}:`, message);
 
-      // Handle retry logic
-      const scheduled = this.scheduledSyncs.get(key);
-      if (scheduled && scheduled.retryCount < this.config.retryAttempts) {
-        scheduled.retryCount++;
-        scheduled.scheduledAt = new Date(Date.now() + this.config.retryDelayMs * scheduled.retryCount);
-        console.log(`[Orchestrator] Scheduling retry ${scheduled.retryCount} for ${sourceId}`);
-      }
+      // Capture unexpected errors to Sentry
+      captureException(error, {
+        adapterName: sourceId,
+        schoolId: this.config.schoolId,
+        operation: 'triggerSync',
+      });
 
       return { success: false, message };
     } finally {

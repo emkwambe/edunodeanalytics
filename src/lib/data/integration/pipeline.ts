@@ -13,11 +13,15 @@
  * - Incremental and full sync support
  * - Real-time and batch processing
  * - Conflict resolution strategies
+ * - Retry with exponential backoff on failures
+ * - Sentry integration for monitoring
  */
 
 import { DataSourceRegistry, type DataSourceAdapter, type SyncResult } from '../sources/registry';
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
 import type { Student as _Student, StudentInsert } from '@/lib/database.types';
+import { withRetry, logToDeadLetter } from '@/lib/data/retry';
+import { addBreadcrumb, captureException } from '@/lib/monitoring/sentry';
 
 // Pipeline configuration
 export interface PipelineConfig {
@@ -98,7 +102,7 @@ export class DataIntegrationPipeline {
   }
 
   /**
-   * Execute the data integration pipeline
+   * Execute the data integration pipeline with retry logic
    */
   async execute(credentials: Map<string, Record<string, string>>): Promise<PipelineResult> {
     const startedAt = new Date();
@@ -113,30 +117,82 @@ export class DataIntegrationPipeline {
     console.log(`[Pipeline] Sources: ${Array.from(this.adapters.keys()).join(', ')}`);
     console.log(`[Pipeline] Mode: ${this.config.syncMode}`);
 
-    // Phase 1: Extract data from all sources
+    addBreadcrumb({
+      category: 'pipeline',
+      message: `Starting integration pipeline`,
+      level: 'info',
+      data: {
+        schoolId: this.config.schoolId,
+        sources: Array.from(this.adapters.keys()),
+        mode: this.config.syncMode,
+      },
+    });
+
+    // Phase 1: Extract data from all sources with retry
     const _extractedData = new Map<string, unknown[]>();
 
     for (const [sourceId, adapter] of this.adapters) {
       try {
         const sourceCreds = credentials.get(sourceId) || {};
-        const result = await adapter.sync(
-          this.config.schoolId,
-          sourceCreds,
-          { fullSync: this.config.syncMode === 'full' }
+
+        addBreadcrumb({
+          category: 'pipeline',
+          message: `Syncing source: ${sourceId}`,
+          level: 'info',
+          data: { sourceId, schoolId: this.config.schoolId },
+        });
+
+        // Execute sync with retry logic
+        const retryResult = await withRetry(
+          () => adapter.sync(
+            this.config.schoolId,
+            sourceCreds,
+            { fullSync: this.config.syncMode === 'full' }
+          ),
+          {
+            maxRetries: 3,
+            baseDelayMs: 1000,
+            context: {
+              adapterName: sourceId,
+              schoolId: this.config.schoolId,
+              operation: 'pipeline_sync',
+            },
+          }
         );
 
-        sourceResults.set(sourceId, result);
-        totalProcessed += result.recordsProcessed;
-        totalCreated += result.recordsCreated;
-        totalUpdated += result.recordsUpdated;
-        totalSkipped += result.recordsSkipped;
+        if (retryResult.success && retryResult.data) {
+          const result = retryResult.data;
+          sourceResults.set(sourceId, result);
+          totalProcessed += result.recordsProcessed;
+          totalCreated += result.recordsCreated;
+          totalUpdated += result.recordsUpdated;
+          totalSkipped += result.recordsSkipped;
 
-        if (!result.success) {
+          if (!result.success) {
+            errors.push({
+              source: sourceId,
+              code: 'SYNC_FAILED',
+              message: `Sync failed for ${sourceId}: ${result.errors[0]?.message || 'Unknown error'}`,
+              recoverable: true,
+            });
+          }
+        } else {
+          // All retries failed
+          const errorMessage = retryResult.error?.message || 'Unknown error after retries';
           errors.push({
             source: sourceId,
-            code: 'SYNC_FAILED',
-            message: `Sync failed for ${sourceId}: ${result.errors[0]?.message || 'Unknown error'}`,
-            recoverable: true,
+            code: 'SYNC_FAILED_AFTER_RETRIES',
+            message: `Sync failed for ${sourceId} after ${retryResult.attempts} attempts: ${errorMessage}`,
+            recoverable: false,
+          });
+
+          // Log to dead letter
+          await logToDeadLetter({
+            adapterName: sourceId,
+            schoolId: this.config.schoolId,
+            operation: 'pipeline_sync',
+            error: errorMessage,
+            attempts: retryResult.attempts,
           });
         }
       } catch (error) {
@@ -146,6 +202,13 @@ export class DataIntegrationPipeline {
           code: 'ADAPTER_ERROR',
           message: `Adapter error for ${sourceId}: ${message}`,
           recoverable: false,
+        });
+
+        // Capture unexpected errors to Sentry
+        captureException(error, {
+          sourceId,
+          schoolId: this.config.schoolId,
+          operation: 'pipeline_execute',
         });
       }
     }

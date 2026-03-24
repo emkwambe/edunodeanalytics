@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
 import { sendStaleInterventionsEmail } from '@/lib/email/templates';
-import { captureException } from '@/lib/monitoring/sentry';
+import {
+  captureException,
+  cronCheckInStart,
+  cronCheckInComplete,
+  addBreadcrumb,
+} from '@/lib/monitoring/sentry';
 
 /**
  * Cron Job: Stale Interventions Alert
@@ -11,23 +16,31 @@ import { captureException } from '@/lib/monitoring/sentry';
  * Sends notifications to relevant staff.
  *
  * Schedule: 0 8 * * 1 (Every Monday at 8 AM)
+ *
+ * Monitoring:
+ * - Sentry cron check-in for alerting if job stops running
  */
 
 const STALE_THRESHOLD_DAYS = 21;
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
+  // Start Sentry cron check-in
+  const checkInId = cronCheckInStart('stale-interventions');
+
   // Verify cron secret
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    cronCheckInComplete(checkInId, 'stale-interventions', 'error', Date.now() - startTime);
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
     );
   }
 
-  const startTime = Date.now();
   const stats = {
     staleInterventionsFound: 0,
     notificationsSent: 0,
@@ -37,6 +50,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = createAdminSupabaseClient();
+
+    addBreadcrumb({
+      category: 'cron',
+      message: 'Starting stale interventions check',
+      level: 'info',
+      data: { thresholdDays: STALE_THRESHOLD_DAYS },
+    });
 
     // Calculate the stale date threshold
     const staleDate = new Date();
@@ -69,6 +89,7 @@ export async function GET(request: NextRequest) {
 
     if (!staleInterventions || staleInterventions.length === 0) {
       console.log('[CRON] No stale interventions found');
+      cronCheckInComplete(checkInId, 'stale-interventions', 'ok', Date.now() - startTime);
       return NextResponse.json({
         job: 'stale-interventions',
         status: 'completed',
@@ -80,6 +101,11 @@ export async function GET(request: NextRequest) {
     }
 
     stats.staleInterventionsFound = staleInterventions.length;
+    addBreadcrumb({
+      category: 'cron',
+      message: `Found ${staleInterventions.length} stale interventions`,
+      level: 'info',
+    });
 
     // Group interventions by owner for batched notifications
     const interventionsByOwner = new Map<string, {
@@ -172,6 +198,13 @@ export async function GET(request: NextRequest) {
 
     for (const [ownerId, ownerData] of interventionsByOwner) {
       try {
+        addBreadcrumb({
+          category: 'cron',
+          message: `Sending notification to ${ownerData.ownerEmail}`,
+          level: 'info',
+          data: { interventionCount: ownerData.interventions.length },
+        });
+
         const result = await sendStaleInterventionsEmail(
           { email: ownerData.ownerEmail, name: ownerData.ownerName },
           {
@@ -190,7 +223,11 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         stats.errors.push(`Exception sending to ${ownerData.ownerEmail}: ${errorMsg}`);
-        captureException(error, { ownerId, ownerEmail: ownerData.ownerEmail });
+        captureException(error, {
+          ownerId,
+          ownerEmail: ownerData.ownerEmail,
+          cronJob: 'stale-interventions',
+        });
       }
     }
 
@@ -209,10 +246,22 @@ export async function GET(request: NextRequest) {
 
     console.log('[CRON] Stale intervention check completed:', alertResults);
 
+    // Complete Sentry cron check-in
+    const cronStatus = stats.errors.length === 0 ? 'ok' : 'error';
+    cronCheckInComplete(checkInId, 'stale-interventions', cronStatus, Date.now() - startTime);
+
     return NextResponse.json(alertResults, { status: 200 });
   } catch (error) {
     console.error('[CRON] Stale intervention check failed:', error);
-    captureException(error, { job: 'stale-interventions' });
+
+    // Capture fatal error to Sentry
+    captureException(error, {
+      cronJob: 'stale-interventions',
+      phase: 'fatal',
+    });
+
+    // Complete Sentry cron check-in with error
+    cronCheckInComplete(checkInId, 'stale-interventions', 'error', Date.now() - startTime);
 
     return NextResponse.json(
       {
