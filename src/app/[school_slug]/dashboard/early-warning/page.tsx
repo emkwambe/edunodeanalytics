@@ -34,6 +34,8 @@ import { useRiskDrivers } from '@/lib/hooks/use-risk-drivers';
 import { useSchoolBySlug } from '@/lib/hooks/use-school-context';
 import { AlertTriangle, Users, TrendingDown, Eye, RefreshCw } from 'lucide-react';
 import type { RiskLevel } from '@/lib/risk-engine/types';
+import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 
 /**
  * Early Warning Dashboard
@@ -155,6 +157,36 @@ export default function EarlyWarningDashboardPage() {
   const newAlertCount = alerts.filter((a) => a.status === 'new').length;
 
   const isLoading = schoolLoading || scoresLoading || distributionLoading;
+  const hasNoStudents = !isLoading && distribution.total === 0;
+
+  // Show empty state if no students imported
+  if (hasNoStudents) {
+    return (
+      <>
+        <PageHeader
+          title="Early Warning Dashboard"
+          description="Monitor student risk levels and coordinate MTSS interventions"
+          breadcrumbs={[
+            { label: 'Dashboard', href: `/${schoolSlug}/dashboard` },
+            { label: 'Early Warning' },
+          ]}
+        />
+        <Card className="border-slate-700 bg-slate-800/30">
+          <CardContent>
+            <EmptyState
+              icon={AlertTriangle}
+              title="No Students Imported Yet"
+              description="Import your student roster to start tracking risk levels and coordinating MTSS interventions. The early warning system will automatically evaluate students for risk indicators."
+              action={{
+                label: 'Import Student Roster',
+                href: `/${schoolSlug}/settings/import`,
+              }}
+            />
+          </CardContent>
+        </Card>
+      </>
+    );
+  }
 
   return (
     <>

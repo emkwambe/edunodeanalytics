@@ -27,6 +27,36 @@ import {
  * Starter tier feature - available to all plans.
  */
 
+// Loading skeleton for reports page
+function ReportsPageSkeleton() {
+  return (
+    <>
+      <div className="h-8 w-32 bg-slate-800/50 rounded animate-pulse mb-2" />
+      <div className="h-4 w-64 bg-slate-800/50 rounded animate-pulse mb-6" />
+      <div className="flex items-center gap-2 mb-6">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="h-8 w-24 bg-slate-800/50 rounded animate-pulse" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Card key={i} className="bg-slate-800/50 border-slate-700">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-lg bg-slate-700 animate-pulse" />
+                <div className="w-16 h-5 bg-slate-700 rounded animate-pulse" />
+              </div>
+              <div className="h-5 w-3/4 bg-slate-700 rounded animate-pulse mb-2" />
+              <div className="h-4 w-full bg-slate-700 rounded animate-pulse mb-4" />
+              <div className="h-8 w-24 bg-slate-700 rounded animate-pulse" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </>
+  );
+}
+
 interface Report {
   id: string;
   name: string;
@@ -108,6 +138,18 @@ export default function ReportsPage() {
   const [filter, setFilter] = React.useState<string>('all');
   const [generating, setGenerating] = React.useState<string | null>(null);
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  // Simulate loading state
+  React.useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Show loading skeleton
+  if (loading) {
+    return <ReportsPageSkeleton />;
+  }
 
   const handleExport = async (reportId: string) => {
     setDownloadingId(reportId);

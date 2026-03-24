@@ -9,6 +9,7 @@ import {
 } from '@/components/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { getSchoolSeed } from '@/lib/data/seed-data';
 import { cn } from '@/lib/utils';
 import {
@@ -28,13 +29,63 @@ import {
  * Starter tier feature - available to all plans.
  */
 
+// Loading skeleton component
+function AttendancePageSkeleton() {
+  return (
+    <>
+      <div className="h-8 w-48 bg-slate-800/50 rounded animate-pulse mb-2" />
+      <div className="h-4 w-64 bg-slate-800/50 rounded animate-pulse mb-6" />
+      <DashboardGrid className="mb-6">
+        {[1, 2, 3, 4].map((i) => (
+          <GridItem key={i} span={3}>
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-slate-700 animate-pulse" />
+                  <div>
+                    <div className="h-6 w-16 bg-slate-700 rounded animate-pulse mb-1" />
+                    <div className="h-3 w-24 bg-slate-700 rounded animate-pulse" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </GridItem>
+        ))}
+      </DashboardGrid>
+      <DashboardGrid className="mb-6">
+        <GridItem span={6}>
+          <Card className="bg-slate-800/50 border-slate-700 h-64">
+            <CardContent className="pt-6">
+              <div className="h-full bg-slate-700/50 rounded animate-pulse" />
+            </CardContent>
+          </Card>
+        </GridItem>
+        <GridItem span={6}>
+          <Card className="bg-slate-800/50 border-slate-700 h-64">
+            <CardContent className="pt-6">
+              <div className="h-full bg-slate-700/50 rounded animate-pulse" />
+            </CardContent>
+          </Card>
+        </GridItem>
+      </DashboardGrid>
+    </>
+  );
+}
+
 export default function AttendancePage() {
   const params = useParams();
   const school_slug = params.school_slug as string;
+  const [loading, setLoading] = React.useState(true);
 
   const schoolSeed = getSchoolSeed(school_slug);
   const students = schoolSeed?.students ?? [];
   const metrics = schoolSeed?.metrics;
+
+  // Simulate loading state
+  React.useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Calculate attendance breakdown
   const attendanceTiers = React.useMemo(() => {
@@ -74,6 +125,45 @@ export default function AttendancePage() {
   }, [students]);
 
   const overallRate = metrics?.attendanceRate ?? 0;
+  const hasData = students.length > 0;
+
+  // Show loading skeleton
+  if (loading) {
+    return <AttendancePageSkeleton />;
+  }
+
+  // Show empty state if no data
+  if (!hasData) {
+    return (
+      <>
+        <PageHeader
+          title="Attendance Monitor"
+          description="Chronic absenteeism tracking and attendance trend analysis"
+          breadcrumbs={[
+            { label: 'Dashboard', href: `/${school_slug}/dashboard` },
+            { label: 'Attendance' },
+          ]}
+        />
+        <Card className="border-slate-700 bg-slate-800/30">
+          <CardContent>
+            <EmptyState
+              icon={Calendar}
+              title="No Attendance Data Available"
+              description="Import attendance records or connect your SIS to see trends. Attendance data helps identify chronic absenteeism and track student engagement."
+              action={{
+                label: 'Import Attendance Data',
+                href: `/${school_slug}/settings/import`,
+              }}
+              secondaryAction={{
+                label: 'Connect SIS',
+                href: `/${school_slug}/settings/integrations`,
+              }}
+            />
+          </CardContent>
+        </Card>
+      </>
+    );
+  }
 
   return (
     <>

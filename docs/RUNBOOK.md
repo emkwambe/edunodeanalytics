@@ -16,6 +16,9 @@
 6. [Sentry Alert Handling](#sentry-alert-handling)
 7. [School Onboarding](#school-onboarding)
 8. [Common Issues & Solutions](#common-issues--solutions)
+9. [Running Demo Seed Script](#running-demo-seed-script)
+10. [Resetting a Demo School](#resetting-a-demo-school)
+11. [Checking Backup Status](#checking-backup-status)
 
 ---
 
@@ -403,8 +406,163 @@ curl https://your-domain.com/api/health/ready
 
 ---
 
+## Running Demo Seed Script
+
+### Purpose
+The demo seed script populates "Lighthouse Charter Academy" with realistic data for sales demos and testing.
+
+### Prerequisites
+- Node.js 18+ installed
+- Environment variables configured:
+  - `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+
+### Execution
+
+```bash
+# From project root
+npm run seed:demo
+
+# Or directly with tsx
+npx tsx scripts/seed-demo.ts
+```
+
+### Expected Output
+```
+Starting EduNode Analytics Demo Seed...
+
+Cleaning up existing demo data...
+Creating school: Lighthouse Charter Academy
+Creating user memberships...
+Generating 150 students...
+Generating 30 days of attendance data...
+Creating 20 active interventions...
+Generating risk evaluations and alerts...
+
+========================================
+Demo Seed Complete!
+========================================
+School: Lighthouse Charter Academy (lighthouse-demo)
+
+Seeded:
+  - 150 students across grades 6-8
+  - ~2,500 attendance records (30 days)
+  - 20 active interventions
+  - 150 risk evaluations
+  - Risk alerts
+
+Risk Distribution:
+  - On Track: ~60%
+  - Watch: ~20%
+  - At Risk: ~15%
+  - Critical: ~5%
+
+Demo Users:
+  - admin@lighthouse.edu (school_admin)
+  - coordinator@lighthouse.edu (counselor)
+  - teacher@lighthouse.edu (teacher)
+
+========================================
+Access the demo at: /lighthouse-demo/dashboard
+========================================
+```
+
+### Idempotency
+The script is idempotent — running it multiple times will:
+1. Delete existing demo school data
+2. Re-create with fresh seed data
+3. Not create duplicates
+
+---
+
+## Resetting a Demo School
+
+### When to Reset
+- Before a sales demo
+- After demo with prospect-specific customizations
+- When data becomes stale or inconsistent
+
+### Reset Procedure
+
+```bash
+# Option 1: Re-run seed script (full reset)
+npm run seed:demo
+
+# Option 2: Manual cleanup via Supabase SQL
+# (Use Supabase Dashboard > SQL Editor)
+```
+
+### Manual SQL Reset (if needed)
+
+```sql
+-- Delete all data for demo school
+DELETE FROM risk_alerts WHERE school_id = 'sch_lighthouse_demo_001';
+DELETE FROM risk_scores WHERE school_id = 'sch_lighthouse_demo_001';
+DELETE FROM intervention_sessions WHERE school_id = 'sch_lighthouse_demo_001';
+DELETE FROM interventions WHERE school_id = 'sch_lighthouse_demo_001';
+DELETE FROM attendance_records WHERE school_id = 'sch_lighthouse_demo_001';
+DELETE FROM students WHERE school_id = 'sch_lighthouse_demo_001';
+DELETE FROM school_memberships WHERE school_id = 'sch_lighthouse_demo_001';
+DELETE FROM schools WHERE id = 'sch_lighthouse_demo_001';
+```
+
+Then run `npm run seed:demo` to recreate.
+
+---
+
+## Checking Backup Status
+
+### Supabase Backup Configuration
+
+**Current Tier:** Pro (or higher)
+
+| Backup Type | Frequency | Retention |
+|-------------|-----------|-----------|
+| Daily Backup | Every 24 hours | 7 days |
+| Point-in-Time Recovery | Continuous | 7 days |
+
+### Verifying Backup Status
+
+1. **Supabase Dashboard:**
+   - Navigate to: Project Settings > Database > Backups
+   - Verify "Last successful backup" timestamp
+   - Check backup size trending
+
+2. **CLI Check:**
+   ```bash
+   # List recent backups (requires Supabase CLI)
+   supabase db remote backup list
+   ```
+
+### Recovery Procedure
+
+**For Point-in-Time Recovery:**
+1. Contact Supabase support with desired recovery timestamp
+2. They will provision a new database instance
+3. Update application environment variables to point to recovered instance
+
+**For Daily Backup Restore:**
+1. Download backup from Supabase dashboard
+2. Create new database instance
+3. Restore using `pg_restore`
+
+### Backup Verification (Monthly)
+
+1. Download latest backup
+2. Restore to staging environment
+3. Run data integrity checks:
+   ```sql
+   SELECT COUNT(*) FROM schools;
+   SELECT COUNT(*) FROM students;
+   SELECT COUNT(*) FROM risk_scores;
+   ```
+4. Verify restored data matches production counts
+
+---
+
 ## Contact Information
 
+- **Technical Director:** Eddy Mkwambe (email TBD)
 - **On-call escalation:** [Configure in PagerDuty]
 - **Sentry project:** [edunode-analytics]
 - **Vercel project:** [edunode-analytics]

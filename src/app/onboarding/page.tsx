@@ -20,6 +20,9 @@ import {
   Upload,
   Mail,
   Plus,
+  Database,
+  FileSpreadsheet,
+  Link2,
 } from 'lucide-react';
 
 /**
@@ -33,12 +36,13 @@ import {
  * - Staff Invitations with RBAC
  */
 
-type OnboardingStep = 'identity' | 'cadence' | 'invitations' | 'branding';
+type OnboardingStep = 'identity' | 'datasource' | 'cadence' | 'invitations' | 'branding';
 
 interface SchoolSetup {
   name: string;
   slug: string;
   logoUrl?: string;
+  dataSource: 'csv' | 'sis' | null;
   cadence: 'weekly' | 'biweekly';
   masteryThreshold: number;
   diagnosticWindow: number;
@@ -57,6 +61,7 @@ const COLOR_OPTIONS = [
 
 const STEPS: { id: OnboardingStep; label: string; icon: React.ReactNode }[] = [
   { id: 'identity', label: 'School Identity', icon: <Building2 size={18} /> },
+  { id: 'datasource', label: 'Data Source', icon: <Database size={18} /> },
   { id: 'cadence', label: 'Data Cadence', icon: <Clock size={18} /> },
   { id: 'invitations', label: 'Staff Invitations', icon: <Users size={18} /> },
   { id: 'branding', label: 'White-Labeling', icon: <Palette size={18} /> },
@@ -70,6 +75,7 @@ export default function OnboardingPage() {
   const [setup, setSetup] = React.useState<SchoolSetup>({
     name: '',
     slug: '',
+    dataSource: null,
     cadence: 'weekly',
     masteryThreshold: 80,
     diagnosticWindow: 21,
@@ -129,7 +135,20 @@ export default function OnboardingPage() {
     setIsSubmitting(true);
     // In production: Save to Supabase, create tenant, etc.
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    router.push(`/${setup.slug || 'demo'}/dashboard`);
+
+    const schoolSlug = setup.slug || 'demo';
+
+    // Navigate based on data source selection
+    if (setup.dataSource === 'csv') {
+      // Go to CSV import page first
+      router.push(`/${schoolSlug}/settings/import`);
+    } else if (setup.dataSource === 'sis') {
+      // Go to SIS configuration page
+      router.push(`/${schoolSlug}/settings/integrations`);
+    } else {
+      // Default to dashboard
+      router.push(`/${schoolSlug}/dashboard`);
+    }
   };
 
   return (
@@ -240,7 +259,83 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 2: Data Cadence */}
+          {/* Step 2: Data Source Selection */}
+          {currentStep === 'datasource' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <header>
+                <h2 className="text-3xl font-black text-white">Choose Your Data Source</h2>
+                <p className="text-slate-400 mt-2">
+                  How would you like to import your student data? You can always add more sources later.
+                </p>
+              </header>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div
+                  onClick={() => updateSetup({ dataSource: 'csv' })}
+                  className={cn(
+                    'p-6 rounded-2xl border-2 transition cursor-pointer',
+                    setup.dataSource === 'csv'
+                      ? 'border-emerald-500 bg-emerald-900/10'
+                      : 'border-slate-700 hover:border-slate-600'
+                  )}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-400">
+                      <FileSpreadsheet size={24} />
+                    </div>
+                    {setup.dataSource === 'csv' && (
+                      <CheckCircle2 className="text-emerald-400" size={20} />
+                    )}
+                  </div>
+                  <h3 className="font-bold text-lg text-white">CSV Upload</h3>
+                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                    Upload student rosters, attendance, and assessment data via CSV files.
+                    Great for quick setup or schools without SIS integration.
+                  </p>
+                  <Badge className="mt-3 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                    Quick Start
+                  </Badge>
+                </div>
+
+                <div
+                  onClick={() => updateSetup({ dataSource: 'sis' })}
+                  className={cn(
+                    'p-6 rounded-2xl border-2 transition cursor-pointer',
+                    setup.dataSource === 'sis'
+                      ? 'border-indigo-500 bg-indigo-900/10'
+                      : 'border-slate-700 hover:border-slate-600'
+                  )}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400">
+                      <Link2 size={24} />
+                    </div>
+                    {setup.dataSource === 'sis' && (
+                      <CheckCircle2 className="text-indigo-400" size={20} />
+                    )}
+                  </div>
+                  <h3 className="font-bold text-lg text-white">SIS Integration</h3>
+                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                    Connect to PowerSchool, Infinite Campus, Clever, or ClassLink for
+                    automatic daily sync of student data.
+                  </p>
+                  <Badge className="mt-3 bg-indigo-500/20 text-indigo-400 border-indigo-500/30">
+                    Recommended for Automation
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-4 text-cyan-500">
+                <Database size={20} className="flex-shrink-0" />
+                <p className="text-xs leading-relaxed text-slate-300">
+                  Don&apos;t worry — you can import data via CSV now and connect your SIS later.
+                  The risk engine works with either source.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Data Cadence */}
           {currentStep === 'cadence' && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <header>
