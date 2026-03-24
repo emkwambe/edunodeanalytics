@@ -3,23 +3,28 @@
  * ====================
  *
  * GET /api/schools/[schoolId]/students/at-risk - Get at-risk students
+ *
+ * T1 Security: FERPA audit logging on all student data access
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentsAtRisk, type StudentQueryOptions } from '@/lib/db/queries/students';
-
-interface RouteParams {
-  params: Promise<{ schoolId: string }>;
-}
+import { authenticateSchoolRequest, type RiskRouteParams } from '../../risk/_shared/auth';
+import { logStudentListAccess } from '@/lib/compliance/ferpa-audit';
 
 /**
  * GET /api/schools/[schoolId]/students/at-risk
  * Get students who are at risk (risk_level = 'at_risk' or 'critical')
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: RiskRouteParams) {
   try {
     const { schoolId } = await params;
     const searchParams = request.nextUrl.searchParams;
+
+    // Authenticate request
+    const authResult = await authenticateSchoolRequest({ schoolId });
+    if (authResult instanceof NextResponse) return authResult;
+    const { userId } = authResult;
 
     // Build query options from search params
     const options: Omit<StudentQueryOptions, 'riskLevel'> = {};
@@ -58,6 +63,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const result = await getStudentsAtRisk(schoolId, options);
+
+    // FERPA Audit: Log at-risk students access
+    const studentIds = result.data.map((s) => s.id);
+    await logStudentListAccess(schoolId, userId, studentIds, 'view_at_risk');
 
     return NextResponse.json(result);
   } catch (error) {

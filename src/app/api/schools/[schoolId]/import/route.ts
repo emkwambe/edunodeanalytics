@@ -9,11 +9,14 @@
  *   - assessments: Update assessment scores on students table
  *
  * Only school admins can import data.
+ *
+ * T1 Security: FERPA audit logging on all student data imports
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateSchoolRequest, isAdmin, type RiskRouteParams } from '../risk/_shared/auth';
 import { evaluateSchoolRisk } from '@/lib/risk-engine/orchestrator';
+import { logFerpaAccess } from '@/lib/compliance/ferpa-audit';
 
 // ============================================================
 // TYPES
@@ -414,6 +417,23 @@ export async function POST(request: NextRequest, { params }: RiskRouteParams) {
       })),
       metadata: JSON.parse(JSON.stringify({ trigger: 'csv_import' })),
     } as any);
+
+    // FERPA Audit: Log student import
+    if (result.importedStudentIds && result.importedStudentIds.length > 0) {
+      await logFerpaAccess({
+        schoolId,
+        userId,
+        accessType: 'import_students',
+        studentIds: result.importedStudentIds,
+        description: `Imported ${result.rowsProcessed} ${body.importType} records (${result.rowsCreated} created, ${result.rowsUpdated} updated)`,
+        metadata: {
+          importType: body.importType,
+          rowsProcessed: result.rowsProcessed,
+          rowsCreated: result.rowsCreated,
+          rowsUpdated: result.rowsUpdated,
+        },
+      });
+    }
 
     // Run risk evaluation if we imported data successfully
     if (result.importedStudentIds && result.importedStudentIds.length > 0) {

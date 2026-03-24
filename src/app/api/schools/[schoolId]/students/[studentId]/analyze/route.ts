@@ -4,11 +4,15 @@
  *
  * POST /api/schools/[schoolId]/students/[studentId]/analyze
  * Analyze student data using AI with automatic PII anonymization
+ *
+ * T1 Security: FERPA audit logging on all student data access
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentById } from '@/lib/db/queries/students';
 import { createSecureAIProxy, AIProvider } from '@/lib/privacy';
+import { authenticateSchoolRequest } from '../../../risk/_shared/auth';
+import { logSingleStudentAccess } from '@/lib/compliance/ferpa-audit';
 
 interface RouteParams {
   params: Promise<{ schoolId: string; studentId: string }>;
@@ -35,6 +39,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { schoolId, studentId } = await params;
     const body: AnalyzeRequest = await request.json();
 
+    // Authenticate request
+    const authResult = await authenticateSchoolRequest({ schoolId });
+    if (authResult instanceof NextResponse) return authResult;
+    const { userId } = authResult;
+
     const {
       feature = 'qualitative_pulse',
       provider = 'anthropic',
@@ -52,6 +61,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 404 }
       );
     }
+
+    // FERPA Audit: Log AI analysis access (before making the call)
+    await logSingleStudentAccess(schoolId, userId, studentId, 'analyze_student');
 
     // Create secure AI proxy for this school
     const proxy = createSecureAIProxy(schoolId);
@@ -127,7 +139,7 @@ Provide actionable insights for both educators and the student.`,
       studentData,
       {
         schoolId,
-        userId: 'api-user', // In production, get from auth
+        userId,
         feature,
       }
     );

@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 /**
  * EduNode Multi-Tenant Middleware
@@ -9,7 +10,145 @@ import { NextResponse } from 'next/server';
  * 2. School-specific routing (e.g., /[school_slug]/dashboard)
  * 3. Tenant isolation enforcement
  * 4. RBAC validation at the edge
+ * 5. CORS lockdown (T1 Security)
+ * 6. Content Security Policy (T1 Security)
+ * 7. CSRF protection (T1 Security)
  */
+
+// ============================================================
+// SECURITY: CORS Configuration
+// ============================================================
+
+/**
+ * Get allowed origins from environment variable.
+ * ALLOWED_ORIGINS is comma-separated list of allowed origins.
+ * Default to localhost:3000 in development.
+ */
+function getAllowedOrigins(): string[] {
+  const envOrigins = process.env.ALLOWED_ORIGINS;
+  if (envOrigins && envOrigins.trim() !== '') {
+    return envOrigins.split(',').map((origin) => origin.trim()).filter(Boolean);
+  }
+  // Default to localhost in development
+  if (process.env.NODE_ENV === 'development') {
+    return ['http://localhost:3000'];
+  }
+  return [];
+}
+
+/**
+ * Check if origin is allowed for CORS
+ */
+function isOriginAllowed(origin: string | null): boolean {
+  if (!origin) return false;
+
+  const allowed = getAllowedOrigins();
+
+  // In development, allow localhost variations
+  if (process.env.NODE_ENV === 'development') {
+    if (
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://127.0.0.1:')
+    ) {
+      return true;
+    }
+  }
+
+  return allowed.includes(origin);
+}
+
+// ============================================================
+// SECURITY: Content Security Policy
+// ============================================================
+
+/**
+ * Content Security Policy header value.
+ * Using Report-Only mode initially to catch violations before enforcing.
+ */
+const CSP_POLICY = [
+  "default-src 'self'",
+  // Scripts: self + inline (Next.js needs this) + eval (Next.js dev)
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  // Styles: self + inline (Tailwind needs this)
+  "style-src 'self' 'unsafe-inline'",
+  // Images: self + data URIs + blobs + all HTTPS sources
+  "img-src 'self' data: blob: https:",
+  // Connect: self + Supabase + Clerk + Stripe APIs
+  "connect-src 'self' https://*.supabase.co https://*.clerk.dev https://*.clerk.com https://api.stripe.com wss://*.supabase.co",
+  // Frames: self + Clerk + Stripe
+  "frame-src 'self' https://*.clerk.dev https://*.clerk.com https://js.stripe.com",
+  // Fonts: self + Google Fonts
+  "font-src 'self' https://fonts.gstatic.com",
+  // Object: none (no plugins)
+  "object-src 'none'",
+  // Base URI: self
+  "base-uri 'self'",
+  // Form action: self
+  "form-action 'self'",
+  // Frame ancestors: self (clickjacking protection)
+  "frame-ancestors 'self'",
+].join('; ');
+
+// ============================================================
+// SECURITY: CSRF Protection
+// ============================================================
+
+/**
+ * CSRF cookie name
+ */
+const CSRF_COOKIE_NAME = 'edunode_csrf';
+
+/**
+ * CSRF header name (client must send this header with the cookie value)
+ */
+const CSRF_HEADER_NAME = 'x-csrf-token';
+
+/**
+ * Generate a random CSRF token
+ */
+function generateCSRFToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Routes exempt from CSRF protection
+ */
+const isCSRFExemptRoute = createRouteMatcher([
+  // Webhook routes use signature verification instead
+  '/api/webhooks(.*)',
+  // Health checks are read-only
+  '/api/health(.*)',
+  // Cron jobs are protected by Vercel secret
+  '/api/cron(.*)',
+]);
+
+/**
+ * Check if request method requires CSRF protection
+ */
+function requiresCSRFProtection(method: string): boolean {
+  return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+}
+
+/**
+ * Validate CSRF token from request
+ */
+function validateCSRFToken(request: NextRequest): boolean {
+  const cookieToken = request.cookies.get(CSRF_COOKIE_NAME)?.value;
+  const headerToken = request.headers.get(CSRF_HEADER_NAME);
+
+  if (!cookieToken || !headerToken) {
+    return false;
+  }
+
+  // Double submit cookie pattern: tokens must match
+  return cookieToken === headerToken;
+}
+
+// ============================================================
+// ROUTE MATCHERS
+// ============================================================
 
 // Public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
@@ -17,7 +156,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks(.*)',
-  '/api/health',
+  '/api/health(.*)',
 ]);
 
 // Routes that require authentication but not school context
@@ -40,19 +179,61 @@ const DEMO_SCHOOLS = [
 // In dev mode, allow all authenticated users to access any school
 const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
 
+// ============================================================
+// MIDDLEWARE
+// ============================================================
+
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
   const path = req.nextUrl.pathname;
+  const method = req.method;
+  const origin = req.headers.get('origin');
 
-  // Allow public routes
+  // ============================================================
+  // CORS: Handle preflight OPTIONS requests
+  // ============================================================
+  if (method === 'OPTIONS') {
+    const response = new NextResponse(null, { status: 204 });
+
+    if (isOriginAllowed(origin)) {
+      response.headers.set('Access-Control-Allow-Origin', origin!);
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
+      response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+      response.headers.set(
+        'Access-Control-Allow-Headers',
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+      );
+      response.headers.set('Access-Control-Max-Age', '86400');
+    }
+
+    return response;
+  }
+
+  // ============================================================
+  // CSRF: Validate on mutation endpoints (POST/PUT/PATCH/DELETE)
+  // ============================================================
+  const isApiRoute = path.startsWith('/api/');
+
+  if (isApiRoute && requiresCSRFProtection(method) && !isCSRFExemptRoute(req)) {
+    if (!validateCSRFToken(req)) {
+      return NextResponse.json(
+        { error: 'CSRF validation failed', message: 'Missing or invalid CSRF token' },
+        { status: 403 }
+      );
+    }
+  }
+
+  // ============================================================
+  // AUTH: Allow public routes
+  // ============================================================
   if (isPublicRoute(req)) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    addSecurityHeaders(response, origin);
+    ensureCSRFCookie(response, req);
+    return response;
   }
 
   // For API routes, return JSON error instead of redirecting to HTML
-  const isApiRoute = path.startsWith('/api/');
-
-  // Redirect unauthenticated users to sign-in (or return 401 for API)
   if (!userId) {
     if (isApiRoute) {
       return NextResponse.json(
@@ -67,7 +248,10 @@ export default clerkMiddleware(async (auth, req) => {
 
   // Allow auth-only routes without school context
   if (isAuthOnlyRoute(req)) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    addSecurityHeaders(response, origin);
+    ensureCSRFCookie(response, req);
+    return response;
   }
 
   // Extract school_slug from path (e.g., /academy-charter/dashboard)
@@ -77,7 +261,10 @@ export default clerkMiddleware(async (auth, req) => {
   // For authenticated API routes, let the route handlers deal with authorization
   // This prevents redirecting API calls to HTML pages
   if (isApiRoute) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    addSecurityHeaders(response, origin);
+    ensureCSRFCookie(response, req);
+    return response;
   }
 
   // If no school slug in URL, redirect to school selection
@@ -181,8 +368,47 @@ export default clerkMiddleware(async (auth, req) => {
     maxAge: 60 * 60 * 24, // 24 hours
   });
 
+  addSecurityHeaders(response, origin);
+  ensureCSRFCookie(response, req);
+
   return response;
 });
+
+/**
+ * Add security headers to response
+ */
+function addSecurityHeaders(response: NextResponse, origin: string | null): void {
+  // CORS headers for allowed origins
+  if (isOriginAllowed(origin)) {
+    response.headers.set('Access-Control-Allow-Origin', origin!);
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+  }
+
+  // Content Security Policy (Report-Only mode for initial deployment)
+  response.headers.set('Content-Security-Policy-Report-Only', CSP_POLICY);
+
+  // Additional security headers (not set in next.config.js for API routes)
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+}
+
+/**
+ * Ensure CSRF cookie is set for all responses
+ */
+function ensureCSRFCookie(response: NextResponse, request: NextRequest): void {
+  // Only set if not already present
+  if (!request.cookies.get(CSRF_COOKIE_NAME)) {
+    const token = generateCSRFToken();
+    response.cookies.set(CSRF_COOKIE_NAME, token, {
+      httpOnly: false, // Client needs to read this for the header
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: '/',
+    });
+  }
+}
 
 export const config = {
   matcher: [

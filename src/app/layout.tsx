@@ -3,6 +3,17 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
+// Environment validation (T1 Security)
+// Validation is lazy - only triggers at runtime, not build time.
+// Import the getEnv function to ensure it's available for runtime validation.
+import { getEnv } from '@/lib/env';
+
+// Validate on first page load (server-side)
+// getEnv() throws on invalid env, crashing the app with a clear error message
+if (typeof window === 'undefined' && process.env.NEXT_PHASE !== 'phase-production-build') {
+  getEnv();
+}
+
 // Force dynamic rendering for all pages to avoid Clerk build-time errors
 // when NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not available during static generation
 export const dynamic = 'force-dynamic';

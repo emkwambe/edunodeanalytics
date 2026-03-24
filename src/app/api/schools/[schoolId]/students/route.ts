@@ -4,6 +4,8 @@
  *
  * GET /api/schools/[schoolId]/students - List students with filtering, sorting, and pagination
  * POST /api/schools/[schoolId]/students - Create a new student
+ *
+ * T1 Security: FERPA audit logging on all student data access
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,16 +16,14 @@ import {
   type StudentQueryOptions,
 } from '@/lib/db/queries/students';
 import { checkApiRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit';
-
-interface RouteParams {
-  params: Promise<{ schoolId: string }>;
-}
+import { authenticateSchoolRequest, type RiskRouteParams } from '../risk/_shared/auth';
+import { logStudentListAccess, logStudentCreation } from '@/lib/compliance/ferpa-audit';
 
 /**
  * GET /api/schools/[schoolId]/students
  * List students for a school with optional filtering, sorting, and pagination
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: RiskRouteParams) {
   // Rate limiting
   const rateLimitResult = await checkApiRateLimit(request, RATE_LIMITS.standard);
   if (!rateLimitResult.allowed) {
@@ -34,11 +34,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { schoolId } = await params;
     const searchParams = request.nextUrl.searchParams;
 
+    // Authenticate request
+    const authResult = await authenticateSchoolRequest({ schoolId });
+    if (authResult instanceof NextResponse) return authResult;
+    const { userId } = authResult;
+
     // Check for search query - use searchStudents if present
     const search = searchParams.get('search');
     if (search) {
       const limit = parseInt(searchParams.get('limit') || '20', 10);
       const students = await searchStudents(schoolId, search, limit);
+
+      // FERPA Audit: Log student list access
+      const studentIds = students.map((s) => s.id);
+      await logStudentListAccess(schoolId, userId, studentIds, 'view_students');
+
       return NextResponse.json({
         data: students,
         total: students.length,
@@ -91,6 +101,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const result = await getStudentsBySchool(schoolId, options);
 
+    // FERPA Audit: Log student list access
+    const studentIds = result.data.map((s) => s.id);
+    await logStudentListAccess(schoolId, userId, studentIds, 'view_students');
+
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching students:', error);
@@ -105,7 +119,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * POST /api/schools/[schoolId]/students
  * Create a new student
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, { params }: RiskRouteParams) {
   // Rate limiting
   const rateLimitResult = await checkApiRateLimit(request, RATE_LIMITS.standard);
   if (!rateLimitResult.allowed) {
@@ -115,6 +129,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { schoolId } = await params;
     const body = await request.json();
+
+    // Authenticate request
+    const authResult = await authenticateSchoolRequest({ schoolId });
+    if (authResult instanceof NextResponse) return authResult;
+    const { userId } = authResult;
 
     // Ensure the student is associated with the correct school
     const studentData = {
@@ -130,6 +149,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 500 }
       );
     }
+
+    // FERPA Audit: Log student creation
+    await logStudentCreation(schoolId, userId, student.id);
 
     return NextResponse.json(student, { status: 201 });
   } catch (error) {

@@ -1,13 +1,20 @@
+/**
+ * Student Export API
+ * ==================
+ *
+ * GET /api/schools/[schoolId]/export/students - Export students to CSV
+ *
+ * T1 Security: FERPA audit logging on all student data exports
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentsBySchool } from '@/lib/db/queries/students';
 import { exportStudentsToCSV } from '@/lib/export';
 import { checkApiRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit';
+import { authenticateSchoolRequest, type RiskRouteParams } from '../../risk/_shared/auth';
+import { logStudentListAccess } from '@/lib/compliance/ferpa-audit';
 
-interface RouteParams {
-  params: Promise<{ schoolId: string }>;
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: RiskRouteParams) {
   // Rate limiting for export endpoints (expensive operations)
   const rateLimitResult = await checkApiRateLimit(request, RATE_LIMITS.export);
   if (!rateLimitResult.allowed) {
@@ -17,6 +24,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { schoolId } = await params;
     const searchParams = request.nextUrl.searchParams;
+
+    // Authenticate request
+    const authResult = await authenticateSchoolRequest({ schoolId });
+    if (authResult instanceof NextResponse) return authResult;
+    const { userId } = authResult;
 
     // Get filter options from query params
     const gradeLevel = searchParams.get('gradeLevel');
@@ -30,6 +42,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       riskLevel: riskLevel ?? undefined,
       teacherName: teacherName ?? undefined,
     });
+
+    // FERPA Audit: Log student export (critical for compliance)
+    const studentIds = result.data.map((s) => s.id);
+    await logStudentListAccess(schoolId, userId, studentIds, 'export_students');
 
     const csv = exportStudentsToCSV(result.data);
     const filename = `students-${schoolId}-${new Date().toISOString().split('T')[0]}.csv`;

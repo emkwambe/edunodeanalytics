@@ -21,22 +21,45 @@ vi.mock('@/lib/db/queries/students', () => ({
   createStudent: vi.fn(),
 }));
 
+// Mock the authentication module
+vi.mock('../schools/[schoolId]/risk/_shared/auth', () => ({
+  authenticateSchoolRequest: vi.fn(),
+}));
+
+// Mock FERPA audit logging
+vi.mock('@/lib/compliance/ferpa-audit', () => ({
+  logStudentListAccess: vi.fn(),
+  logStudentCreation: vi.fn(),
+}));
+
 // Import after mocking
 import {
   getStudentsBySchool,
   searchStudents,
   createStudent,
 } from '@/lib/db/queries/students';
+import { authenticateSchoolRequest } from '../schools/[schoolId]/risk/_shared/auth';
 
 const mockGetStudentsBySchool = vi.mocked(getStudentsBySchool);
 const mockSearchStudents = vi.mocked(searchStudents);
 const mockCreateStudent = vi.mocked(createStudent);
+const mockAuthenticateSchoolRequest = vi.mocked(authenticateSchoolRequest);
 
 describe('GET /api/schools/[schoolId]/students', () => {
   const schoolId = 'test-school-123';
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock successful authentication
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockAuthenticateSchoolRequest.mockResolvedValue({
+      userId: 'test-user-id',
+      clerkUserId: 'clerk-user-id',
+      schoolId,
+      role: 'admin',
+      supabase: {},
+      adminSupabase: {},
+    } as any);
   });
 
   it('returns students list with pagination info', async () => {
@@ -201,6 +224,16 @@ describe('POST /api/schools/[schoolId]/students', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock successful authentication
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockAuthenticateSchoolRequest.mockResolvedValue({
+      userId: 'test-user-id',
+      clerkUserId: 'clerk-user-id',
+      schoolId,
+      role: 'admin',
+      supabase: {},
+      adminSupabase: {},
+    } as any);
   });
 
   it('creates a student successfully', async () => {
