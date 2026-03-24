@@ -37,7 +37,7 @@ interface EventProperties {
 
 // Check if PostHog is configured
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com';
+const _POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com';
 const IS_POSTHOG_ENABLED = !!POSTHOG_KEY && typeof window !== 'undefined';
 
 // Analytics opt-out check
@@ -103,7 +103,7 @@ export function reset(): void {
 /**
  * Track page view
  */
-export function trackPageView(path: string, properties?: EventProperties): void {
+export function trackPageView(path: string, _properties?: EventProperties): void {
   if (!IS_POSTHOG_ENABLED || isOptedOut()) return;
 
   // posthog.capture('$pageview', {
@@ -127,7 +127,7 @@ export function trackEvent(eventName: string, properties?: EventProperties): voi
 /**
  * Set group for school-level analytics
  */
-export function setSchool(schoolSlug: string, properties?: EventProperties): void {
+export function setSchool(schoolSlug: string, _properties?: EventProperties): void {
   if (!IS_POSTHOG_ENABLED || isOptedOut()) return;
 
   // posthog.group('school', schoolSlug, properties);

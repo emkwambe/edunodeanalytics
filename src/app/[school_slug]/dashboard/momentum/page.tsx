@@ -26,7 +26,7 @@ import {
   ArrowRight,
   RefreshCw,
 } from 'lucide-react';
-import { SCHOOL_SEEDS, type StudentSeedData } from '@/lib/data/seed-data';
+import { SCHOOL_SEEDS } from '@/lib/data/seed-data';
 import { PageFeatureGate } from '@/components/features/page-feature-gate';
 import {
   calculateVolatilityIndex,

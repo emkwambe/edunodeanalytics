@@ -1,4 +1,6 @@
-// @ts-nocheck - references tables not yet migrated (compliance_events, consent_records, etc.)
+// Tables compliance_events, consent_records, compliance_reports are defined but not yet migrated to DB
+import type { Json } from '@/lib/database.types';
+
 /**
  * Evidence and Compliance Logger
  * ===============================
@@ -147,7 +149,7 @@ export class EvidenceLogger {
       justification: event.justification,
       ip_address: event.ipAddress,
       user_agent: event.userAgent,
-      metadata: event.metadata,
+      metadata: event.metadata as Json,
       retention_until: retentionUntil.toISOString(),
     };
 
@@ -402,7 +404,7 @@ export class EvidenceLogger {
       studentId: c.student_id,
       guardianName: c.guardian_name,
       guardianEmail: c.guardian_email,
-      consentType: c.consent_type,
+      consentType: c.consent_type as ConsentRecord['consentType'],
       granted: c.granted,
       grantedAt: new Date(c.granted_at),
       expiresAt: c.expires_at ? new Date(c.expires_at) : null,
@@ -435,17 +437,17 @@ export class EvidenceLogger {
       id: e.id,
       schoolId: e.school_id,
       userId: e.user_id,
-      eventType: e.event_type,
+      eventType: e.event_type as ComplianceEventType,
       action: e.action,
       resourceType: e.resource_type,
       resourceId: e.resource_id,
       studentIds: e.student_ids || [],
-      dataClassification: e.data_classification,
+      dataClassification: e.data_classification as DataClassification,
       description: e.description,
       justification: e.justification,
       ipAddress: e.ip_address,
       userAgent: e.user_agent,
-      metadata: e.metadata || {},
+      metadata: (e.metadata || {}) as Record<string, unknown>,
       createdAt: new Date(e.created_at),
       retentionUntil: new Date(e.retention_until),
     }));
@@ -527,8 +529,7 @@ export class EvidenceLogger {
       .from('compliance_events')
       .select(`
         *,
-        user:users(first_name, last_name, email),
-        school_user:school_users(role)
+        user:users(first_name, last_name, email)
       `)
       .eq('school_id', this.schoolId)
       .contains('student_ids', [studentId])
@@ -539,9 +540,9 @@ export class EvidenceLogger {
     if (!data) return [];
 
     return data.map((e) => ({
-      userId: e.user_id,
-      userName: e.user ? `${e.user.first_name} ${e.user.last_name}` : 'System',
-      userRole: e.school_user?.role || 'Unknown',
+      userId: e.user_id || 'system',
+      userName: e.user ? `${(e.user as { first_name: string; last_name: string }).first_name} ${(e.user as { first_name: string; last_name: string }).last_name}` : 'System',
+      userRole: 'Unknown',
       accessTime: new Date(e.created_at),
       accessType: e.action as 'view' | 'edit' | 'export' | 'delete',
       recordsAccessed: e.student_ids?.length || 1,

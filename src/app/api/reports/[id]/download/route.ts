@@ -52,7 +52,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-function generateReportCSV(reportId: string): string {
+function generateReportCSV(_reportId: string): string {
   // Generate sample report data based on report type
   const headers = ['Metric', 'Value', 'Target', 'Status', 'Period'];
   const rows = [

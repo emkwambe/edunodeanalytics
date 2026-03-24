@@ -150,7 +150,7 @@ export function calculateVolatilityIndex(
     minDataPoints?: number;
   } = {}
 ): VolatilityMetrics {
-  const { maxScale = 10, expectedStdDev = 8, minDataPoints = 3 } = options;
+  const { maxScale = 10, expectedStdDev: _expectedStdDev = 8, minDataPoints = 3 } = options;
 
   // Handle insufficient data
   if (scores.length < minDataPoints) {

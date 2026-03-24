@@ -1,6 +1,5 @@
 import useSWR from 'swr';
-import useSWRMutation from 'swr/mutation';
-import { fetcher, mutationFetcher, buildQueryString } from './fetcher';
+import { fetcher, buildQueryString } from './fetcher';
 import type { RiskLevel, Trajectory } from '@/lib/risk-engine/types';
 
 // Types matching API response

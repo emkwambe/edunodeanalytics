@@ -84,7 +84,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: DosageSessionRouteParams
 ) {
-  const { schoolId, interventionId, sessionId } = await params;
+  const { schoolId, interventionId: _interventionId, sessionId } = await params;
   const authResult = await authenticateSchoolRequest({ schoolId });
   if (authResult instanceof NextResponse) return authResult;
 

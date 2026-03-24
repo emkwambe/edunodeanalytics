@@ -165,7 +165,7 @@ export function analyzeQualitativePulse(
   };
 }
 
-function generatePulseSummary(stress: number, motivation: number, positive: number, logs: MTSSLogEntry[]): string {
+function generatePulseSummary(stress: number, motivation: number, positive: number, _logs: MTSSLogEntry[]): string {
   if (stress >= 2) {
     return `Gemini detected recurring keywords regarding environmental stress factors in teacher logs. Home-life indicators suggest external barriers may be impacting classroom performance.`;
   }
@@ -225,8 +225,8 @@ export function generateFlightPlan(
   studentId: string,
   studentName: string,
   focusArea: string,
-  currentProgress: number,
-  masteryGaps: string[]
+  _currentProgress: number,
+  _masteryGaps: string[]
 ): InterventionFlightPlan {
   const strategyKey = Object.keys(INTERVENTION_STRATEGIES).find(k =>
     focusArea.toLowerCase().includes(k.split('-')[0])

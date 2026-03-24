@@ -17,7 +17,6 @@ import {
   Settings,
   ArrowRight,
   ExternalLink,
-  Clock,
   CheckCircle,
 } from 'lucide-react';
 

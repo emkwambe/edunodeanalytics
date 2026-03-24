@@ -10,13 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { TIER_INFO, FEATURES, getLockedFeatures, type SubscriptionTier } from '@/lib/features/feature-gates';
+import { TIER_INFO, getLockedFeatures, type SubscriptionTier } from '@/lib/features/feature-gates';
 import { getSchoolSeed } from '@/lib/data/seed-data';
 import {
   CreditCard,
   Download,
   ExternalLink,
-  Check,
   AlertCircle,
   Calendar,
   Users,

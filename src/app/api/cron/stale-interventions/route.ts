@@ -15,20 +15,6 @@ import { captureException } from '@/lib/monitoring/sentry';
 
 const STALE_THRESHOLD_DAYS = 21;
 
-interface StaleIntervention {
-  id: string;
-  student_id: string;
-  student_name: string;
-  intervention_type: string;
-  days_since_update: number;
-  owner_id: string;
-  owner_email: string;
-  owner_name: string;
-  school_id: string;
-  school_slug: string;
-  school_name: string;
-}
-
 export async function GET(request: NextRequest) {
   // Verify cron secret
   const authHeader = request.headers.get('authorization');

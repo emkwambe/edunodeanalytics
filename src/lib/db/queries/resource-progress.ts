@@ -1,6 +1,5 @@
-// @ts-nocheck - strict type mismatches after database.types.ts regen
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import type { ResourceProgress, ResourceProgressInsert, ResourceProgressUpdate } from '@/lib/database.types';
+import type { ResourceProgress, ResourceProgressInsert } from '@/lib/database.types';
 
 /**
  * Resource Progress Queries
@@ -363,7 +362,7 @@ export async function updateProgress(
     return null;
   }
 
-  const newSectionsCompleted = Math.max(existing.sections_completed, sectionIndex);
+  const newSectionsCompleted = Math.max(existing.sections_completed ?? 0, sectionIndex);
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -371,7 +370,7 @@ export async function updateProgress(
     .update({
       sections_completed: newSectionsCompleted,
       current_section: sectionIndex + 1,
-      time_spent_minutes: existing.time_spent_minutes + timeSpentMinutes,
+      time_spent_minutes: (existing.time_spent_minutes ?? 0) + timeSpentMinutes,
       updated_at: now,
     })
     .eq('id', existing.id)

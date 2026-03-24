@@ -26,7 +26,6 @@ import { cn } from '@/lib/utils';
 import {
   type MTSSInterventionFormState,
   type InterventionTier,
-  type InterventionStrategy,
   type TeamMember,
   type CustomField,
   type MonitoringFrequency,
@@ -199,7 +198,7 @@ export function MTSSInterventionForm({
   ]);
 
   // Get required fields based on tier
-  const requiredFields = useMemo(() => getTierRequiredFields(form.tier), [form.tier]);
+  const _requiredFields = useMemo(() => getTierRequiredFields(form.tier), [form.tier]);
 
   // Toggle section expansion
   const toggleSection = (section: string) => {

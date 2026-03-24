@@ -5,10 +5,8 @@ import Link from 'next/link';
 import {
   Sparkles,
   Building2,
-  Users,
   Mail,
   Phone,
-  MapPin,
   Send,
   CheckCircle,
   ArrowLeft,

@@ -33,7 +33,7 @@ export function MetricDegradation({
   children,
   vitality,
   showBadge = true,
-  showWarning = true,
+  showWarning: _showWarning = true,
   className,
   onRefreshRequest,
 }: MetricDegradationProps) {

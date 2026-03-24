@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getUserContext } from '@/lib/auth/rbac';
-import type { SchoolRole, Permission } from '@/lib/auth/types';
+import type { SchoolRole } from '@/lib/auth/types';
 
 /**
  * GET /api/schools/[schoolId]/user/role

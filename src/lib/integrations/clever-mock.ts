@@ -12,7 +12,6 @@
  * - GET /v3.0/schools
  */
 
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // =============================================================================
 // TYPES: Clever API Response Structures
@@ -410,7 +409,7 @@ export async function syncCleverRoster(
 /**
  * Get sync status for a school
  */
-export async function getCleverSyncStatus(schoolId: string): Promise<{
+export async function getCleverSyncStatus(_schoolId: string): Promise<{
   lastSync: string | null;
   status: 'connected' | 'disconnected' | 'syncing' | 'error';
   studentCount: number;
@@ -441,7 +440,7 @@ export interface ClassLinkRosterResponse {
   }>;
 }
 
-export function getMockClassLinkRoster(tenantId: string): ClassLinkRosterResponse {
+export function getMockClassLinkRoster(_tenantId: string): ClassLinkRosterResponse {
   // ClassLink OneRoster API structure
   return {
     users: [

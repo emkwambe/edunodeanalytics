@@ -565,7 +565,7 @@ export default function CSVImportPage() {
                   <tbody>
                     {parsedData.slice(0, 10).map((row, i) => (
                       <tr key={i} className="border-b border-slate-800">
-                        {Object.entries(row).map(([key, value], j) => (
+                        {Object.entries(row).map(([_key, value], j) => (
                           <td key={j} className="px-3 py-2 text-slate-300">
                             {value === null ? (
                               <span className="text-slate-500">-</span>

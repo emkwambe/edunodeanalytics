@@ -97,7 +97,7 @@ async function initBigQueryClient(): Promise<unknown | null> {
 /**
  * Validate statistical significance and return appropriate message
  */
-function validateNSize(
+function _validateNSize(
   count: number,
   threshold: number = STATISTICAL_THRESHOLDS.minimumNSize
 ): { isValid: boolean; message: string | null } {

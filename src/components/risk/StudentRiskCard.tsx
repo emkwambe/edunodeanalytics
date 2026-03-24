@@ -10,7 +10,6 @@ import type { RiskScore } from '@/lib/hooks/use-risk-scores';
 import type { RiskLevel, Trajectory } from '@/lib/risk-engine/types';
 import {
   getRiskBadgeText,
-  getRiskBadgeColor,
   getTrajectoryIcon,
   getTrajectoryColor,
   interpretTrajectory,

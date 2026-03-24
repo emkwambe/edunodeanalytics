@@ -15,7 +15,6 @@ import {
   RESPONSIBLE_PARTY_META,
   getRecommendedAction,
   generateCorrelationId,
-  type IntegrationErrorCategory,
   type ResponsibleParty,
   type IssueSeverity,
   type ConnectorHealthStatus,
@@ -23,10 +22,6 @@ import {
 } from '@/lib/integrations/error-taxonomy';
 import {
   getPlaybook,
-  matchFailureMode,
-  generateEscalationMessage,
-  type VendorPlaybook,
-  type FailureMode,
 } from '@/lib/integrations/vendor-playbooks';
 import {
   ChevronLeft,
@@ -52,7 +47,6 @@ import {
   Minus,
   HelpCircle,
   Lightbulb,
-  ArrowRight,
   Eye,
   BookOpen,
 } from 'lucide-react';

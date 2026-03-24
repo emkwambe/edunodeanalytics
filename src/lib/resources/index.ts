@@ -16,10 +16,9 @@ import {
   UserRole,
   CATEGORY_LABELS,
   CATEGORY_DESCRIPTIONS,
-  ROLE_LABELS,
 } from './types';
-import { getAllModules, getModulesFiltered, getResourceSummary } from './content';
-import { getAllAssets, getAssetsFiltered, getAssetSummary } from './downloadables';
+import { getAllModules, getModulesFiltered } from './content';
+import { getAllAssets, getAssetsFiltered } from './downloadables';
 
 /**
  * Combined resource library interface

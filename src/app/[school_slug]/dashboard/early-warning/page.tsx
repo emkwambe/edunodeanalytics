@@ -22,16 +22,14 @@ import {
 } from '@/components/risk';
 import {
   DosageSummary,
-  DosageSummarySkeleton,
 } from '@/components/dashboard/dosage-summary';
 import {
   DosageAlerts,
-  DosageAlertsSkeleton,
 } from '@/components/dashboard/dosage-alerts';
 import { Button } from '@/components/ui/button';
 import { useRiskScores } from '@/lib/hooks/use-risk-scores';
 import { useRiskDistribution } from '@/lib/hooks/use-risk-distribution';
-import { useRiskAlerts, useAcknowledgeAlert, useResolveAlert } from '@/lib/hooks/use-risk-alerts';
+import { useRiskAlerts } from '@/lib/hooks/use-risk-alerts';
 import { useRiskDrivers } from '@/lib/hooks/use-risk-drivers';
 import { useSchoolBySlug } from '@/lib/hooks/use-school-context';
 import { AlertTriangle, Users, TrendingDown, Eye, RefreshCw } from 'lucide-react';
@@ -96,7 +94,7 @@ export default function EarlyWarningDashboardPage() {
   } = useRiskDrivers(schoolId);
 
   // Alert actions - we'll track which alert is being acted on
-  const [activeAlertId, setActiveAlertId] = React.useState<string | null>(null);
+  const [, setActiveAlertId] = React.useState<string | null>(null);
 
   const handleAcknowledgeAlert = async (alertId: string) => {
     if (!schoolId) return;

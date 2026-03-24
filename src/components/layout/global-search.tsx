@@ -12,7 +12,6 @@ import {
   Settings,
   BookOpen,
   ArrowRight,
-  Loader2,
 } from 'lucide-react';
 import { SCHOOL_SEEDS, StudentSeedData } from '@/lib/data/seed-data';
 

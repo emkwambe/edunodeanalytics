@@ -144,7 +144,7 @@ export async function verifyNWEAConnection(
       districtName: result.district?.name,
       schoolCount: result.district?.schools?.length,
     };
-  } catch (error) {
+  } catch {
     return {
       success: false,
     };
@@ -260,7 +260,7 @@ export function getCurrentTerm(): NWEATerm {
  */
 export function transformNWEAResults(
   results: NWEAStudentResult[],
-  schoolId: string
+  _schoolId: string
 ): {
   studentSisId: string;
   readingScores: {

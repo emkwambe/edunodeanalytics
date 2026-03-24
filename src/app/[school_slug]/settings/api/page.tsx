@@ -122,7 +122,7 @@ students.forEach((s) => console.log(\`\${s.name}: \${s.risk_score}\`));`,
 
 export default function APIKeysPage() {
   const params = useParams();
-  const schoolSlug = params?.school_slug as string;
+  const _schoolSlug = params?.school_slug as string;
 
   const [apiKeys, setApiKeys] = useState<APIKey[]>(MOCK_API_KEYS);
   const [webhooks, setWebhooks] = useState<Webhook[]>(MOCK_WEBHOOKS);

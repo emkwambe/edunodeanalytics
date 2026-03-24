@@ -1,4 +1,4 @@
-// @ts-nocheck - references tables not yet migrated (compliance_events, consent_records, etc.)
+// Table data_quality_issues is defined but not yet migrated to DB
 /**
  * Data Integration Pipeline
  * =========================
@@ -17,7 +17,7 @@
 
 import { DataSourceRegistry, type DataSourceAdapter, type SyncResult } from '../sources/registry';
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
-import type { Student, StudentInsert } from '@/lib/database.types';
+import type { Student as _Student, StudentInsert } from '@/lib/database.types';
 
 // Pipeline configuration
 export interface PipelineConfig {
@@ -114,7 +114,7 @@ export class DataIntegrationPipeline {
     console.log(`[Pipeline] Mode: ${this.config.syncMode}`);
 
     // Phase 1: Extract data from all sources
-    const extractedData = new Map<string, unknown[]>();
+    const _extractedData = new Map<string, unknown[]>();
 
     for (const [sourceId, adapter] of this.adapters) {
       try {
@@ -350,13 +350,16 @@ export class DataTransformationService {
     const firstName = String(raw.first_name || raw.firstName || '');
     const lastName = String(raw.last_name || raw.lastName || '');
 
+    const gradeValue = raw.grade_level ?? raw.grade ?? 0;
+    const attendanceValue = raw.attendance_rate ?? 0;
+
     return {
       school_id: schoolId,
       first_name: this.normalizeName(firstName),
       last_name: this.normalizeName(lastName),
       display_name: this.generateDisplayName(firstName, lastName),
-      grade_level: this.normalizeGradeLevel(raw.grade_level || raw.grade || 0),
-      attendance_rate: this.normalizeAttendanceRate(raw.attendance_rate || 0),
+      grade_level: this.normalizeGradeLevel(gradeValue as string | number),
+      attendance_rate: this.normalizeAttendanceRate(attendanceValue as string | number),
       sis_student_id: String(raw.sis_id || raw.sisId || raw.student_id || ''),
       has_iep: Boolean(raw.has_iep || raw.hasIep || false),
       has_504_plan: Boolean(raw.has_504 || raw.has504 || raw.has_504_plan || false),

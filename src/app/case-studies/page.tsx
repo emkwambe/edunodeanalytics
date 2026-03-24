@@ -5,11 +5,9 @@ import {
   Sparkles,
   TrendingUp,
   Users,
-  Clock,
   Award,
   MapPin,
   GraduationCap,
-  BarChart3,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';

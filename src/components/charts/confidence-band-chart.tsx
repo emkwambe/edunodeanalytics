@@ -68,7 +68,7 @@ export function ConfidenceBandChart({
 
   // Calculate if observed is significantly different from expected
   const isSignificantlyDifferent = useMemo(() => {
-    const latestObserved = observedScores[observedScores.length - 1];
+    const _latestObserved = observedScores[observedScores.length - 1];
     const latestExpected = expectedScores[expectedScores.length - 1];
     const latestUpper = confidenceBands.upper[confidenceBands.upper.length - 1];
     const latestLower = confidenceBands.lower[confidenceBands.lower.length - 1];
@@ -231,9 +231,8 @@ export function ConfidenceBandChart({
   }), [autoYRange, confidenceBands, sem]);
 
   // Calculate delta
-  const latestObserved = observedScores[observedScores.length - 1];
   const latestExpected = expectedScores[expectedScores.length - 1];
-  const delta = latestObserved - latestExpected;
+  const delta = observedScores[observedScores.length - 1] - latestExpected;
 
   return (
     <Card

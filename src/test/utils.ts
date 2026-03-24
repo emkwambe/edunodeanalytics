@@ -74,9 +74,9 @@ export function createMockSupabaseClient(options: {
 } = {}) {
   const {
     selectData = [],
-    insertData = null,
-    updateData = null,
-    deleteSuccess = true,
+    insertData: _insertData = null,
+    updateData: _updateData = null,
+    deleteSuccess: _deleteSuccess = true,
     error = null,
   } = options;
 

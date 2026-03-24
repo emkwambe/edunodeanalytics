@@ -15,7 +15,7 @@ function generateId(): string {
 /**
  * Generate a random date within a range
  */
-function randomDate(start: Date, end: Date): string {
+function _randomDate(start: Date, end: Date): string {
   return new Date(
     start.getTime() + Math.random() * (end.getTime() - start.getTime())
   ).toISOString();

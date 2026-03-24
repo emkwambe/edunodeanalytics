@@ -1,4 +1,6 @@
-// @ts-nocheck - references tables not yet migrated (compliance_events, consent_records, etc.)
+// Table school_data_sources is defined but not yet migrated to DB
+import type { Json } from '@/lib/database.types';
+
 /**
  * Data Connector Orchestrator
  * ===========================
@@ -185,18 +187,20 @@ export class DataConnectorOrchestrator {
         return new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
       case 'hourly':
         return new Date(now.getTime() + 60 * 60 * 1000);
-      case 'daily':
+      case 'daily': {
         // Schedule for 2 AM next day
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
         tomorrow.setHours(2, 0, 0, 0);
         return tomorrow;
-      case 'weekly':
+      }
+      case 'weekly': {
         // Schedule for Sunday 2 AM
         const nextSunday = new Date(now);
         nextSunday.setDate(nextSunday.getDate() + (7 - nextSunday.getDay()));
         nextSunday.setHours(2, 0, 0, 0);
         return nextSunday;
+      }
       case 'manual':
       default:
         return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // Far future
@@ -323,11 +327,10 @@ export class DataConnectorOrchestrator {
 
     // Log webhook event
     await supabase.from('webhook_events').insert({
-      school_id: this.config.schoolId,
-      source: sourceId,
+      event_id: `${this.config.schoolId}-${sourceId}-${Date.now()}`,
       event_type: eventType,
-      payload,
-      processed: false,
+      payload: payload as Json,
+      status: 'pending',
     });
 
     // Handle specific event types
@@ -338,7 +341,7 @@ export class DataConnectorOrchestrator {
         // Queue incremental sync
         this.scheduleSync(sourceId, 'realtime');
         break;
-      case 'roster.changed':
+      case 'roster.changed': {
         // Queue full sync
         const adapter = DataSourceRegistry.get(sourceId);
         if (adapter) {
@@ -346,6 +349,7 @@ export class DataConnectorOrchestrator {
           console.log(`[Orchestrator] Queueing roster sync for ${sourceId}`);
         }
         break;
+      }
     }
   }
 }

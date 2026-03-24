@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   lineChartOptions,
   EDUNODE_COLORS,
-  datasetPresets,
 } from './chart-config';
 import { cn } from '@/lib/utils';
 import type { ChartData, ChartOptions } from 'chart.js';
@@ -48,6 +47,7 @@ export function AttendanceTrendChart({
   showChronicAbsence = false,
   height = 300,
   className,
+  tenantId: _tenantId,
   schoolName,
   benchmarkData,
 }: AttendanceTrendChartProps) {

@@ -161,7 +161,7 @@ export class SecureAIProxy {
    */
   prepareFreeTextForAI(
     text: string,
-    context: AIRequestContext
+    _context: AIRequestContext
   ): {
     safeText: string;
     piiDetected: boolean;

@@ -43,7 +43,7 @@ export function SeedImportNotification({
       setTimeout(() => {
         window.location.reload();
       }, 1500);
-    } catch (err) {
+    } catch {
       setError('Failed to import seed data. Please try again.');
       setIsImporting(false);
     }

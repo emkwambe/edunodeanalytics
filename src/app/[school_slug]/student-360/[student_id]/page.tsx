@@ -17,10 +17,9 @@ import { Line } from 'react-chartjs-2';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getSchoolSeed, type StudentSeedData } from '@/lib/data/seed-data';
+import { getSchoolSeed } from '@/lib/data/seed-data';
 import { cn } from '@/lib/utils';
 import { PageFeatureGate } from '@/components/features/page-feature-gate';
-import { ConfoundingRiskBanner } from '@/components/banners/confounding-risk-banner';
 import { useStudent360Audit } from '@/lib/hooks/use-ferpa-audit';
 import {
   analyzeQualitativePulse,
@@ -34,12 +33,9 @@ import {
   CheckCircle2,
   TrendingUp,
   TrendingDown,
-  Calendar,
   BookOpen,
   Target,
   GraduationCap,
-  Activity,
-  Shield,
   ShieldAlert,
   Clock,
   FileText,
@@ -86,7 +82,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
  */
 
 // Threshold constants
-const THRESHOLDS = {
+const _THRESHOLDS = {
   chronicAbsence: 90,
   lowGrowth: 55,
   highGrowth: 70,

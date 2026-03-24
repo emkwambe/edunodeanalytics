@@ -624,7 +624,7 @@ export class ReportGenerator {
   /**
    * Custom report - allows flexible data selection
    */
-  private async fetchCustomReportData(config: ReportConfig): Promise<ReportData> {
+  private async fetchCustomReportData(_config: ReportConfig): Promise<ReportData> {
     const schoolSeed = getSchoolSeed(this.schoolSlug);
     const metrics = schoolSeed?.metrics;
 

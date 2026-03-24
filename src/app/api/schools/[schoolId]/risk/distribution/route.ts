@@ -60,7 +60,7 @@ export async function GET(request: NextRequest, { params }: RiskRouteParams) {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - weeks * 7);
 
-    const { data: evalHistory, error: histError } = await adminSupabase
+    const { data: evalHistory, error: _histError } = await adminSupabase
       .from('risk_evaluations')
       .select('risk_level, computed_at')
       .eq('school_id', schoolId)

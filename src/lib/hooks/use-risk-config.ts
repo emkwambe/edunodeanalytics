@@ -1,4 +1,4 @@
-import useSWR, { mutate as globalMutate } from 'swr';
+import useSWR from 'swr';
 import { fetcher } from './fetcher';
 import type { RiskModelConfig } from '@/lib/risk-engine/types';
 

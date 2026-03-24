@@ -15,8 +15,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { headers } from 'next/headers';
+import Stripe from 'stripe';
 import {
   updateSchoolSubscriptionBySlug,
   updateSchoolSubscriptionByStripeId,

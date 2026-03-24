@@ -23,16 +23,13 @@ import {
   Zap,
   RefreshCw,
   ChevronLeft,
-  Upload,
   FileJson,
   Link2,
   Eye,
   Save,
-  ExternalLink,
   BrainCircuit,
   Wand2,
   Check,
-  X,
   HelpCircle,
 } from 'lucide-react';
 

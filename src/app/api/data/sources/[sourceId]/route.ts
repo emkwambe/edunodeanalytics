@@ -91,7 +91,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { sourceId } = await params;
     const body = await request.json();
-    const { schoolSlug, credentials, syncFrequency, settings } = body;
+    const { schoolSlug, credentials, syncFrequency, settings: _settings } = body;
 
     if (!schoolSlug) {
       return NextResponse.json(

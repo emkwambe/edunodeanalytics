@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   PageHeader,
 } from '@/components/layout/dashboard-shell';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -43,7 +43,7 @@ import {
 } from 'lucide-react';
 
 // Map icon names to components
-const ICON_MAP: Record<string, React.ElementType> = {
+const _ICON_MAP: Record<string, React.ElementType> = {
   Users,
   GraduationCap,
   BookOpen,

@@ -168,7 +168,7 @@ export function captureException(
 export function captureMessage(
   message: string,
   level: 'debug' | 'info' | 'warning' | 'error' = 'info',
-  context?: SentryContext
+  _context?: SentryContext
 ): string | null {
   if (!IS_SENTRY_ENABLED) {
     console.log(`[Sentry Mock] Would capture message: [${level}] ${message}`);
@@ -209,7 +209,7 @@ export function setTag(key: string, value: string): void {
  */
 export function startTransaction(
   name: string,
-  op: string
+  _op: string
 ): { finish: () => void } {
   if (!IS_SENTRY_ENABLED) {
     return {
@@ -269,7 +269,7 @@ export function sentryErrorHandler(
 /**
  * Flush pending events (useful before process exit)
  */
-export async function flush(timeout = 2000): Promise<void> {
+export async function flush(_timeout = 2000): Promise<void> {
   if (!IS_SENTRY_ENABLED) return;
 
   // await Sentry.flush(timeout);

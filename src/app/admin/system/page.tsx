@@ -9,7 +9,6 @@ import {
   Cpu,
   HardDrive,
   Activity,
-  Wifi,
   Clock,
   RefreshCw,
   CheckCircle,
@@ -19,9 +18,8 @@ import {
   TrendingDown,
   Zap,
   Globe,
-  Shield,
   Bell,
-  Settings,
+  Shield,
 } from 'lucide-react';
 
 type ServiceStatus = 'operational' | 'degraded' | 'outage' | 'maintenance';
@@ -112,8 +110,8 @@ const STATUS_CONFIG: Record<ServiceStatus, { icon: React.ReactNode; label: strin
 
 function MetricBar({ metric }: { metric: SystemMetric }) {
   const percentage = (metric.value / metric.max) * 100;
-  const warningPercent = metric.warning ? (metric.warning / metric.max) * 100 : 100;
-  const criticalPercent = metric.critical ? (metric.critical / metric.max) * 100 : 100;
+  const _warningPercent = metric.warning ? (metric.warning / metric.max) * 100 : 100;
+  const _criticalPercent = metric.critical ? (metric.critical / metric.max) * 100 : 100;
 
   let barColor = 'bg-emerald-500';
   if (metric.critical && metric.value >= metric.critical) {

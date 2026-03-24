@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
-import { DocsLayout, DocsBreadcrumb, CodeBlock } from '@/components/layout/docs-layout';
+import { DocsLayout, DocsBreadcrumb } from '@/components/layout/docs-layout';
 import {
   CheckCircle,
   Circle,

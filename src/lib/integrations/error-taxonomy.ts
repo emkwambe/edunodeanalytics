@@ -285,13 +285,13 @@ export const RESPONSIBLE_PARTY_META: Record<ResponsibleParty, {
 export function getRecommendedAction(
   category: IntegrationErrorCategory,
   vendorName: string,
-  context?: {
+  _context?: {
     affectedRecords?: number;
     lastSuccessfulSync?: Date;
     vendorErrorCode?: string;
   }
 ): RecommendedAction {
-  const meta = ERROR_CATEGORY_META[category];
+  const _meta = ERROR_CATEGORY_META[category];
 
   switch (category) {
     case 'authentication_failure':

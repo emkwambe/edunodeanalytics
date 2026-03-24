@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { AlertTriangle, ShieldAlert, Users, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 /**

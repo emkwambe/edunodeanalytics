@@ -1,4 +1,3 @@
-// @ts-nocheck - references tables not yet migrated (compliance_events, consent_records, etc.)
 /**
  * FERPA Audit Logging API
  * =======================

@@ -24,7 +24,6 @@ import {
   createAdapter,
   DataSourceRegistry,
   type DataSourceAdapter,
-  type SyncResult,
   type SyncError,
 } from '../registry';
 import {
@@ -55,7 +54,7 @@ async function performLiveSync(
   schoolId: string,
   credentials: Record<string, string>,
   options: { fullSync?: boolean } = {}
-): Promise<SyncResult> {
+): Promise<import('../registry').SyncResult> {
   const startedAt = new Date();
   const errors: SyncError[] = [];
   let recordsCreated = 0;
@@ -149,7 +148,7 @@ async function performLiveSync(
     }
 
     const completedAt = new Date();
-    const result: SyncResult = {
+    const result: import('../registry').SyncResult = {
       success: errors.length < oneRosterStudents.length * 0.1,
       recordsProcessed: oneRosterStudents.length,
       recordsCreated,
@@ -219,9 +218,9 @@ async function performLiveSync(
  * Perform mock sync for development
  */
 async function performMockSync(
-  schoolId: string,
+  _schoolId: string,
   options: { fullSync?: boolean } = {}
-): Promise<SyncResult> {
+): Promise<import('../registry').SyncResult> {
   const startedAt = new Date();
 
   await new Promise((resolve) => setTimeout(resolve, MOCK_SYNC_DELAY));

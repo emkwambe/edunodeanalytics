@@ -9,10 +9,6 @@ import {
   MasteryCurveChart,
   MasteryCurveChartSkeleton,
 } from '@/components/charts/mastery-curve-chart';
-import {
-  RiskDistributionChart,
-  RiskDistributionChartSkeleton,
-} from '@/components/charts/risk-distribution-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,7 +17,7 @@ import {
   Student360CardSkeleton,
 } from '@/components/dashboard/student-360-card';
 import { RiskDistribution } from '@/components/dashboard/status-indicator';
-import { generateMockDashboardData, generateMockStudents } from '@/lib/mock-data';
+import { generateMockDashboardData } from '@/lib/mock-data';
 import { Activity, BookOpen, Target, AlertCircle } from 'lucide-react';
 import { PageFeatureGate } from '@/components/features/page-feature-gate';
 

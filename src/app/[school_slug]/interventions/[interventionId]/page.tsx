@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageFeatureGate } from '@/components/features/page-feature-gate';
 import { useCurrentSchool } from '@/lib/hooks/use-school-context';
-import { useIntervention, useUpdateIntervention } from '@/lib/hooks/use-interventions';
+import { useIntervention } from '@/lib/hooks/use-interventions';
 import { cn } from '@/lib/utils';
 import {
   ArrowLeft,
@@ -19,9 +19,7 @@ import {
   XCircle,
   AlertTriangle,
   Plus,
-  Activity,
   FileText,
-  User,
   TrendingUp,
 } from 'lucide-react';
 
@@ -238,7 +236,7 @@ export default function InterventionDetailPage() {
 
   const completedSessions = sessions.filter((s) => s.status === 'completed' || s.status === 'partial').length;
   const totalSessions = sessions.length;
-  const scheduledSessions = sessions.filter((s) => s.status === 'scheduled');
+  const _scheduledSessions = sessions.filter((s) => s.status === 'scheduled');
 
   return (
     <PageFeatureGate featureKey="intervention_hub">

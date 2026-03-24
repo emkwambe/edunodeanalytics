@@ -12,7 +12,6 @@ import {
   Download,
   ArrowRight,
   Info,
-  CheckCircle,
 } from 'lucide-react';
 
 interface ROIInputs {

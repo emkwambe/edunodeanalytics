@@ -84,7 +84,7 @@ export const powerschoolAdapter: DataSourceAdapter = createAdapter({
     };
   },
 
-  async sync(schoolId, credentials, options = {}) {
+  async sync(_schoolId, credentials, options = {}) {
     const startedAt = new Date();
 
     await new Promise((resolve) => setTimeout(resolve, 3500));
@@ -104,7 +104,7 @@ export const powerschoolAdapter: DataSourceAdapter = createAdapter({
     };
   },
 
-  async getStatus(schoolId) {
+  async getStatus(_schoolId) {
     return {
       status: 'connected',
       lastSyncAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
@@ -125,7 +125,7 @@ export const powerschoolAdapter: DataSourceAdapter = createAdapter({
     return `${serverUrl}/oauth/access_token?${params.toString()}`;
   },
 
-  async handleOAuthCallback(schoolId, code, redirectUri) {
+  async handleOAuthCallback(_schoolId, _code, _redirectUri) {
     await new Promise((resolve) => setTimeout(resolve, 500));
     return {
       credentials: {

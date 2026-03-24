@@ -9,16 +9,9 @@ import {
   ArrowRight,
   X,
   Sparkles,
-  Users,
-  Target,
-  BrainCircuit,
-  BarChart3,
-  Palette,
-  Network,
   Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   type SubscriptionTier,
@@ -46,7 +39,7 @@ export function UpgradeModal({
   currentTier,
   highlightedFeature,
 }: UpgradeModalProps) {
-  const nextTier = getNextTier(currentTier);
+  const _nextTier = getNextTier(currentTier);
 
   if (!isOpen) return null;
 

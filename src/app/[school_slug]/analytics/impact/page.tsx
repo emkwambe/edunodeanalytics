@@ -14,8 +14,6 @@ import {
 import { Scatter } from 'react-chartjs-2';
 import {
   PageHeader,
-  DashboardGrid,
-  GridItem,
 } from '@/components/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +26,6 @@ import {
   AlertTriangle,
   TrendingUp,
   Dna,
-  Users,
   Target,
   Filter,
   Download,
@@ -39,7 +36,7 @@ import {
   ChevronRight,
   Zap,
 } from 'lucide-react';
-import { identifyInvisibleSuccessStudents, type InvisibleSuccessStudent } from '@/lib/ai/edunode-advisor';
+import { identifyInvisibleSuccessStudents } from '@/lib/ai/edunode-advisor';
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, ScatterController);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -60,7 +60,7 @@ const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const _router = useRouter();
 
   const tierParam = searchParams.get('tier') as SubscriptionTier | null;
   const periodParam = searchParams.get('period') as BillingPeriod | null;

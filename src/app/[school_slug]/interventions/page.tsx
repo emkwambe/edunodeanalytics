@@ -18,11 +18,8 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle2,
-  XCircle,
   Target,
-  Activity,
   Plus,
-  ChevronRight,
   BrainCircuit,
   Zap,
   RotateCcw,
@@ -108,7 +105,7 @@ export default function InterventionsPage() {
   const router = useRouter();
 
   const { schoolId } = useCurrentSchool(school_slug);
-  const { interventions: apiInterventions, isLoading: apiLoading } = useInterventions(schoolId);
+  const { interventions: apiInterventions, isLoading: _apiLoading } = useInterventions(schoolId);
   const [launchingPlan, setLaunchingPlan] = React.useState<string | null>(null);
   const [filterTier, setFilterTier] = React.useState<'all' | 2 | 3>('all');
   const [filterStatus, setFilterStatus] = React.useState<'all' | 'active' | 'stale'>('all');

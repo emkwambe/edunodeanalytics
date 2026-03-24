@@ -572,7 +572,7 @@ export class RiskDetectionEngine {
   // Confidence
   // ============================================================
 
-  private calculateConfidence(student: Student, factors: RiskFactor[]): number {
+  private calculateConfidence(student: Student, _factors: RiskFactor[]): number {
     let confidence = 1.0;
 
     if (student.attendance_rate === null) confidence -= 0.2;

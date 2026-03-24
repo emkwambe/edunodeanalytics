@@ -465,7 +465,7 @@ export async function syncClassLinkRoster(
 /**
  * Get ClassLink sync status
  */
-export async function getClassLinkSyncStatus(tenantId: string): Promise<{
+export async function getClassLinkSyncStatus(_tenantId: string): Promise<{
   lastSync: string | null;
   status: 'connected' | 'disconnected' | 'syncing' | 'error';
   studentCount: number;

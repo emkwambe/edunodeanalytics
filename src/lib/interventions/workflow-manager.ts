@@ -1,4 +1,6 @@
-// @ts-nocheck - references tables not yet migrated (compliance_events, consent_records, etc.)
+// Table intervention_audit_log is defined but not yet migrated to DB
+import type { Json } from '@/lib/database.types';
+
 /**
  * Intervention Workflow Manager
  * =============================
@@ -259,8 +261,8 @@ export class InterventionWorkflowManager {
           status: 'pending',
           targetDate: new Date(startDate.getTime() + m.dayOffset * 24 * 60 * 60 * 1000).toISOString(),
         })),
-        resources: template.resources,
-      },
+        resources: template.resources.map(r => ({ ...r })),
+      } as Json,
       ...customizations,
     };
 
@@ -359,12 +361,13 @@ export class InterventionWorkflowManager {
     switch (intervention.status) {
       case 'planned':
         return 'planning';
-      case 'in_progress':
+      case 'in_progress': {
         // Check if we're in early, mid, or late stage
         const progress = this.calculateProgress(intervention);
         if (progress < 25) return 'implementation';
         if (progress < 75) return 'monitoring';
         return 'evaluation';
+      }
       case 'completed':
         return 'closed';
       case 'cancelled':
@@ -471,7 +474,7 @@ export class InterventionWorkflowManager {
       .from('interventions')
       .update({
         current_value: currentValue,
-        progress_notes: [...existingNotes, newNote],
+        progress_notes: [...existingNotes, newNote] as Json,
         updated_at: new Date().toISOString(),
       })
       .eq('id', interventionId)
@@ -696,7 +699,7 @@ export class InterventionWorkflowManager {
       school_id: this.schoolId,
       event_type: eventType,
       user_id: userId,
-      data,
+      data: data as Json,
       created_at: new Date().toISOString(),
     });
   }

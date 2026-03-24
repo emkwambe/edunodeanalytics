@@ -1,4 +1,3 @@
-// @ts-nocheck - references tables not yet migrated (compliance_events, consent_records, etc.)
 /**
  * Team Collaboration for Interventions
  * =====================================
@@ -15,6 +14,62 @@
  */
 
 import { createAdminSupabaseClient, createServerSupabaseClient } from '@/lib/supabase/server';
+import type { Json } from '@/lib/database.types';
+
+// Type definitions for tables not yet in the schema
+// These are used for type assertions when querying tables that don't exist in generated types
+type InterventionTeamMemberRow = {
+  intervention_id: string;
+  user_id: string;
+  role: string;
+  assigned_at: string;
+  assigned_by: string;
+  user?: { id: string; email: string; first_name: string; last_name: string } | null;
+  school_user?: { role: string } | null;
+};
+
+type InterventionTaskRow = {
+  id: string;
+  intervention_id: string;
+  title: string;
+  description: string;
+  assigned_to: string;
+  created_by: string;
+  status: string;
+  priority: string;
+  due_date: string | null;
+  completed_at: string | null;
+  notes: string;
+};
+
+type InterventionCommentRow = {
+  id: string;
+  intervention_id: string;
+  user_id: string;
+  user_name: string;
+  content: string;
+  created_at: string;
+  updated_at: string | null;
+  reply_to: string | null;
+  mentions: string[];
+  attachments: Json;
+};
+
+type InterventionMeetingRow = {
+  id: string;
+  intervention_id: string;
+  title: string;
+  description: string;
+  scheduled_at: string;
+  duration: number;
+  location: string;
+  attendees: string[];
+  organizer: string;
+  status: string;
+  notes: string | null;
+  decisions: string[];
+  action_items: string[];
+};
 
 export type TeamRole = 'owner' | 'lead' | 'contributor' | 'observer';
 
@@ -154,12 +209,13 @@ export class TeamCollaborationManager {
     if (!user) return null;
 
     // Get user's school role
-    const { data: schoolUser } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: schoolUser } = await (supabase as any)
       .from('school_users')
       .select('role')
       .eq('user_id', userId)
       .eq('school_id', this.schoolId)
-      .single();
+      .single() as { data: { role: string } | null };
 
     const memberData = {
       intervention_id: interventionId,
@@ -169,7 +225,8 @@ export class TeamCollaborationManager {
       assigned_by: addedBy,
     };
 
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from('intervention_team_members')
       .insert(memberData);
 
@@ -200,7 +257,8 @@ export class TeamCollaborationManager {
   async removeTeamMember(interventionId: string, userId: string): Promise<boolean> {
     const supabase = createAdminSupabaseClient();
 
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from('intervention_team_members')
       .delete()
       .eq('intervention_id', interventionId)
@@ -220,7 +278,8 @@ export class TeamCollaborationManager {
   async updateRole(interventionId: string, userId: string, newRole: TeamRole): Promise<boolean> {
     const supabase = createAdminSupabaseClient();
 
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from('intervention_team_members')
       .update({ role: newRole })
       .eq('intervention_id', interventionId)
@@ -240,14 +299,15 @@ export class TeamCollaborationManager {
   async getTeamMembers(interventionId: string): Promise<TeamMember[]> {
     const supabase = await createServerSupabaseClient();
 
-    const { data } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
       .from('intervention_team_members')
       .select(`
         *,
         user:users(id, email, first_name, last_name),
         school_user:school_users(role)
       `)
-      .eq('intervention_id', interventionId);
+      .eq('intervention_id', interventionId) as { data: InterventionTeamMemberRow[] | null };
 
     if (!data) return [];
 
@@ -286,13 +346,14 @@ export class TeamCollaborationManager {
       notes: task.notes,
     };
 
-    const { data, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from('intervention_tasks')
       .insert(taskData)
       .select()
-      .single();
+      .single() as { data: InterventionTaskRow | null; error: Error | null };
 
-    if (error) {
+    if (error || !data) {
       console.error('[TeamCollab] Error creating task:', error);
       return null;
     }
@@ -309,8 +370,8 @@ export class TeamCollaborationManager {
       description: data.description,
       assignedTo: data.assigned_to,
       createdBy: data.created_by,
-      status: data.status,
-      priority: data.priority,
+      status: data.status as TeamTask['status'],
+      priority: data.priority as TeamTask['priority'],
       dueDate: data.due_date ? new Date(data.due_date) : null,
       completedAt: null,
       notes: data.notes,
@@ -329,7 +390,8 @@ export class TeamCollaborationManager {
       updates.completed_by = userId;
     }
 
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from('intervention_tasks')
       .update(updates)
       .eq('id', taskId);
@@ -343,11 +405,12 @@ export class TeamCollaborationManager {
   async getTasks(interventionId: string): Promise<TeamTask[]> {
     const supabase = await createServerSupabaseClient();
 
-    const { data } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
       .from('intervention_tasks')
       .select('*')
       .eq('intervention_id', interventionId)
-      .order('due_date', { ascending: true });
+      .order('due_date', { ascending: true }) as { data: InterventionTaskRow[] | null };
 
     if (!data) return [];
 
@@ -358,8 +421,8 @@ export class TeamCollaborationManager {
       description: t.description,
       assignedTo: t.assigned_to,
       createdBy: t.created_by,
-      status: t.status,
-      priority: t.priority,
+      status: t.status as TeamTask['status'],
+      priority: t.priority as TeamTask['priority'],
       dueDate: t.due_date ? new Date(t.due_date) : null,
       completedAt: t.completed_at ? new Date(t.completed_at) : null,
       notes: t.notes,
@@ -403,13 +466,14 @@ export class TeamCollaborationManager {
       attachments: attachments || [],
     };
 
-    const { data, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from('intervention_comments')
       .insert(commentData)
       .select()
-      .single();
+      .single() as { data: InterventionCommentRow | null; error: Error | null };
 
-    if (error) {
+    if (error || !data) {
       console.error('[TeamCollab] Error adding comment:', error);
       return null;
     }
@@ -442,11 +506,12 @@ export class TeamCollaborationManager {
   async getComments(interventionId: string): Promise<TeamComment[]> {
     const supabase = await createServerSupabaseClient();
 
-    const { data } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
       .from('intervention_comments')
       .select('*')
       .eq('intervention_id', interventionId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true }) as { data: InterventionCommentRow[] | null };
 
     if (!data) return [];
 
@@ -460,7 +525,7 @@ export class TeamCollaborationManager {
       updatedAt: c.updated_at ? new Date(c.updated_at) : null,
       replyTo: c.reply_to,
       mentions: c.mentions || [],
-      attachments: c.attachments || [],
+      attachments: (c.attachments || []) as unknown as Attachment[],
     }));
   }
 
@@ -482,13 +547,14 @@ export class TeamCollaborationManager {
       status: 'scheduled',
     };
 
-    const { data, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from('intervention_meetings')
       .insert(meetingData)
       .select()
-      .single();
+      .single() as { data: InterventionMeetingRow | null; error: Error | null };
 
-    if (error) {
+    if (error || !data) {
       console.error('[TeamCollab] Error scheduling meeting:', error);
       return null;
     }
@@ -529,7 +595,8 @@ export class TeamCollaborationManager {
   ): Promise<boolean> {
     const supabase = createAdminSupabaseClient();
 
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from('intervention_meetings')
       .update({
         status: 'completed',
@@ -548,11 +615,12 @@ export class TeamCollaborationManager {
   async getMeetings(interventionId: string): Promise<TeamMeeting[]> {
     const supabase = await createServerSupabaseClient();
 
-    const { data } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
       .from('intervention_meetings')
       .select('*')
       .eq('intervention_id', interventionId)
-      .order('scheduled_at', { ascending: true });
+      .order('scheduled_at', { ascending: true }) as { data: InterventionMeetingRow[] | null };
 
     if (!data) return [];
 
@@ -566,7 +634,7 @@ export class TeamCollaborationManager {
       location: m.location,
       attendees: m.attendees,
       organizer: m.organizer,
-      status: m.status,
+      status: m.status as TeamMeeting['status'],
       notes: m.notes,
       decisions: m.decisions || [],
       actionItems: m.action_items || [],
@@ -592,10 +660,11 @@ export class TeamCollaborationManager {
       progress_updated: 'Intervention progress has been updated',
     };
 
-    await supabase.from('notifications').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('notifications').insert({
       school_id: this.schoolId,
       user_id: userId,
-      type: 'intervention',
+      type: 'alert', // Using 'alert' as notification type
       title: titles[type] || 'Intervention update',
       message: `Intervention update: ${type}`,
       data: {

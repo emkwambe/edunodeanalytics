@@ -404,7 +404,7 @@ export const strategyQuerySchema = z.object({
  */
 export function validateMTSSIntervention(
   data: unknown,
-  tier: InterventionTier
+  _tier: InterventionTier
 ): MTSSValidationResult {
   const errors: MTSSValidationError[] = [];
 

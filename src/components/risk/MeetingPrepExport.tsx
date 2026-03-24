@@ -123,7 +123,7 @@ export function MeetingPrepExport({
   onClear,
   className,
 }: MeetingPrepExportProps) {
-  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [_isGenerating, _setIsGenerating] = React.useState(false);
 
   const handleExportText = () => {
     const content = generateAgendaContent(selectedStudents, schoolName, meetingDate);
@@ -197,7 +197,7 @@ export function MeetingPrepExport({
 
           {/* Selected student avatars */}
           <div className="flex -space-x-2">
-            {selectedStudents.slice(0, 5).map((student, i) => (
+            {selectedStudents.slice(0, 5).map((student, _i) => (
               <div
                 key={student.studentId}
                 className="w-8 h-8 rounded-full bg-slate-700 border-2 border-slate-900 flex items-center justify-center text-xs font-medium text-slate-300"

@@ -11,7 +11,6 @@ import {
   Users,
   Clock,
   Palette,
-  Target,
   ArrowRight,
   ArrowLeft,
   CheckCircle2,

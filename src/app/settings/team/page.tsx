@@ -13,8 +13,6 @@ import {
   CheckCircle,
   XCircle,
   Search,
-  Filter,
-  ChevronDown,
   Edit,
   Trash2,
   Key,
@@ -108,7 +106,7 @@ export default function TeamSettingsPage() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [_showInviteModal, _setShowInviteModal] = useState(false);
 
   const filteredMembers = TEAM_MEMBERS.filter(member => {
     const matchesSearch =

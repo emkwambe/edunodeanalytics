@@ -9,10 +9,8 @@ import type { RiskScore } from '@/lib/hooks/use-risk-scores';
 import type { RiskLevel, Trajectory } from '@/lib/risk-engine/types';
 import {
   getRiskBadgeText,
-  getRiskBadgeColor,
   getTrajectoryIcon,
   getTrajectoryColor,
-  interpretFactor,
   getPrimaryConcern,
   type RiskFactor,
 } from '@/lib/risk-engine/interpreter';
@@ -27,7 +25,7 @@ interface StudentRiskTableProps {
   className?: string;
 }
 
-const RISK_LEVEL_ORDER: RiskLevel[] = ['critical', 'at_risk', 'watch', 'on_track'];
+const _RISK_LEVEL_ORDER: RiskLevel[] = ['critical', 'at_risk', 'watch', 'on_track'];
 
 function getRiskLevelBadgeVariant(level: RiskLevel): 'on-track' | 'watch' | 'at-risk' | 'critical' {
   switch (level) {

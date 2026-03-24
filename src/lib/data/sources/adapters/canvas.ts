@@ -18,8 +18,6 @@ import {
   createAdapter,
   DataSourceRegistry,
   type DataSourceAdapter,
-  type SyncResult,
-  type DataSourceStatus,
   type SyncError,
 } from '../registry';
 
@@ -154,7 +152,7 @@ export const canvasAdapter: DataSourceAdapter = createAdapter({
     };
   },
 
-  async getStatus(schoolId) {
+  async getStatus(_schoolId) {
     return {
       status: 'connected',
       lastSyncAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
@@ -176,7 +174,7 @@ export const canvasAdapter: DataSourceAdapter = createAdapter({
     return `${canvasUrl}/login/oauth2/auth?${params.toString()}`;
   },
 
-  async handleOAuthCallback(schoolId, code, redirectUri) {
+  async handleOAuthCallback(_schoolId, _code, _redirectUri) {
     await new Promise((resolve) => setTimeout(resolve, 500));
     return {
       credentials: {

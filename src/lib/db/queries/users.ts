@@ -1,9 +1,7 @@
-// @ts-nocheck - strict type mismatches after database.types.ts regen
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server';
 import type {
   User,
   UserInsert,
-  UserUpdate,
   SchoolMembership,
   SchoolMembershipInsert,
   Json,

@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useParams } from 'next/navigation';
 import { Lock, Crown, ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   type FeatureKey,
   type SubscriptionTier,
@@ -15,7 +14,6 @@ import {
   getLockedFeatures,
 } from '@/lib/features/feature-gates';
 import { getSchoolSeed } from '@/lib/data/seed-data';
-import { cn } from '@/lib/utils';
 
 interface PageFeatureGateProps {
   featureKey: FeatureKey;

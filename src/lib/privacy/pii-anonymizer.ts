@@ -188,7 +188,7 @@ export class PIIAnonymizer {
     let pseudonym: string;
 
     switch (fieldType) {
-      case 'name':
+      case 'name': {
         // Use hash to pick consistent name from pool
         const nameHash = crypto
           .createHmac('sha256', this.schoolSecret)
@@ -203,8 +203,9 @@ export class PIIAnonymizer {
           pseudonym = FIRST_NAMES[nameIndex % FIRST_NAMES.length];
         }
         break;
+      }
 
-      case 'email':
+      case 'email': {
         // Generate fake email
         const emailHash = crypto
           .createHmac('sha256', this.schoolSecret)
@@ -213,8 +214,9 @@ export class PIIAnonymizer {
           .substring(0, 8);
         pseudonym = `student_${emailHash}@example.edu`;
         break;
+      }
 
-      case 'id':
+      case 'id': {
         // Generate consistent but non-reversible ID
         const idHash = crypto
           .createHmac('sha256', this.schoolSecret)
@@ -224,6 +226,7 @@ export class PIIAnonymizer {
           .toUpperCase();
         pseudonym = `STU_${idHash}`;
         break;
+      }
 
       default:
         // Generic hash-based pseudonym

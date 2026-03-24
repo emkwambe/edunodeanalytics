@@ -1,4 +1,3 @@
-// @ts-nocheck - strict type mismatches after database.types.ts regen
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type {
   DashboardConfig,

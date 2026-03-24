@@ -9,7 +9,6 @@ import {
   Calendar,
   Clock,
   ArrowRight,
-  Tag,
   User,
   TrendingUp,
   Lightbulb,

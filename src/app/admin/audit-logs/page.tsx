@@ -6,11 +6,9 @@ import { Card } from '@/components/ui/card';
 import {
   FileText,
   Search,
-  Filter,
   Download,
   ChevronLeft,
   ChevronRight,
-  Calendar,
   User,
   Shield,
   Database,
@@ -213,7 +211,7 @@ const ACTION_CONFIG: Record<AuditAction, { icon: React.ReactNode; label: string;
   api_access: { icon: <Key className="w-4 h-4" />, label: 'API', color: 'text-cyan-600' },
 };
 
-const CATEGORY_CONFIG: Record<string, { icon: React.ReactNode; label: string }> = {
+const _CATEGORY_CONFIG: Record<string, { icon: React.ReactNode; label: string }> = {
   auth: { icon: <Key className="w-4 h-4" />, label: 'Authentication' },
   data: { icon: <Database className="w-4 h-4" />, label: 'Data Access' },
   admin: { icon: <Shield className="w-4 h-4" />, label: 'Administration' },

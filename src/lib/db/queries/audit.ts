@@ -1,4 +1,3 @@
-// @ts-nocheck - strict type mismatches after database.types.ts regen
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
 import { headers } from 'next/headers';
 import type { AuditLogInsert, Json } from '@/lib/database.types';
@@ -66,7 +65,7 @@ export async function logAuditEvent(options: AuditLogOptions): Promise<void> {
     resource_id: options.resourceId || null,
     old_values: (options.oldValues as Json) || null,
     new_values: (options.newValues as Json) || null,
-    ip_address: ipAddress,
+    ip_address: ipAddress as unknown,
     user_agent: userAgent,
     metadata: (options.metadata as Json) || null,
   };

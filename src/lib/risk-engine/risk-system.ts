@@ -24,7 +24,7 @@ import { aggregateSchoolMetrics, aggregateStudentMetrics } from './metrics-aggre
 import { TrendDetector, createTrendDetector, type StudentTrendAnalysis } from './trend-detector';
 import {
   interpretRiskLevel,
-  getRiskSummary,
+  getRiskSummary as _getRiskSummary,
   getRiskBadgeText,
   getRiskBadgeColor,
   interpretFactor,
@@ -41,8 +41,6 @@ import type {
   RiskModelConfig,
   RiskModelConfigRow,
   CurrentRiskScoreRow,
-  RiskAlertRow,
-  parseConfigRow,
 } from './types';
 
 // ============================================================

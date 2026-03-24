@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
-import { notFound } from 'next/navigation';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { getSchoolBySlug, getSchoolBranding } from '@/lib/db/queries/schools';
+import { getSchoolBranding } from '@/lib/db/queries/schools';
 import { getSchoolSeed } from '@/lib/data/seed-data';
 
 /**

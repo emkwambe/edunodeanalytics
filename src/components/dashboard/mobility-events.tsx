@@ -12,7 +12,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { analyzeMobilityEvent, type MobilityEvent } from '@/lib/analytics/purpose-driven-metrics';
+import { analyzeMobilityEvent } from '@/lib/analytics/purpose-driven-metrics';
 import { type MobilityRecord } from '@/lib/data/seed-data';
 
 /**

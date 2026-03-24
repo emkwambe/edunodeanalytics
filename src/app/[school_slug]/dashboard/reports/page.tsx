@@ -4,15 +4,12 @@ import * as React from 'react';
 import { useParams } from 'next/navigation';
 import {
   PageHeader,
-  DashboardGrid,
-  GridItem,
 } from '@/components/layout/dashboard-shell';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
-  FileText,
   Download,
   Calendar,
   Shield,

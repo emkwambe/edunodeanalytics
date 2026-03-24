@@ -11,7 +11,6 @@ import {
   type StudentInsight,
   type DataSourceType,
   generateStudentInsights,
-  getMissingDataSources,
   hasMinimumViableData,
   createMockDataAvailability,
 } from '@/lib/data/data-availability';

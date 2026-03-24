@@ -51,9 +51,10 @@ export function MasteryCurveChart({
   subtitle = 'Formative assessment performance',
   height = 320,
   className,
+  tenantId: _tenantId,
   gradeLevel,
-  selectedSubject,
-  onSubjectChange,
+  selectedSubject: _selectedSubject,
+  onSubjectChange: _onSubjectChange,
 }: MasteryCurveChartProps) {
   const [activeSubjects, setActiveSubjects] = React.useState<Set<string>>(
     new Set(subjects.map((s) => s.subject))

@@ -24,7 +24,6 @@ import {
   createAdapter,
   DataSourceRegistry,
   type DataSourceAdapter,
-  type SyncResult,
   type SyncError,
 } from '../registry';
 import {
@@ -51,7 +50,7 @@ const MOCK_SYNC_DELAY = 2000;
 /**
  * Generate mock student data for development
  */
-function generateMockStudents(count: number, schoolId: string) {
+function _generateMockStudents(count: number, schoolId: string) {
   const firstNames = ['Emma', 'Liam', 'Olivia', 'Noah', 'Ava', 'Ethan', 'Sophia', 'Mason', 'Isabella', 'William'];
   const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
   const grades = [6, 7, 8, 9, 10, 11, 12];
@@ -80,7 +79,7 @@ async function performLiveSync(
   schoolId: string,
   credentials: Record<string, string>,
   options: { fullSync?: boolean } = {}
-): Promise<SyncResult> {
+): Promise<import('../registry').SyncResult> {
   const startedAt = new Date();
   const errors: SyncError[] = [];
   let recordsCreated = 0;
@@ -170,7 +169,7 @@ async function performLiveSync(
     }
 
     const completedAt = new Date();
-    const result: SyncResult = {
+    const result: import('../registry').SyncResult = {
       success: errors.length < cleverStudents.length * 0.1, // 90% success threshold
       recordsProcessed: cleverStudents.length,
       recordsCreated,
@@ -241,9 +240,9 @@ async function performLiveSync(
  * Perform mock sync for development
  */
 async function performMockSync(
-  schoolId: string,
+  _schoolId: string,
   options: { fullSync?: boolean } = {}
-): Promise<SyncResult> {
+): Promise<import('../registry').SyncResult> {
   const startedAt = new Date();
   const errors: SyncError[] = [];
 
@@ -426,7 +425,7 @@ export const cleverAdapter: DataSourceAdapter = createAdapter({
     return `https://clever.com/oauth/authorize?${params.toString()}`;
   },
 
-  async handleOAuthCallback(schoolId, code, redirectUri) {
+  async handleOAuthCallback(_schoolId, code, redirectUri) {
     if (!USE_LIVE_API) {
       // Mock mode
       await new Promise((resolve) => setTimeout(resolve, 500));

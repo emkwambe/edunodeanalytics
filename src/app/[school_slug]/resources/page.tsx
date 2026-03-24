@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   getAllModuleMetadata,
   getModuleMetadataFiltered,
-  ModuleMetadata,
 } from '@/lib/resources/content/metadata';
 import {
   getAllAssets,

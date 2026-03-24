@@ -16,7 +16,6 @@ import {
   Clock,
   ChevronRight,
   Filter,
-  Check,
   Trash2,
   MailOpen,
   Inbox,
@@ -170,7 +169,7 @@ export default function NotificationsPage() {
 
   // Stats
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const alertCount = notifications.filter((n) => n.type === 'alert' && !n.read).length;
+  const _alertCount = notifications.filter((n) => n.type === 'alert' && !n.read).length;
 
   // Time formatting
   const getTimeAgo = (date: Date) => {

@@ -16,7 +16,7 @@ interface RouteParams {
  * POST /api/schools/[schoolId]/notifications/read-all
  * Mark all notifications as read for the current user
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(_request: NextRequest, { params: _params }: RouteParams) {
   try {
     // For demo, use a fixed userId - in production, get from auth
     const userId = 'demo-user';

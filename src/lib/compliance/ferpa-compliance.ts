@@ -1,4 +1,4 @@
-// @ts-nocheck - references tables not yet migrated (compliance_events, consent_records, etc.)
+// Tables directory_opt_outs, sections, section_enrollments, iep_team_members, amendment_requests are defined but not yet migrated to DB
 /**
  * FERPA Compliance Module
  * =======================
@@ -561,7 +561,7 @@ export class FerpaComplianceManager {
       currentValue: r.current_value,
       requestedValue: r.requested_value,
       justification: r.justification,
-      status: r.status,
+      status: r.status as AmendmentRequest['status'],
       decidedAt: r.decided_at ? new Date(r.decided_at) : null,
       decidedBy: r.decided_by,
       decisionReason: r.decision_reason,

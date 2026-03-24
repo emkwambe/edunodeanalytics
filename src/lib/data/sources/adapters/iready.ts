@@ -17,8 +17,6 @@ import {
   createAdapter,
   DataSourceRegistry,
   type DataSourceAdapter,
-  type SyncResult,
-  type DataSourceStatus,
   type SyncError,
 } from '../registry';
 
@@ -148,7 +146,7 @@ export const ireadyAdapter: DataSourceAdapter = createAdapter({
     await new Promise((resolve) => setTimeout(resolve, MOCK_SYNC_DELAY));
 
     const studentCount = 450 + Math.floor(Math.random() * 100);
-    const diagnostics = generateMockDiagnostics(studentCount, schoolId);
+    generateMockDiagnostics(studentCount, schoolId);
     const totalRecords = studentCount * 2; // Reading + Math per student
 
     const completedAt = new Date();
@@ -166,7 +164,7 @@ export const ireadyAdapter: DataSourceAdapter = createAdapter({
     };
   },
 
-  async getStatus(schoolId) {
+  async getStatus(_schoolId) {
     return {
       status: 'connected',
       lastSyncAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago

@@ -38,6 +38,7 @@ export function RiskDistributionChart({
   subtitle,
   height = 280,
   className,
+  tenantId: _tenantId,
   showPercentages = true,
 }: RiskDistributionChartProps) {
   const total = data.onTrack + data.watch + data.atRisk + data.critical;

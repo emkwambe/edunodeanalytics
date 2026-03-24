@@ -33,7 +33,6 @@ import {
 import {
   DataConnectorOrchestrator,
   type ConnectorStatus,
-  type OrchestratorConfig,
 } from '../data/integration/orchestrator';
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
 import type { Database, Json } from '@/lib/database.types';
@@ -41,9 +40,6 @@ import type { Database, Json } from '@/lib/database.types';
 type DbDataSourceType = Database['public']['Enums']['data_source_type'];
 type DbDataSourceProvider = Database['public']['Enums']['data_source_provider'];
 
-// Helper to bypass type checking for tables not yet in schema
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnySupabaseClient = ReturnType<typeof createAdminSupabaseClient> & { from: (table: string) => any };
 
 // Re-export commonly used types
 export type {
@@ -696,12 +692,12 @@ export class IntegrationService {
   /**
    * Get current period costs for a school
    */
-  async getCurrentPeriodCosts(schoolId: string): Promise<{
+  async getCurrentPeriodCosts(_schoolId: string): Promise<{
     totalCost: number;
     breakdown: IntegrationCost[];
     billingPeriod: { start: Date; end: Date };
   }> {
-    const supabase = createAdminSupabaseClient();
+    const _supabase = createAdminSupabaseClient();
 
     const now = new Date();
     const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);

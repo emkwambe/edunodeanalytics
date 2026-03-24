@@ -47,7 +47,7 @@ export default function SearchPage() {
   const initialQuery = searchParams.get('q') || '';
   const [query, setQuery] = React.useState(initialQuery);
   const [category, setCategory] = React.useState<SearchCategory>('all');
-  const [isSearching, setIsSearching] = React.useState(false);
+  const [_isSearching, _setIsSearching] = React.useState(false);
 
   // Get seed data
   const schoolSeed = getSchoolSeed(school_slug);

@@ -11,9 +11,7 @@ import {
   LayoutDashboard,
   Users,
   Calendar,
-  BarChart3,
   FileText,
-  Settings,
   HelpCircle,
   ChevronLeft,
   Activity,
@@ -26,13 +24,10 @@ import {
   Lock,
   Zap,
   Crown,
-  Sparkles,
   BookOpen,
   Network,
-  Search,
   Bell,
   TrendingUp,
-  Key,
 } from 'lucide-react';
 import {
   type FeatureKey,

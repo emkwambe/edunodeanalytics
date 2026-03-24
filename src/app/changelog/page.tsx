@@ -4,11 +4,8 @@ import { Card } from '@/components/ui/card';
 import {
   Sparkles,
   Bug,
-  Wrench,
   Shield,
   Zap,
-  Users,
-  BarChart3,
   Bell,
 } from 'lucide-react';
 

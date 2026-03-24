@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import {
@@ -112,7 +112,7 @@ function getOverallStatus(services: Service[]): ServiceStatus {
 
 function UptimeBar({ days = 90 }: { days?: number }) {
   // Simulate uptime data - in production, this would be real data
-  const uptimeData = Array.from({ length: days }, (_, i) => {
+  const uptimeData = Array.from({ length: days }, () => {
     const random = Math.random();
     if (random > 0.98) return 'degraded';
     if (random > 0.995) return 'outage';
@@ -121,9 +121,9 @@ function UptimeBar({ days = 90 }: { days?: number }) {
 
   return (
     <div className="flex gap-0.5">
-      {uptimeData.map((status, i) => (
+      {uptimeData.map((status, _i) => (
         <div
-          key={i}
+          key={_i}
           className={`w-1 h-8 rounded-sm ${
             status === 'operational'
               ? 'bg-emerald-500'
@@ -131,7 +131,7 @@ function UptimeBar({ days = 90 }: { days?: number }) {
               ? 'bg-amber-500'
               : 'bg-rose-500'
           }`}
-          title={`Day ${days - i}: ${status}`}
+          title={`Day ${days - _i}: ${status}`}
         />
       ))}
     </div>

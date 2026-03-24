@@ -114,11 +114,12 @@ function calculateMonthlyAmount(
   switch (tier) {
     case 'starter':
       return 0; // Free tier
-    case 'pro':
+    case 'pro': {
       // $7,500/year base + $5/student/year = monthly amount
       const yearlyBase = 7500;
       const yearlyPerStudent = studentCount * 5;
       return Math.round((yearlyBase + yearlyPerStudent) / 12 * 100); // Return cents
+    }
     case 'enterprise':
       // Custom pricing - return placeholder
       return 0;

@@ -23,7 +23,7 @@ interface RouteParams {
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { schoolId } = await params;
+    const { schoolId: _schoolId } = await params;
     const searchParams = request.nextUrl.searchParams;
 
     // For demo, use a fixed userId - in production, get from auth

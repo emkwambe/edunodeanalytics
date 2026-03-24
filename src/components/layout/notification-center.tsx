@@ -3,14 +3,11 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Bell,
   X,
   AlertTriangle,
   TrendingDown,
-  UserCheck,
   Clock,
   CheckCircle2,
   ChevronRight,
@@ -128,7 +125,7 @@ export function NotificationCenter({ schoolSlug }: NotificationCenterProps) {
     action: Clock,
   };
 
-  const priorityColors: Record<string, string> = {
+  const _priorityColors: Record<string, string> = {
     urgent: 'bg-rose-500',
     high: 'bg-amber-500',
     medium: 'bg-indigo-500',

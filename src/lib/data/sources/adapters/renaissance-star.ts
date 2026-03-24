@@ -78,7 +78,7 @@ export const renaissanceStarAdapter: DataSourceAdapter = createAdapter({
     };
   },
 
-  async sync(schoolId, credentials, options = {}) {
+  async sync(_schoolId, _credentials, _options = {}) {
     const startedAt = new Date();
 
     await new Promise((resolve) => setTimeout(resolve, 2500));
@@ -98,7 +98,7 @@ export const renaissanceStarAdapter: DataSourceAdapter = createAdapter({
     };
   },
 
-  async getStatus(schoolId) {
+  async getStatus(_schoolId) {
     return {
       status: 'connected',
       lastSyncAt: new Date(Date.now() - 12 * 60 * 60 * 1000),

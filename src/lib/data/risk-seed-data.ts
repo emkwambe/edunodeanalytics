@@ -49,7 +49,7 @@ class SeededRandom {
 // RISK FACTOR GENERATION
 // =============================================================================
 
-const FACTOR_NAMES: Record<string, string[]> = {
+const _FACTOR_NAMES: Record<string, string[]> = {
   attendance: [
     'Attendance Rate',
     'Days Absent (30 day)',

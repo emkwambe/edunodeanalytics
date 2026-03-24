@@ -1,4 +1,3 @@
-// @ts-nocheck - demo data type mismatches after database.types.ts regen
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { Intervention, InterventionInsert, InterventionUpdate } from '@/lib/database.types';
 
@@ -54,6 +53,7 @@ export interface InterventionStats {
 const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
 
 // Demo interventions for development mode
+// Using type assertion since demo data uses literal types that are compatible with the enum types
 const DEMO_INTERVENTIONS = [
   {
     id: 'demo-intervention-1',
@@ -269,7 +269,7 @@ const DEMO_INTERVENTIONS = [
     is_stale: false,
     metadata: null,
   },
-];
+] as Intervention[];
 
 // Demo student data for joins
 const DEMO_STUDENTS: Record<string, InterventionWithStudent['student']> = {
@@ -526,7 +526,7 @@ export async function createIntervention(
 ): Promise<Intervention | null> {
   // Demo mode - return a mock created intervention
   if (isDemoMode && intervention.school_id.startsWith('demo-')) {
-    const newIntervention = {
+    const newIntervention: Intervention = {
       id: `demo-intervention-${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -544,12 +544,13 @@ export async function createIntervention(
       actual_end_date: intervention.actual_end_date || null,
       goal: intervention.goal || null,
       success_criteria: intervention.success_criteria || null,
-      baseline_value: intervention.baseline_value || null,
-      target_value: intervention.target_value || null,
-      current_value: intervention.current_value || null,
+      baseline_value: intervention.baseline_value ?? null,
+      target_value: intervention.target_value ?? null,
+      current_value: intervention.current_value ?? null,
       progress_notes: intervention.progress_notes || null,
       outcome_summary: intervention.outcome_summary || null,
-      was_successful: intervention.was_successful || null,
+      was_successful: intervention.was_successful ?? null,
+      is_stale: false,
       metadata: intervention.metadata || null,
     };
     return newIntervention;

@@ -11,7 +11,7 @@
  */
 
 import useSWR from 'swr';
-import { fetcher, buildQueryString } from './fetcher';
+import { fetcher } from './fetcher';
 import type {
   DosageStatus,
   InferenceFlag,

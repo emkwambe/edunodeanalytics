@@ -12,7 +12,6 @@
 import type { Student360Data } from '@/components/dashboard/student-360-card';
 import {
   type SchoolDataAvailability,
-  type DataSourceType,
   createMockDataAvailability,
 } from './data-availability';
 

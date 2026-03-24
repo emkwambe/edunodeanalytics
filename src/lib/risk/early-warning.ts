@@ -25,7 +25,6 @@ import type {
   AlertType,
   AlertSeverity,
   AlertStatus,
-  RiskAlertInsert,
   RiskAlertRow,
 } from '@/lib/risk-engine/types';
 
@@ -225,7 +224,7 @@ export class EarlyWarningSystem {
       case 'threshold':
         return this.evaluateThreshold(currentValue, condition.operator, condition.value);
 
-      case 'change':
+      case 'change': {
         if (!previous) {
           previous = (await this.getPreviousState(current.id, condition.windowDays || 7)) ?? undefined;
         }
@@ -233,6 +232,7 @@ export class EarlyWarningSystem {
         const previousValue = this.getFieldValue(previous, condition.field);
         const change = currentValue - previousValue;
         return this.evaluateThreshold(change, condition.operator, condition.value);
+      }
 
       case 'trend':
         return false;

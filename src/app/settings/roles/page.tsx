@@ -19,11 +19,8 @@ import {
   Lock,
   Eye,
   Pencil,
-  Trash2,
   Database,
   BarChart3,
-  FileText,
-  Bell,
   Zap,
 } from 'lucide-react';
 

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import {
-  UserPlus,
   Mail,
   Users,
   Shield,
@@ -16,7 +15,6 @@ import {
   CheckCircle,
   AlertCircle,
   Info,
-  Upload,
   FileSpreadsheet,
 } from 'lucide-react';
 
@@ -257,7 +255,7 @@ export default function InviteTeamPage() {
               </div>
 
               <div className="space-y-4">
-                {invites.map((invite, index) => (
+                {invites.map((invite, _index) => (
                   <div key={invite.id} className="flex items-start gap-3">
                     <div className="flex-1">
                       <div className="flex gap-3">

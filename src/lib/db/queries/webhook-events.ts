@@ -1,6 +1,5 @@
-// @ts-nocheck - strict type mismatches after database.types.ts regen
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
-import type { WebhookEvent, WebhookEventInsert, Json } from '@/lib/database.types';
+import type { WebhookEvent, Json } from '@/lib/database.types';
 
 /**
  * Webhook Events Queries

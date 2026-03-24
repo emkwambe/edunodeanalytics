@@ -11,9 +11,6 @@ import {
   AlertTriangle,
   XCircle,
   Clock,
-  TrendingUp,
-  TrendingDown,
-  Users,
 } from 'lucide-react';
 import type { InferenceFlag } from '@/lib/dosage/types';
 

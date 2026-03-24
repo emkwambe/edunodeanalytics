@@ -107,7 +107,7 @@ async function fetchFromSeedData(
         risk_distribution: school.metrics.riskDistribution,
       };
 
-    case 'radar':
+    case 'radar': {
       // Renewal Radar data for Authorizer Portal
       // Strategic: Emphasize high growth to demonstrate charter value
       const growthScore = Math.min(100, school.metrics.avgGrowthPercentile + 10);
@@ -132,21 +132,25 @@ async function fetchFromSeedData(
           renewal_probability: calculateRenewalProbability(school.metrics),
         },
       };
+    }
 
-    case 'students':
+    case 'students': {
       let students = school.students;
       if (options.gradeLevel) {
         students = students.filter((s) => s.gradeLevel === parseInt(options.gradeLevel!));
       }
       return students.slice(0, options.limit || 100);
+    }
 
-    case 'attendance':
+    case 'attendance': {
       const attendanceResult = await bigQueryProvider.getAttendanceTrend(schoolSlug, 16);
       return attendanceResult.data;
+    }
 
-    case 'mastery':
+    case 'mastery': {
       const masteryResult = await bigQueryProvider.getMasteryData(schoolSlug, 12);
       return masteryResult.data;
+    }
 
     case 'chronic':
       return school.students
@@ -160,7 +164,7 @@ async function fetchFromSeedData(
           risk_level: s.riskLevel,
         }));
 
-    case 'subgroups':
+    case 'subgroups': {
       // Subgroup analysis for Equity reporting
       const iepStudents = school.students.filter((s) => s.hasIep);
       const ellStudents = school.students.filter((s) => s.isEnglishLearner);
@@ -187,6 +191,7 @@ async function fetchFromSeedData(
           ell_growth_gap: calculateAvgGrowth(allStudents) - calculateAvgGrowth(ellStudents),
         },
       };
+    }
 
     case 'fiscal':
       // Mock fiscal health metrics
@@ -223,7 +228,7 @@ async function fetchFromBigQuery(
   console.log(`[BigQuery] Would query: ${projectId}.${datasetId} for ${metricType}`);
 
   // Example query structure (not executed without real credentials)
-  const queries: Record<string, string> = {
+  const _queries: Record<string, string> = {
     summary: `
       SELECT
         COUNT(DISTINCT student_id) as total_enrollment,

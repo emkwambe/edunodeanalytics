@@ -17,8 +17,6 @@ import {
   createAdapter,
   DataSourceRegistry,
   type DataSourceAdapter,
-  type SyncResult,
-  type DataSourceStatus,
 } from '../registry';
 
 export const googleClassroomAdapter: DataSourceAdapter = createAdapter({
@@ -71,7 +69,7 @@ export const googleClassroomAdapter: DataSourceAdapter = createAdapter({
     };
   },
 
-  async sync(schoolId, credentials, options = {}) {
+  async sync(_schoolId, _credentials, _options = {}) {
     const startedAt = new Date();
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -91,7 +89,7 @@ export const googleClassroomAdapter: DataSourceAdapter = createAdapter({
     };
   },
 
-  async getStatus(schoolId) {
+  async getStatus(_schoolId) {
     return {
       status: 'connected',
       lastSyncAt: new Date(Date.now() - 8 * 60 * 60 * 1000),
@@ -114,7 +112,7 @@ export const googleClassroomAdapter: DataSourceAdapter = createAdapter({
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   },
 
-  async handleOAuthCallback(schoolId, code, redirectUri) {
+  async handleOAuthCallback(_schoolId, _code, _redirectUri) {
     await new Promise((resolve) => setTimeout(resolve, 500));
     return {
       credentials: {
