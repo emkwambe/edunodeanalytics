@@ -42,6 +42,13 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { generateCharterNarrative, type CharterNarrative } from '@/lib/ai/edunode-advisor';
+import { MTSSEvidenceMetrics } from '@/components/dashboard/mtss-evidence-metrics';
+import { useCurrentSchool } from '@/lib/hooks/use-school-context';
+import { useMtssSummary } from '@/lib/hooks/use-mtss-summary';
+import { useRiskDistribution } from '@/lib/hooks/use-risk-distribution';
+import { useUserRole } from '@/lib/hooks/use-user-role';
+import { Line } from 'react-chartjs-2';
+import { ArcElement } from 'chart.js';
 
 // Register Chart.js components
 ChartJS.register(
@@ -53,7 +60,8 @@ ChartJS.register(
   Legend,
   CategoryScale,
   LinearScale,
-  BarElement
+  BarElement,
+  ArcElement
 );
 
 /**
@@ -96,6 +104,9 @@ interface AuditItem {
   date?: string;
 }
 
+// Allowed roles for authorizer page
+const ALLOWED_ROLES = ['school_admin', 'principal', 'authorizer', 'platform_admin'];
+
 export default function AuthorizerPortal() {
   const params = useParams();
   const schoolSlug = params.school_slug as string;
@@ -110,6 +121,12 @@ export default function AuthorizerPortal() {
   const [narrativeResult, setNarrativeResult] = React.useState<CharterNarrative | null>(null);
   const [narrativeExpanded, setNarrativeExpanded] = React.useState(false);
   const [copiedSection, setCopiedSection] = React.useState<string | null>(null);
+
+  // School context and MTSS data hooks
+  const { schoolId, school, isLoading: isLoadingSchool } = useCurrentSchool(schoolSlug);
+  const { data: mtssSummary, isLoading: isLoadingMtss } = useMtssSummary(schoolId);
+  const { weeklyTrend, isLoading: isLoadingTrend } = useRiskDistribution(schoolId, { weeks: 12 });
+  const { role, isLoading: isLoadingRole } = useUserRole(schoolId);
 
   // Fetch data from warehouse API
   React.useEffect(() => {
@@ -154,16 +171,43 @@ export default function AuthorizerPortal() {
     fetchData();
   }, [schoolSlug]);
 
-  // Export Evidence Pack (trigger print)
+  // Export Evidence Pack (enhanced with MTSS data - Sprint 5E)
   const handleExportEvidence = () => {
     setIsPrinting(true);
+
+    // Prepare MTSS data for export
+    const exportData = {
+      schoolName: schoolSlug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+      generatedAt: new Date().toISOString(),
+      academicYear: '2025-26',
+      renewalMetrics: metrics,
+      mtssEvidence: mtssSummary ? {
+        studentsIdentified: mtssSummary.students_identified,
+        responseRate: Math.round(mtssSummary.response_rate * 100) + '%',
+        avgTimeToAction: mtssSummary.avg_time_to_action_days.toFixed(1) + ' days',
+        dosageCompliance: Math.round(mtssSummary.avg_dosage_compliance * 100) + '%',
+        improvementRate: Math.round(mtssSummary.improvement_rate * 100) + '%',
+        outcomes: {
+          improved: mtssSummary.students_improved,
+          maintained: mtssSummary.students_maintained,
+          worsened: mtssSummary.students_worsened,
+        },
+        topStrategies: mtssSummary.top_strategies,
+      } : null,
+      riskTrend: weeklyTrend && weeklyTrend.length >= 2 ? weeklyTrend : null,
+      narrative: narrativeResult,
+    };
+
+    // Store export data for print view access
+    (window as any).__authorizerExportData = exportData;
+
     setTimeout(() => {
       window.print();
       setIsPrinting(false);
     }, 100);
   };
 
-  // Generate AI Charter Narrative
+  // Generate AI Charter Narrative (enhanced with MTSS data)
   const handleGenerateNarrative = async () => {
     if (!metrics) return;
 
@@ -180,6 +224,15 @@ export default function AuthorizerPortal() {
       chronicAbsenceRate: metrics.chronicAbsenceRate,
       subgroupGap: 5, // Mock: 5% gap between subgroups
       yearOverYearChange: 3, // Mock: 3% improvement year over year
+      // MTSS data for enhanced narrative (Sprint 5E)
+      mtssData: mtssSummary ? {
+        studentsIdentified: mtssSummary.students_identified,
+        responseRate: mtssSummary.response_rate,
+        avgTimeToAction: mtssSummary.avg_time_to_action_days,
+        dosageCompliance: mtssSummary.avg_dosage_compliance,
+        improvementRate: mtssSummary.improvement_rate,
+        studentsImproved: mtssSummary.students_improved,
+      } : undefined,
     });
 
     setNarrativeResult(result);
@@ -334,12 +387,33 @@ export default function AuthorizerPortal() {
     },
   };
 
-  if (loading) {
+  // Loading state
+  if (loading || isLoadingSchool || isLoadingRole) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-slate-400">Loading Renewal Evidence...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Role-based access control (Sprint 5E)
+  if (role && !ALLOWED_ROLES.includes(role)) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck className="w-8 h-8 text-red-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Access Restricted</h1>
+          <p className="text-slate-400 mb-6">
+            The Authorizer Portal is restricted to school administrators, principals, and authorized charter authorizers.
+          </p>
+          <Button variant="outline" onClick={() => window.history.back()}>
+            Go Back
+          </Button>
         </div>
       </div>
     );
@@ -465,6 +539,231 @@ export default function AuthorizerPortal() {
               <div className="text-xs text-amber-400 mt-2">
                 State Avg: 18.5%
               </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* MTSS Evidence Section (Sprint 5E) */}
+        <div className="mb-8">
+          <Card className="bg-slate-800/30 border-slate-700 print:bg-white print:border-slate-300">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <ShieldCheck className="w-5 h-5 text-cyan-400" />
+                Evidence of Systematic MTSS Process
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {schoolId && (
+                <MTSSEvidenceMetrics
+                  schoolId={schoolId}
+                  variant="summary"
+                  schoolName={school?.name || schoolSlug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                  className="print:text-slate-900"
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Intervention Outcomes & Risk Trend (Sprint 5E) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Intervention Outcomes */}
+          <Card className="bg-slate-800/30 border-slate-700 print:bg-white print:border-slate-300">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <TrendingUp className="w-5 h-5 text-emerald-400" />
+                Intervention Outcomes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingMtss ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="animate-pulse h-8 bg-slate-700/50 rounded" />
+                  ))}
+                </div>
+              ) : mtssSummary && (mtssSummary.students_improved > 0 || mtssSummary.students_maintained > 0 || mtssSummary.students_worsened > 0) ? (
+                <div className="space-y-4">
+                  {/* Outcome bars */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-24 text-sm text-slate-400">Improved</div>
+                      <div className="flex-1 bg-slate-700/50 rounded-full h-6 overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full flex items-center justify-end px-2"
+                          style={{
+                            width: `${Math.max(10, (mtssSummary.students_improved / (mtssSummary.students_improved + mtssSummary.students_maintained + mtssSummary.students_worsened)) * 100)}%`
+                          }}
+                        >
+                          <span className="text-xs font-bold text-white">{mtssSummary.students_improved}</span>
+                        </div>
+                      </div>
+                      <div className="w-12 text-right text-sm text-emerald-400">
+                        {Math.round((mtssSummary.students_improved / (mtssSummary.students_improved + mtssSummary.students_maintained + mtssSummary.students_worsened)) * 100)}%
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-24 text-sm text-slate-400">Maintained</div>
+                      <div className="flex-1 bg-slate-700/50 rounded-full h-6 overflow-hidden">
+                        <div
+                          className="h-full bg-amber-500 rounded-full flex items-center justify-end px-2"
+                          style={{
+                            width: `${Math.max(10, (mtssSummary.students_maintained / (mtssSummary.students_improved + mtssSummary.students_maintained + mtssSummary.students_worsened)) * 100)}%`
+                          }}
+                        >
+                          <span className="text-xs font-bold text-white">{mtssSummary.students_maintained}</span>
+                        </div>
+                      </div>
+                      <div className="w-12 text-right text-sm text-amber-400">
+                        {Math.round((mtssSummary.students_maintained / (mtssSummary.students_improved + mtssSummary.students_maintained + mtssSummary.students_worsened)) * 100)}%
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-24 text-sm text-slate-400">Worsened</div>
+                      <div className="flex-1 bg-slate-700/50 rounded-full h-6 overflow-hidden">
+                        <div
+                          className="h-full bg-red-500 rounded-full flex items-center justify-end px-2"
+                          style={{
+                            width: `${Math.max(10, (mtssSummary.students_worsened / (mtssSummary.students_improved + mtssSummary.students_maintained + mtssSummary.students_worsened)) * 100)}%`
+                          }}
+                        >
+                          <span className="text-xs font-bold text-white">{mtssSummary.students_worsened}</span>
+                        </div>
+                      </div>
+                      <div className="w-12 text-right text-sm text-red-400">
+                        {Math.round((mtssSummary.students_worsened / (mtssSummary.students_improved + mtssSummary.students_maintained + mtssSummary.students_worsened)) * 100)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Performing Strategies */}
+                  {mtssSummary.top_strategies && mtssSummary.top_strategies.length > 0 && (
+                    <div className="mt-6 pt-4 border-t border-slate-700">
+                      <h4 className="text-sm font-semibold text-slate-300 mb-3">Top Performing Strategies</h4>
+                      <div className="space-y-2">
+                        {mtssSummary.top_strategies.map((strategy, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 text-xs flex items-center justify-center font-bold">
+                                {idx + 1}
+                              </span>
+                              <span className="text-sm text-slate-300">{strategy.strategy_name}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-slate-500">{strategy.student_count} students</span>
+                              <Badge variant={strategy.improvement_rate >= 0.5 ? 'accent' : 'secondary'} size="sm">
+                                {Math.round(strategy.improvement_rate * 100)}% improved
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-500">
+                  <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No intervention outcome data available yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Risk Distribution Trend */}
+          <Card className="bg-slate-800/30 border-slate-700 print:bg-white print:border-slate-300">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BarChart3 className="w-5 h-5 text-violet-400" />
+                Risk Distribution Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingTrend ? (
+                <div className="h-[250px] flex items-center justify-center">
+                  <div className="animate-pulse w-full h-full bg-slate-700/30 rounded" />
+                </div>
+              ) : weeklyTrend && weeklyTrend.length >= 2 ? (
+                <div className="h-[250px]">
+                  <Line
+                    data={{
+                      labels: weeklyTrend.map(w => {
+                        const date = new Date(w.weekStart);
+                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                      }),
+                      datasets: [
+                        {
+                          label: 'On Track',
+                          data: weeklyTrend.map(w => w.on_track),
+                          borderColor: '#10b981',
+                          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                          fill: true,
+                          tension: 0.3,
+                        },
+                        {
+                          label: 'Watch',
+                          data: weeklyTrend.map(w => w.watch),
+                          borderColor: '#f59e0b',
+                          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                          fill: true,
+                          tension: 0.3,
+                        },
+                        {
+                          label: 'At Risk',
+                          data: weeklyTrend.map(w => w.at_risk),
+                          borderColor: '#f97316',
+                          backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                          fill: true,
+                          tension: 0.3,
+                        },
+                        {
+                          label: 'Critical',
+                          data: weeklyTrend.map(w => w.critical),
+                          borderColor: '#ef4444',
+                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          fill: true,
+                          tension: 0.3,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      scales: {
+                        x: {
+                          grid: { color: 'rgba(255,255,255,0.05)' },
+                          ticks: { color: '#64748b', font: { size: 10 } },
+                        },
+                        y: {
+                          stacked: true,
+                          grid: { color: 'rgba(255,255,255,0.05)' },
+                          ticks: { color: '#64748b' },
+                        },
+                      },
+                      plugins: {
+                        legend: {
+                          position: 'bottom' as const,
+                          labels: { color: '#94a3b8', usePointStyle: true, padding: 12 },
+                        },
+                        tooltip: {
+                          backgroundColor: '#1e293b',
+                          titleColor: '#f8fafc',
+                          bodyColor: '#cbd5e1',
+                          borderColor: '#334155',
+                          borderWidth: 1,
+                        },
+                      },
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="h-[250px] flex items-center justify-center text-slate-500">
+                  <div className="text-center">
+                    <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Risk trend data will populate as the system runs over time</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

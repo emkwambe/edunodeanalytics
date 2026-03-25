@@ -336,6 +336,15 @@ export function harmonizeLMSSchema(
 // CHARTER NARRATIVE GENERATOR
 // =============================================================================
 
+export interface MTSSNarrativeData {
+  studentsIdentified: number;
+  responseRate: number;
+  avgTimeToAction: number;
+  dosageCompliance: number;
+  improvementRate: number;
+  studentsImproved: number;
+}
+
 export function generateCharterNarrative(
   schoolName: string,
   metrics: {
@@ -344,20 +353,49 @@ export function generateCharterNarrative(
     chronicAbsenceRate: number;
     subgroupGap: number;
     yearOverYearChange: number;
+    mtssData?: MTSSNarrativeData;
   }
 ): CharterNarrative {
   const isHighGrowth = metrics.avgGrowth >= 60;
   const isClosingGap = metrics.subgroupGap < 10;
+  const hasMtssData = metrics.mtssData && metrics.mtssData.studentsIdentified > 0;
+
+  // Build MTSS narrative section if data available
+  let mtssNarrative = '';
+  if (hasMtssData) {
+    const mtss = metrics.mtssData!;
+    const responseRatePercent = Math.round(mtss.responseRate * 100);
+    const dosagePercent = Math.round(mtss.dosageCompliance * 100);
+    const improvementPercent = Math.round(mtss.improvementRate * 100);
+
+    mtssNarrative = ` The school's MTSS early warning system identified ${mtss.studentsIdentified} students requiring Tier 2/3 support. ${responseRatePercent}% received intervention within ${mtss.avgTimeToAction.toFixed(1)} business days, demonstrating systematic responsiveness. Intervention dosage compliance averaged ${dosagePercent}%, with ${improvementPercent}% of flagged students improving to a lower risk tier.`;
+  }
+
+  // Enhanced key highlights with MTSS
+  const keyHighlights = [
+    `${metrics.avgGrowth}th percentile average growth (CGI) - ${isHighGrowth ? 'exceeds' : 'approaches'} state targets`,
+    `${(100 - metrics.chronicAbsenceRate).toFixed(1)}% attendance rate maintained`,
+    `${metrics.yearOverYearChange > 0 ? '+' : ''}${metrics.yearOverYearChange.toFixed(1)}% year-over-year proficiency change`,
+    isClosingGap ? `Subgroup parity achieved (gap < 10 points)` : `Active intervention reducing subgroup disparities`,
+  ];
+
+  // Add MTSS highlights if data available
+  if (hasMtssData) {
+    const mtss = metrics.mtssData!;
+    keyHighlights.push(
+      `${Math.round(mtss.responseRate * 100)}% MTSS response rate - students flagged receive intervention promptly`
+    );
+    if (mtss.improvementRate >= 0.5) {
+      keyHighlights.push(
+        `${Math.round(mtss.improvementRate * 100)}% of at-risk students showing measurable improvement`
+      );
+    }
+  }
 
   return {
-    executiveSummary: `${schoolName} demonstrates ${isHighGrowth ? 'exemplary' : 'promising'} academic growth with a Conditional Growth Index averaging the ${metrics.avgGrowth}th percentile. ${isHighGrowth ? 'This places the school in the top quartile of charter schools statewide, validating the effectiveness of our instructional model even when serving students who enter below grade level.' : 'While proficiency remains a work in progress, our growth trajectory indicates students are making accelerated gains under our instructional approach.'}`,
+    executiveSummary: `${schoolName} demonstrates ${isHighGrowth ? 'exemplary' : 'promising'} academic growth with a Conditional Growth Index averaging the ${metrics.avgGrowth}th percentile. ${isHighGrowth ? 'This places the school in the top quartile of charter schools statewide, validating the effectiveness of our instructional model even when serving students who enter below grade level.' : 'While proficiency remains a work in progress, our growth trajectory indicates students are making accelerated gains under our instructional approach.'}${mtssNarrative}`,
 
-    keyHighlights: [
-      `${metrics.avgGrowth}th percentile average growth (CGI) - ${isHighGrowth ? 'exceeds' : 'approaches'} state targets`,
-      `${(100 - metrics.chronicAbsenceRate).toFixed(1)}% attendance rate maintained`,
-      `${metrics.yearOverYearChange > 0 ? '+' : ''}${metrics.yearOverYearChange.toFixed(1)}% year-over-year proficiency change`,
-      isClosingGap ? `Subgroup parity achieved (gap < 10 points)` : `Active intervention reducing subgroup disparities`,
-    ],
+    keyHighlights,
 
     growthEvidence: `Our value-add analysis, controlling for incoming proficiency and demographic factors, reveals that ${schoolName} students gain an additional ${Math.floor(Math.random() * 8) + 5} RIT points compared to matched peers in traditional settings. This "Independent Excellence" metric demonstrates that instructional quality—not selection bias—drives our results.`,
 
@@ -374,6 +412,7 @@ export function generateCharterNarrative(
       'Subgroup Parity Trend Line (3-year)',
       'Attendance vs. Growth Scatter Plot',
       'Value-Add Comparison to District Average',
+      ...(hasMtssData ? ['MTSS Risk Distribution Trend', 'Intervention Outcomes by Strategy'] : []),
     ],
   };
 }

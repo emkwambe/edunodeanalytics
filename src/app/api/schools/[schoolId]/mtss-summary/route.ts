@@ -13,6 +13,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateSchoolRequest, type RiskRouteParams } from '../risk/_shared/auth';
 import { logMetricsAccess } from '@/lib/compliance/ferpa-audit';
 
+export interface StrategyEffectiveness {
+  strategy_name: string;
+  student_count: number;
+  improvement_rate: number;
+}
+
 export interface MtssSummaryResponse {
   students_identified: number;
   students_flagged_no_intervention: number;
@@ -24,6 +30,7 @@ export interface MtssSummaryResponse {
   students_maintained: number;
   students_worsened: number;
   total_active_interventions: number;
+  top_strategies: StrategyEffectiveness[];
   period: string;
   last_updated: string;
 }
@@ -41,6 +48,21 @@ function getCurrentAcademicYear(): string {
     return `${year}-${year + 1}`;
   }
   return `${year - 1}-${year}`;
+}
+
+/**
+ * Format intervention type to readable strategy name
+ */
+function formatStrategyName(type: string): string {
+  const names: Record<string, string> = {
+    academic: 'Academic Tutoring',
+    attendance: 'Attendance Support',
+    behavior: 'Behavior Intervention',
+    sel: 'Social-Emotional Learning',
+    family_engagement: 'Family Engagement',
+    other: 'Other Support',
+  };
+  return names[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 /**
@@ -108,6 +130,7 @@ export async function GET(_request: NextRequest, { params }: RiskRouteParams) {
         students_maintained: 0,
         students_worsened: 0,
         total_active_interventions: 0,
+        top_strategies: [],
         period: getCurrentAcademicYear(),
         last_updated: new Date().toISOString(),
       });
@@ -229,6 +252,9 @@ export async function GET(_request: NextRequest, { params }: RiskRouteParams) {
     let studentsMaintained = 0;
     let studentsWorsened = 0;
 
+    // Declare evalsByStudent at higher scope for use in strategy calculation
+    let evalsByStudent: Record<string, Array<{ risk_level: string; computed_at: string }>> = {};
+
     if (studentsIdentified > 0) {
       const { data: allEvaluations } = await adminSupabase
         .from('risk_evaluations')
@@ -239,7 +265,6 @@ export async function GET(_request: NextRequest, { params }: RiskRouteParams) {
         .order('computed_at', { ascending: true });
 
       // Group evaluations by student
-      const evalsByStudent: Record<string, Array<{ risk_level: string; computed_at: string }>> = {};
       for (const ev of allEvaluations || []) {
         if (!evalsByStudent[ev.student_id]) {
           evalsByStudent[ev.student_id] = [];
@@ -286,6 +311,61 @@ export async function GET(_request: NextRequest, { params }: RiskRouteParams) {
     const improvementRate =
       studentsIdentified > 0 ? studentsImproved / studentsIdentified : 0;
 
+    // Query 6: Calculate top strategies by intervention type
+    const topStrategies: StrategyEffectiveness[] = [];
+
+    if (totalActiveInterventions > 0) {
+      // Get interventions with their types and student risk changes
+      const { data: allInterventions } = await adminSupabase
+        .from('interventions')
+        .select('id, student_id, type, status, was_successful')
+        .eq('school_id', schoolId)
+        .in('status', ['in_progress', 'completed']);
+
+      if (allInterventions && allInterventions.length > 0) {
+        // Group by type and calculate effectiveness
+        const typeStats: Record<string, { count: number; improved: number }> = {};
+
+        for (const iv of allInterventions) {
+          const typeName = iv.type || 'other';
+          if (!typeStats[typeName]) {
+            typeStats[typeName] = { count: 0, improved: 0 };
+          }
+          typeStats[typeName].count++;
+
+          // Check if student improved (using evalsByStudent from earlier)
+          if (evalsByStudent && evalsByStudent[iv.student_id]) {
+            const evals = evalsByStudent[iv.student_id];
+            if (evals.length >= 2) {
+              const firstLevel = evals[0].risk_level;
+              const lastLevel = evals[evals.length - 1].risk_level;
+              const riskSeverity: Record<string, number> = {
+                on_track: 0, watch: 1, at_risk: 2, critical: 3,
+              };
+              if ((riskSeverity[lastLevel] ?? 2) < (riskSeverity[firstLevel] ?? 2)) {
+                typeStats[typeName].improved++;
+              }
+            }
+          } else if (iv.was_successful) {
+            // Fallback: use was_successful flag for completed interventions
+            typeStats[typeName].improved++;
+          }
+        }
+
+        // Convert to array and sort by improvement rate
+        const strategyList = Object.entries(typeStats)
+          .map(([name, stats]) => ({
+            strategy_name: formatStrategyName(name),
+            student_count: stats.count,
+            improvement_rate: stats.count > 0 ? stats.improved / stats.count : 0,
+          }))
+          .sort((a, b) => b.improvement_rate - a.improvement_rate)
+          .slice(0, 3); // Top 3
+
+        topStrategies.push(...strategyList);
+      }
+    }
+
     // Build response
     const response: MtssSummaryResponse = {
       students_identified: studentsIdentified,
@@ -298,6 +378,7 @@ export async function GET(_request: NextRequest, { params }: RiskRouteParams) {
       students_maintained: studentsMaintained,
       students_worsened: studentsWorsened,
       total_active_interventions: totalActiveInterventions,
+      top_strategies: topStrategies,
       period: getCurrentAcademicYear(),
       last_updated: new Date().toISOString(),
     };

@@ -11,6 +11,12 @@
 import useSWR from 'swr';
 import { fetcher } from './fetcher';
 
+export interface StrategyEffectiveness {
+  strategy_name: string;
+  student_count: number;
+  improvement_rate: number;
+}
+
 export interface MtssSummary {
   students_identified: number;
   students_flagged_no_intervention: number;
@@ -22,6 +28,7 @@ export interface MtssSummary {
   students_maintained: number;
   students_worsened: number;
   total_active_interventions: number;
+  top_strategies: StrategyEffectiveness[];
   period: string;
   last_updated: string;
 }
