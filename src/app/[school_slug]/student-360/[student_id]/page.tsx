@@ -55,6 +55,7 @@ import {
   useStudentRiskHistory,
   useRiskAlerts,
 } from '@/lib/hooks/use-risk';
+import { useSchoolBySlug } from '@/lib/hooks/use-school-context';
 import { StatusBadge } from '@/components/dashboard/status-indicator';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -121,10 +122,13 @@ export default function Student360DeepDivePage() {
   // FERPA Audit: Log this page view for compliance
   useStudent360Audit(student_id, school_slug);
 
-  // Risk Engine Integration
-  const { profile: riskProfile, isLoading: riskLoading } = useStudentRiskProfile(school_slug, student_id);
-  const { history: riskHistory, isLoading: historyLoading } = useStudentRiskHistory(school_slug, student_id, { days: 90 });
-  const { alerts: studentAlerts, isLoading: alertsLoading } = useRiskAlerts(school_slug, { studentId: student_id, limit: 5 });
+  // Resolve school slug to UUID
+  const { schoolId } = useSchoolBySlug(school_slug);
+
+  // Risk Engine Integration - use schoolId (UUID), not slug
+  const { profile: riskProfile, isLoading: riskLoading } = useStudentRiskProfile(schoolId, student_id);
+  const { history: riskHistory, isLoading: historyLoading } = useStudentRiskHistory(schoolId, student_id, { days: 90 });
+  const { alerts: studentAlerts, isLoading: alertsLoading } = useRiskAlerts(schoolId, { studentId: student_id, limit: 5 });
 
   // Get student data from seed
   const schoolSeed = getSchoolSeed(school_slug);
