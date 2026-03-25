@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { PageFeatureGate } from '@/components/features/page-feature-gate';
 import { useCurrentSchool } from '@/lib/hooks/use-school-context';
 import { useIntervention } from '@/lib/hooks/use-interventions';
+import { StudentContextCard } from '@/components/interventions';
 import { cn } from '@/lib/utils';
 import {
   ArrowLeft,
@@ -291,6 +292,14 @@ export default function InterventionDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Sprint 5D: Student Context Card */}
+        {schoolId && iv.student_id && (
+          <StudentContextCard
+            schoolId={schoolId}
+            studentId={iv.student_id as string}
+          />
+        )}
 
         {/* Goal & Metrics */}
         {iv.goal && (
