@@ -20,6 +20,10 @@ import { RiskDistribution } from '@/components/dashboard/status-indicator';
 import { generateMockDashboardData } from '@/lib/mock-data';
 import { Activity, BookOpen, Target, AlertCircle } from 'lucide-react';
 import { PageFeatureGate } from '@/components/features/page-feature-gate';
+import {
+  PulseMtssSection,
+  PulseMtssSectionSkeleton,
+} from '@/components/dashboard/pulse-mtss-section';
 
 /**
  * Instructional Pulse Dashboard
@@ -74,6 +78,11 @@ export default async function PulsePage({ params }: PulsePageProps) {
           </div>
         }
       />
+
+      {/* MTSS Evidence Metrics Section (Sprint 5B) */}
+      <Suspense fallback={<PulseMtssSectionSkeleton />}>
+        <PulseMtssSection schoolSlug={school_slug} />
+      </Suspense>
 
       {/* Metrics Row */}
       <DashboardGrid className="mb-6">
