@@ -67,6 +67,9 @@ import {
   type DosageMetrics,
   type MetricVitality,
 } from '@/lib/analytics/purpose-driven-metrics';
+import { StudentTimeline } from '@/components/student-360/student-timeline';
+import { InterventionEffectiveness } from '@/components/student-360/intervention-effectiveness';
+import { StudentContextHeader } from '@/components/student-360/student-context-header';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
@@ -300,6 +303,22 @@ export default function Student360DeepDivePage() {
           </Button>
         </div>
       </div>
+
+      {/* Student Context Header - Risk Drivers & Root Cause Insight */}
+      {riskProfile && (
+        <StudentContextHeader
+          riskFactors={riskProfile.factors?.map(f => ({
+            name: f.name,
+            category: f.category || 'general',
+            weightedScore: f.weightedScore,
+          }))}
+          lastEvaluationDate={riskProfile.computedAt}
+          attendanceRate={student?.attendanceRate}
+          hasMobility={student?.purposeDriven?.mobilityRecord?.previousSchool !== undefined}
+          isEnglishLearner={student?.isEnglishLearner}
+          riskLevel={riskProfile.riskLevel}
+        />
+      )}
 
       {/* High Confounding Risk Banner */}
       {student && attendancePercent < 90 && avgGrowth < 50 && (
@@ -904,6 +923,19 @@ export default function Student360DeepDivePage() {
             </Card>
           </div>
         </div>
+      </div>
+
+      {/* Student Journey Section - Timeline + Intervention Effectiveness */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <StudentTimeline
+          schoolId={school_slug}
+          studentId={student_id}
+        />
+        <InterventionEffectiveness
+          schoolId={school_slug}
+          studentId={student_id}
+          currentRiskScore={riskProfile ? riskProfile.riskScore * 100 : undefined}
+        />
       </div>
 
       {/* Intervention History */}
