@@ -4,3 +4,4 @@ export { RiskDriverBreakdown, RiskDriverBreakdownSkeleton } from './RiskDriverBr
 export { StudentRiskCard, StudentRiskCardSkeleton } from './StudentRiskCard';
 export { InterventionPipeline, InterventionPipelineSkeleton, type PipelineStage } from './InterventionPipeline';
 export { MeetingPrepExport } from './MeetingPrepExport';
+export { ActionabilityTierSection, ActionabilityTierSectionSkeleton } from './ActionabilityTierSection';
