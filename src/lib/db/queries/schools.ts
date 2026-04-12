@@ -6,67 +6,19 @@ import { getCurrentTenantSlug } from '@/lib/auth/rbac';
  * School Queries
  *
  * Data access layer for school/tenant operations
+ *
+ * IMPORTANT: All school queries fetch from Supabase to ensure real UUIDs are used.
+ * This is critical for API routes that query related data by school_id.
  */
-
-// Demo schools for development mode
-const DEMO_SCHOOLS: Record<string, Partial<School>> = {
-  'academy-charter': {
-    id: 'demo-academy-charter',
-    name: 'Academy Charter School',
-    slug: 'academy-charter',
-    is_active: true,
-    primary_color: '#6366f1',
-    secondary_color: '#06b6d4',
-    accent_color: '#10b981',
-    subscription_tier: 'pro',
-    subscription_status: 'active',
-  },
-  'academy-tomorrow': {
-    id: 'demo-academy-tomorrow',
-    name: 'Academy of Tomorrow',
-    slug: 'academy-tomorrow',
-    is_active: true,
-    primary_color: '#8b5cf6',
-    secondary_color: '#06b6d4',
-    accent_color: '#10b981',
-    subscription_tier: 'pro',
-    subscription_status: 'active',
-  },
-  'innovation-prep': {
-    id: 'demo-innovation-prep',
-    name: 'Innovation Prep Academy',
-    slug: 'innovation-prep',
-    is_active: true,
-    primary_color: '#0ea5e9',
-    secondary_color: '#06b6d4',
-    accent_color: '#10b981',
-    subscription_tier: 'pro',
-    subscription_status: 'active',
-  },
-  'stem-scholars': {
-    id: 'demo-stem-scholars',
-    name: 'STEM Scholars Charter',
-    slug: 'stem-scholars',
-    is_active: true,
-    primary_color: '#10b981',
-    secondary_color: '#06b6d4',
-    accent_color: '#6366f1',
-    subscription_tier: 'pro',
-    subscription_status: 'active',
-  },
-};
 
 const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
 
 /**
  * Get all schools
+ *
+ * NOTE: Always queries Supabase to get real school data with proper UUIDs.
  */
 export async function getAllSchools(): Promise<School[]> {
-  // In demo mode, return demo schools
-  if (isDemoMode) {
-    return Object.values(DEMO_SCHOOLS) as School[];
-  }
-
   const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
@@ -85,13 +37,12 @@ export async function getAllSchools(): Promise<School[]> {
 
 /**
  * Get school by slug (most common query pattern)
+ *
+ * NOTE: Always queries Supabase to get real school data with proper UUIDs.
+ * This is critical for API routes that need the real school_id to query
+ * related tables like students, interventions, risk_evaluations, etc.
  */
 export async function getSchoolBySlug(slug: string): Promise<School | null> {
-  // In demo mode, check demo schools first to avoid unnecessary DB calls
-  if (isDemoMode && DEMO_SCHOOLS[slug]) {
-    return DEMO_SCHOOLS[slug] as School;
-  }
-
   const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
