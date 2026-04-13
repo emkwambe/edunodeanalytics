@@ -43,7 +43,8 @@ export async function getAllSchools(): Promise<School[]> {
  * related tables like students, interventions, risk_evaluations, etc.
  */
 export async function getSchoolBySlug(slug: string): Promise<School | null> {
-  const supabase = await createServerSupabaseClient();
+  // Use admin client to bypass RLS - auth is handled by Clerk, not Supabase
+  const supabase = createAdminSupabaseClient();
 
   const { data, error } = await supabase
     .from('schools')
