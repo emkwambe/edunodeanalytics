@@ -42,7 +42,13 @@ const nextConfig = {
   reactStrictMode: true,
 
   // Turbopack configuration (Next.js 16+ default)
-  turbopack: {},
+  turbopack: {
+    resolveAlias: {
+      // Mark BigQuery as external to suppress bundler warnings
+      // The package is optional and only used in production with GCP credentials
+      '@google-cloud/bigquery': '@google-cloud/bigquery',
+    },
+  },
 
   // External packages (server-side only, optional dependencies)
   serverExternalPackages: ['@google-cloud/bigquery'],

@@ -54,7 +54,7 @@ let bigQueryClientInstance: unknown = null;
  *
  * Note: The @google-cloud/bigquery package is an optional dependency.
  * When not installed, we gracefully fall back to seed data.
- * Dynamic import prevents bundler errors when package isn't installed.
+ * We use require() with try-catch to avoid bundler warnings.
  */
 async function initBigQueryClient(): Promise<unknown | null> {
   if (!IS_BIGQUERY_ENABLED) {
@@ -67,9 +67,17 @@ async function initBigQueryClient(): Promise<unknown | null> {
   }
 
   try {
-    // Dynamic import to prevent bundler errors when package isn't installed
-    // @ts-expect-error - Package may not be installed, handled by catch
-    const { BigQuery } = await import('@google-cloud/bigquery').catch(() => ({ BigQuery: null }));
+    // Use require() with try-catch to avoid bundler resolution warnings
+    // The package is optional and only used in production with GCP credentials
+    let BigQuery: unknown = null;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const bigqueryModule = require('@google-cloud/bigquery');
+      BigQuery = bigqueryModule.BigQuery;
+    } catch {
+      console.log('[BigQuery] Package not installed - using seed data fallback');
+      return null;
+    }
 
     if (!BigQuery) {
       console.log('[BigQuery] Package not installed - using seed data fallback');
@@ -77,7 +85,8 @@ async function initBigQueryClient(): Promise<unknown | null> {
     }
 
     // Initialize with project ID
-    bigQueryClientInstance = new BigQuery({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    bigQueryClientInstance = new (BigQuery as any)({
       projectId: BIGQUERY_PROJECT_ID,
     });
 
