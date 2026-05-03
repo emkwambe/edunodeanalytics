@@ -104,26 +104,26 @@ export default function ImpactAnalyticsPage() {
 
   // Transform students into scatter data points
   const studentDataPoints: StudentDataPoint[] = students.map((s) => ({
-    x: s.attendanceRate * 100,
-    y: s.math.growthPercentile, // Using math growth as proxy
+    x: (s.attendanceRate ?? 0) * 100,
+    y: s.math?.growthPercentile ?? 50, // Using math growth as proxy, default to 50
     name: `${s.firstName} ${s.lastName}`,
     grade: s.gradeLevel,
-    zone: classifyStudent(s.attendanceRate * 100, s.math.growthPercentile),
+    zone: classifyStudent((s.attendanceRate ?? 0) * 100, s.math?.growthPercentile ?? 50),
   }));
 
   // AI Pattern Matching: Identify "Invisible Success" students in Amber zone
   const invisibleSuccessStudents = React.useMemo(() => {
     const amberStudents = students
       .filter((s) => {
-        const attendance = s.attendanceRate * 100;
-        const growth = s.math.growthPercentile;
+        const attendance = (s.attendanceRate ?? 0) * 100;
+        const growth = s.math?.growthPercentile ?? 50;
         return attendance < THRESHOLDS.lowAttendance && growth < THRESHOLDS.lowGrowth;
       })
       .map((s) => ({
         id: s.id,
         name: `${s.firstName} ${s.lastName}`,
-        attendance: s.attendanceRate * 100,
-        growth: s.math.growthPercentile,
+        attendance: (s.attendanceRate ?? 0) * 100,
+        growth: s.math?.growthPercentile ?? 50,
         lmsEngagement: 60 + Math.random() * 30, // Simulated LMS engagement
       }));
     return identifyInvisibleSuccessStudents(amberStudents);
