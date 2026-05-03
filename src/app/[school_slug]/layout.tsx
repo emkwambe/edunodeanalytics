@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { getSchoolBranding } from '@/lib/db/queries/schools';
-import { getSchoolSeed } from '@/lib/data/seed-data';
+import { getSchoolBranding, getSchoolBySlug } from '@/lib/db/queries/schools';
+import type { SubscriptionTier } from '@/lib/features/feature-flags';
 
 /**
  * Tenant-Specific Layout
@@ -22,12 +22,14 @@ export default async function TenantLayout({
   // In Next.js 15+, params is a Promise
   const { school_slug } = await params;
 
-  // Fetch school branding
-  const branding = await getSchoolBranding(school_slug);
+  // Fetch school branding and subscription tier from database
+  const [branding, school] = await Promise.all([
+    getSchoolBranding(school_slug),
+    getSchoolBySlug(school_slug),
+  ]);
 
-  // Get subscription tier from seed data (in production, from DB)
-  const schoolSeed = getSchoolSeed(school_slug);
-  const subscriptionTier = schoolSeed?.subscriptionTier ?? 'starter';
+  // Get subscription tier from database
+  const subscriptionTier: SubscriptionTier = (school?.subscription_tier as SubscriptionTier) ?? 'starter';
 
   return (
     <Suspense
