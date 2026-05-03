@@ -51,14 +51,68 @@ DROP POLICY IF EXISTS "dosage_metrics_update" ON public.intervention_dosage_metr
 DROP FUNCTION IF EXISTS public.get_user_school_ids(UUID);
 
 -- ==============================================
--- STEP 3: Re-grant execute on the TEXT version (with explicit signature)
+-- STEP 3: Create/replace the TEXT version of the function
+-- (in case migration 00009 failed before creating it)
+-- ==============================================
+CREATE OR REPLACE FUNCTION public.get_user_school_ids(p_clerk_user_id TEXT)
+RETURNS SETOF UUID
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT sm.school_id
+    FROM school_memberships sm
+    JOIN users u ON sm.user_id = u.id
+    WHERE u.clerk_user_id = p_clerk_user_id
+    AND sm.is_active = TRUE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.check_school_access(p_school_id UUID, p_clerk_user_id TEXT)
+RETURNS BOOLEAN
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1
+        FROM school_memberships sm
+        JOIN users u ON sm.user_id = u.id
+        WHERE sm.school_id = p_school_id
+        AND u.clerk_user_id = p_clerk_user_id
+        AND sm.is_active = TRUE
+    );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.check_platform_admin(p_clerk_user_id TEXT)
+RETURNS BOOLEAN
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1
+        FROM users u
+        WHERE u.clerk_user_id = p_clerk_user_id
+        AND u.platform_role IS NOT NULL
+    );
+END;
+$$;
+
+-- ==============================================
+-- STEP 4: Grant execute permissions
 -- ==============================================
 GRANT EXECUTE ON FUNCTION public.get_user_school_ids(TEXT) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.check_school_access(UUID, TEXT) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.check_platform_admin(TEXT) TO authenticated, anon;
 
 -- ==============================================
--- STEP 4: Recreate policies using check_school_access (which works with Clerk)
+-- STEP 5: Recreate policies using check_school_access (which works with Clerk)
 -- ==============================================
 
 -- risk_model_configs policies
