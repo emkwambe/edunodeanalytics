@@ -155,6 +155,6 @@ CREATE POLICY "Admins can view audit logs"
 -- ==============================================
 -- Grant execute permissions on helper functions
 -- ==============================================
-GRANT EXECUTE ON FUNCTION check_school_access TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION check_platform_admin TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION get_user_school_ids TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION check_school_access(UUID, TEXT) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION check_platform_admin(TEXT) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION get_user_school_ids(TEXT) TO authenticated, anon;
