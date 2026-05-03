@@ -11,33 +11,55 @@
 -- so the UUID version is not useful. We'll drop it and keep only the TEXT version.
 -- ==============================================
 
--- Drop the UUID version of the function
+-- ==============================================
+-- STEP 1: Drop ALL policies that depend on the UUID function
+-- Must be done BEFORE dropping the function
+-- ==============================================
+
+-- risk_model_configs policies
+DROP POLICY IF EXISTS "risk_config_select" ON public.risk_model_configs;
+DROP POLICY IF EXISTS "risk_config_insert" ON public.risk_model_configs;
+DROP POLICY IF EXISTS "risk_config_update" ON public.risk_model_configs;
+
+-- student_metrics policies
+DROP POLICY IF EXISTS "student_metrics_select" ON public.student_metrics;
+
+-- student_metric_history policies
+DROP POLICY IF EXISTS "metric_history_select" ON public.student_metric_history;
+
+-- risk_evaluations policies
+DROP POLICY IF EXISTS "risk_eval_select" ON public.risk_evaluations;
+
+-- risk_alerts policies
+DROP POLICY IF EXISTS "risk_alerts_select" ON public.risk_alerts;
+DROP POLICY IF EXISTS "risk_alerts_update" ON public.risk_alerts;
+
+-- intervention_sessions policies
+DROP POLICY IF EXISTS "sessions_select" ON public.intervention_sessions;
+DROP POLICY IF EXISTS "sessions_insert" ON public.intervention_sessions;
+DROP POLICY IF EXISTS "sessions_update" ON public.intervention_sessions;
+DROP POLICY IF EXISTS "sessions_delete" ON public.intervention_sessions;
+
+-- intervention_dosage_metrics policies
+DROP POLICY IF EXISTS "dosage_metrics_select" ON public.intervention_dosage_metrics;
+DROP POLICY IF EXISTS "dosage_metrics_insert" ON public.intervention_dosage_metrics;
+DROP POLICY IF EXISTS "dosage_metrics_update" ON public.intervention_dosage_metrics;
+
+-- ==============================================
+-- STEP 2: Drop the UUID version of the function
+-- ==============================================
 DROP FUNCTION IF EXISTS public.get_user_school_ids(UUID);
 
--- Re-grant execute on the TEXT version (with explicit signature)
+-- ==============================================
+-- STEP 3: Re-grant execute on the TEXT version (with explicit signature)
+-- ==============================================
 GRANT EXECUTE ON FUNCTION public.get_user_school_ids(TEXT) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.check_school_access(UUID, TEXT) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.check_platform_admin(TEXT) TO authenticated, anon;
 
 -- ==============================================
--- Update RLS policies that used the UUID version
--- These policies from 00006 used: get_user_school_ids(auth.uid())
--- Since auth.uid() is NULL with Clerk, they don't work anyway.
--- We'll drop and recreate them to use check_school_access instead.
+-- STEP 4: Recreate policies using check_school_access (which works with Clerk)
 -- ==============================================
-
--- Drop old policies that referenced the UUID function
-DROP POLICY IF EXISTS "risk_config_select" ON public.risk_model_configs;
-DROP POLICY IF EXISTS "risk_config_insert" ON public.risk_model_configs;
-DROP POLICY IF EXISTS "risk_config_update" ON public.risk_model_configs;
-DROP POLICY IF EXISTS "student_metrics_select" ON public.student_metrics;
-DROP POLICY IF EXISTS "metric_history_select" ON public.student_metric_history;
-DROP POLICY IF EXISTS "risk_eval_select" ON public.risk_evaluations;
-DROP POLICY IF EXISTS "risk_alerts_select" ON public.risk_alerts;
-DROP POLICY IF EXISTS "risk_alerts_update" ON public.risk_alerts;
-
--- Recreate policies using check_school_access (which works with Clerk)
--- Note: Service role policies remain unchanged as they bypass RLS
 
 -- risk_model_configs policies
 CREATE POLICY "risk_config_select" ON public.risk_model_configs
@@ -92,6 +114,52 @@ CREATE POLICY "risk_alerts_select" ON public.risk_alerts
     );
 
 CREATE POLICY "risk_alerts_update" ON public.risk_alerts
+    FOR UPDATE USING (
+        check_school_access(school_id, COALESCE(auth.uid()::TEXT, ''))
+        OR auth.role() = 'service_role'
+    );
+
+-- intervention_sessions policies
+CREATE POLICY "sessions_select" ON public.intervention_sessions
+    FOR SELECT USING (
+        check_school_access(school_id, COALESCE(auth.uid()::TEXT, ''))
+        OR check_platform_admin(COALESCE(auth.uid()::TEXT, ''))
+        OR auth.role() = 'service_role'
+    );
+
+CREATE POLICY "sessions_insert" ON public.intervention_sessions
+    FOR INSERT WITH CHECK (
+        check_school_access(school_id, COALESCE(auth.uid()::TEXT, ''))
+        OR auth.role() = 'service_role'
+    );
+
+CREATE POLICY "sessions_update" ON public.intervention_sessions
+    FOR UPDATE USING (
+        check_school_access(school_id, COALESCE(auth.uid()::TEXT, ''))
+        OR auth.role() = 'service_role'
+    );
+
+CREATE POLICY "sessions_delete" ON public.intervention_sessions
+    FOR DELETE USING (
+        check_school_access(school_id, COALESCE(auth.uid()::TEXT, ''))
+        OR auth.role() = 'service_role'
+    );
+
+-- intervention_dosage_metrics policies
+CREATE POLICY "dosage_metrics_select" ON public.intervention_dosage_metrics
+    FOR SELECT USING (
+        check_school_access(school_id, COALESCE(auth.uid()::TEXT, ''))
+        OR check_platform_admin(COALESCE(auth.uid()::TEXT, ''))
+        OR auth.role() = 'service_role'
+    );
+
+CREATE POLICY "dosage_metrics_insert" ON public.intervention_dosage_metrics
+    FOR INSERT WITH CHECK (
+        check_school_access(school_id, COALESCE(auth.uid()::TEXT, ''))
+        OR auth.role() = 'service_role'
+    );
+
+CREATE POLICY "dosage_metrics_update" ON public.intervention_dosage_metrics
     FOR UPDATE USING (
         check_school_access(school_id, COALESCE(auth.uid()::TEXT, ''))
         OR auth.role() = 'service_role'
