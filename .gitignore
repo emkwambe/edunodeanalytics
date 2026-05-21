@@ -48,3 +48,9 @@ dbt/logs/
 # BigQuery service account (NEVER COMMIT)
 *service-account*.json
 credentials*.json
+
+masked-output/
+*.sql
+audit-signed.json
+edunode-*.json
+edunode-*.sql
