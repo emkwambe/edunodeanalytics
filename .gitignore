@@ -1,4 +1,4 @@
-# Dependencies
+﻿# Dependencies
 /node_modules
 /.pnp
 .pnp.js
@@ -51,6 +51,8 @@ credentials*.json
 
 masked-output/
 *.sql
+!supabase/migrations/*.sql
+!dbt/**/*.sql
 audit-signed.json
 edunode-*.json
 edunode-*.sql

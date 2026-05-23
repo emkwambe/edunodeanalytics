@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Feature Gating System
  * =====================
  *
@@ -23,6 +23,11 @@
  *   - Dedicated Data Success Partner
  */
 
+// ---------------------------------------------------------------------------
+// DEMO MODE OVERRIDE
+// Set NEXT_PUBLIC_DEMO_MODE=true in .env.local to unlock all features
+// ---------------------------------------------------------------------------
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 export type SubscriptionTier = 'starter' | 'pro' | 'enterprise';
 
 export type FeatureKey =

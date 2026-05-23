@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { useParams } from 'next/navigation';
@@ -114,12 +114,19 @@ export default function StudentDashboardDetailPage() {
   const students = schoolSeed?.students ?? [];
   const student = students.find((s) => s.id === student_id) || students[0];
 
-  // Generate AI Qualitative Pulse
+  // AI Qualitative Pulse — on-demand only
+  const [pulseLoading, setPulseLoading] = React.useState(false);
+  const [qualitativePulse, setQualitativePulse] = React.useState<QualitativePulseResult | null>(null);
   const mtssLogs = React.useMemo(() => generateMockMTSSLogs(student_id), [student_id]);
-  const qualitativePulse = React.useMemo(
-    () => analyzeQualitativePulse(student_id, mtssLogs),
-    [student_id, mtssLogs]
-  );
+  const runAIPulse = React.useCallback(async () => {
+    if (pulseLoading || qualitativePulse) return;
+    setPulseLoading(true);
+    await new Promise((r) => setTimeout(r, 900));
+    setQualitativePulse(analyzeQualitativePulse(student_id, mtssLogs));
+    setPulseLoading(false);
+  }, [student_id, mtssLogs, pulseLoading, qualitativePulse]);
+
+
 
   // Calculate metrics with null safety
   const avgGrowth = student?.reading?.growthPercentile && student?.math?.growthPercentile
@@ -582,6 +589,15 @@ export default function StudentDashboardDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+                    {!qualitativePulse ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-4">
+              <p className="text-sm text-slate-400 text-center max-w-sm">Analyze recent MTSS logs to surface behavioral patterns, social-emotional indicators, and recommended actions.</p>
+              <Button type="button" onClick={runAIPulse} disabled={pulseLoading} className="bg-violet-600 hover:bg-violet-700 text-white gap-2">
+                <Sparkles className="w-4 h-4" />
+                {pulseLoading ? 'Analyzing...' : 'Run AI Pulse'}
+              </Button>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Synthesis Result */}
             <div>
@@ -645,6 +661,7 @@ export default function StudentDashboardDetailPage() {
               </div>
             </div>
           </div>
+          )}
         </CardContent>
       </Card>
 

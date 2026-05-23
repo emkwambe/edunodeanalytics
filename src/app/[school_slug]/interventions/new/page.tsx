@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { MTSSInterventionForm } from '@/components/interventions/mtss-intervention-form';
+import { PageFeatureGate } from '@/components/features/page-feature-gate';
 import { useSchool } from '@/lib/hooks/use-schools';
 import type { MTSSInterventionFormState } from '@/lib/mtss/types';
 
@@ -36,18 +37,20 @@ export default function NewInterventionPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">New MTSS Intervention</h1>
-        <p className="text-slate-400 mt-1 text-sm">
-          Create a Tier 2 or Tier 3 intervention with comprehensive planning and monitoring.
-        </p>
+    <PageFeatureGate featureKey="intervention_hub">
+      <div className="max-w-3xl mx-auto py-8 px-4">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-white">New MTSS Intervention</h1>
+          <p className="text-slate-400 mt-1 text-sm">
+            Create a Tier 2 or Tier 3 intervention with comprehensive planning and monitoring.
+          </p>
+        </div>
+        <MTSSInterventionForm
+          schoolId={school?.id ?? schoolSlug}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+        />
       </div>
-      <MTSSInterventionForm
-        schoolId={school?.id ?? schoolSlug}
-        onSubmit={handleSubmit}
-        onCancel={handleCancel}
-      />
-    </div>
+    </PageFeatureGate>
   );
 }
