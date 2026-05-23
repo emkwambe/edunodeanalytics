@@ -1,7 +1,7 @@
-import { Suspense } from 'react';
+﻿import { Suspense } from 'react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { getSchoolBranding, getSchoolBySlug } from '@/lib/db/queries/schools';
-import type { SubscriptionTier } from '@/lib/features/feature-flags';
+import type { SubscriptionTier } from '@/lib/features/feature-gates';
 
 /**
  * Tenant-Specific Layout
@@ -28,8 +28,10 @@ export default async function TenantLayout({
     getSchoolBySlug(school_slug),
   ]);
 
-  // Get subscription tier from database
-  const subscriptionTier: SubscriptionTier = (school?.subscription_tier as SubscriptionTier) ?? 'starter';
+  // Get subscription tier — seed data first, then DB, then default
+  const { getSchoolSeed } = await import('@/lib/data/seed-data');
+  const seed = getSchoolSeed(school_slug);
+  const subscriptionTier: SubscriptionTier = process.env.DEMO_MODE === 'true' ? 'enterprise' : ((seed?.subscriptionTier as SubscriptionTier) ?? (school?.subscription_tier as SubscriptionTier) ?? 'starter');
 
   return (
     <Suspense
