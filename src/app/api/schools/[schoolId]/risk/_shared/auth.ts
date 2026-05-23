@@ -1,4 +1,4 @@
-// src/app/api/schools/[schoolId]/risk/_shared/auth.ts
+﻿// src/app/api/schools/[schoolId]/risk/_shared/auth.ts
 /**
  * Shared auth helper for risk API routes.
  * Validates schoolId, checks Clerk auth, verifies school membership.
@@ -13,6 +13,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { getSchoolBySlug } from '@/lib/db/queries/schools';
 
 /** Route params type alias — matches at-risk route pattern */
 export interface RiskRouteParams {
@@ -45,14 +46,31 @@ export async function authenticateSchoolRequest(
 ): Promise<AuthContext | NextResponse> {
   const { schoolId } = params;
 
-  // 1. Validate schoolId format (UUID)
+  // 1. Resolve slug to UUID if needed, then validate format
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  let resolvedSchoolId = schoolId;
   if (!uuidRegex.test(schoolId)) {
-    return NextResponse.json(
-      { error: 'Invalid school ID format' },
-      { status: 400 }
-    );
+    // Looks like a slug — try to resolve it
+    // Demo/seed mode: resolve from seed data first
+    const { getSchoolSeed } = await import('@/lib/data/seed-data');
+    const seed = getSchoolSeed(schoolId);
+    if (seed) {
+      resolvedSchoolId = seed.id;
+    } else {
+      // Try database slug lookup
+      const school = await getSchoolBySlug(schoolId);
+      if (!school) {
+        return NextResponse.json(
+          { error: 'School not found' },
+          { status: 404 }
+        );
+      }
+      resolvedSchoolId = school.id;
+    }
   }
+  const { schoolId: _originalId, ..._ } = { schoolId, _: null };
+  // Use resolvedSchoolId from here on
+  Object.assign(params, { schoolId: resolvedSchoolId });
 
   // 2. Check Clerk auth (matches warehouse route pattern)
   const { userId: clerkUserId } = await auth();
@@ -83,7 +101,7 @@ export async function authenticateSchoolRequest(
     .from('school_memberships')
     .select('role')
     .eq('user_id', user.id)
-    .eq('school_id', schoolId)
+    .eq('school_id', resolvedSchoolId)
     .eq('is_active', true)
     .single();
 
@@ -99,7 +117,7 @@ export async function authenticateSchoolRequest(
   return {
     userId: user.id,
     clerkUserId,
-    schoolId,
+    schoolId: resolvedSchoolId,
     role: membership.role,
     supabase,
     adminSupabase,
