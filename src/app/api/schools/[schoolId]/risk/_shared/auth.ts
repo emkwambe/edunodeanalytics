@@ -71,6 +71,19 @@ export async function authenticateSchoolRequest(
   const { schoolId: _originalId, ..._ } = { schoolId, _: null };
   // Use resolvedSchoolId from here on
   Object.assign(params, { schoolId: resolvedSchoolId });
+  // DEMO MODE: bypass Clerk auth and membership check
+  if (process.env.DEMO_MODE === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+    const supabase = await createServerSupabaseClient();
+    const adminSupabase = createAdminSupabaseClient();
+    return {
+      userId: 'demo-user',
+      clerkUserId: 'demo-clerk-user',
+      schoolId: resolvedSchoolId,
+      role: 'admin',
+      supabase,
+      adminSupabase,
+    };
+  }
 
   // 2. Check Clerk auth (matches warehouse route pattern)
   const { userId: clerkUserId } = await auth();
