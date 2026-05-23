@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import * as React from 'react';
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   AlertCircle, Plus, X, ChevronDown, ChevronUp, Settings2,
   Users, Target, Clock, Calendar, TrendingUp, ClipboardCheck,
@@ -120,11 +120,14 @@ function StudentPicker({ schoolId, selectedStudentId, onSelect, error }: Student
   const [selectedName, setSelectedName] = useState('');
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const fetchedForRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!schoolId) return;
+    if (fetchedForRef.current === schoolId) return;
+    fetchedForRef.current = schoolId;
     setIsLoading(true);
-    fetch(`/api/demo/schools/${schoolId}/students`)
+    fetch(`/api/schools/${schoolId}/students?limit=500&sortBy=last_name&sortOrder=asc`)
       .then((r) => r.json())
       .then((d) => { setAllStudents(d.data || []); setIsLoading(false); })
       .catch(() => setIsLoading(false));

@@ -65,32 +65,53 @@ export function SubscriptionProvider({
   const params = useParams();
   const schoolSlug = params?.school_slug as string;
 
-  const [subscription, setSubscription] = React.useState<SubscriptionState>(() => {
-    // Use initialTier if provided, otherwise try to get from seed data
-    if (initialTier) {
-      return {
-        ...DEFAULT_SUBSCRIPTION,
-        tier: initialTier,
-        status: 'active',
-      };
-    }
-
-    const schoolSeed = schoolSlug ? getSchoolSeed(schoolSlug) : null;
-    if (schoolSeed) {
-      return {
-        ...DEFAULT_SUBSCRIPTION,
-        tier: schoolSeed.subscriptionTier,
-        status: 'active',
-        studentCount: schoolSeed.studentCount,
-        staffSeats: 25,
-      };
-    }
-
-    return DEFAULT_SUBSCRIPTION;
+  // Start in a loading state. Tier resolution happens in the effect below
+  // once `useParams()` has actually resolved the slug — reading the seed
+  // (or the NEXT_PUBLIC_DEMO_MODE env var) inside a useState initializer is
+  // unreliable on first render and forces every school to start as 'starter'.
+  const [subscription, setSubscription] = React.useState<SubscriptionState>({
+    ...DEFAULT_SUBSCRIPTION,
+    status: 'loading',
   });
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<Error | null>(null);
+
+  // Resolve tier once the slug is available.
+  React.useEffect(() => {
+    if (!schoolSlug) return;
+
+    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      setSubscription({
+        ...DEFAULT_SUBSCRIPTION,
+        tier: 'enterprise',
+        status: 'active',
+        studentCount: 487,
+        staffSeats: 25,
+      });
+      return;
+    }
+
+    const seed = getSchoolSeed(schoolSlug);
+    if (seed) {
+      setSubscription({
+        ...DEFAULT_SUBSCRIPTION,
+        tier: seed.subscriptionTier,
+        status: 'active',
+        studentCount: seed.studentCount,
+        staffSeats: 25,
+      });
+      return;
+    }
+
+    if (initialTier) {
+      setSubscription({
+        ...DEFAULT_SUBSCRIPTION,
+        tier: initialTier,
+        status: 'active',
+      });
+    }
+  }, [schoolSlug, initialTier]);
 
   // Fetch subscription from API in production
   const refreshSubscription = React.useCallback(async () => {
@@ -180,13 +201,6 @@ export function SubscriptionProvider({
     () => TIER_INFO[subscription.tier],
     [subscription.tier]
   );
-
-  // Initialize subscription on mount
-  React.useEffect(() => {
-    // In development, we use seed data (already set in initial state)
-    // In production, uncomment this to fetch from API:
-    // refreshSubscription();
-  }, [schoolSlug]);
 
   const value: SubscriptionContextValue = {
     subscription,
