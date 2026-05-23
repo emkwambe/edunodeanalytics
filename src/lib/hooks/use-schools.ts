@@ -1,4 +1,4 @@
-import useSWR from 'swr';
+﻿import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import { fetcher, mutationFetcher, buildQueryString } from './fetcher';
 import type { School } from '@/lib/database.types';
