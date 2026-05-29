@@ -70,7 +70,7 @@ export async function getAuthorizerBySlug(slug: string): Promise<Authorizer | nu
 export async function getAuthorizerForUser(userId: string): Promise<Authorizer | null> {
   const supabase = createAdminSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('authorizer_memberships')
     .select(`
       authorizer:authorizers(*)
@@ -93,7 +93,7 @@ export async function getAuthorizerForUser(userId: string): Promise<Authorizer |
 export async function isAuthorizerMember(userId: string): Promise<boolean> {
   const supabase = createAdminSupabaseClient();
 
-  const { count, error } = await supabase
+  const { count, error } = await (supabase as any)
     .from('authorizer_memberships')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
@@ -143,7 +143,7 @@ export async function getAuthorizerPortfolio(authorizerId: string): Promise<Auth
   if (!authorizer) return null;
 
   // Get schools with their latest metrics
-  const { data: schools, error } = await supabase
+  const { data: schools, error } = await (supabase as any)
     .from('schools')
     .select(`
       id,
@@ -165,9 +165,9 @@ export async function getAuthorizerPortfolio(authorizerId: string): Promise<Auth
 
   // Get latest metrics for each school
   const portfolioSchools: AuthorizerPortfolioSchool[] = await Promise.all(
-    schools.map(async (school) => {
+    schools.map(async (school: any) => {
       // Get latest metrics
-      const { data: metrics } = await supabase
+      const { data: metrics } = await (supabase as any)
         .from('school_metrics_history')
         .select('*')
         .eq('school_id', school.id)
@@ -176,7 +176,7 @@ export async function getAuthorizerPortfolio(authorizerId: string): Promise<Auth
         .single();
 
       // Get latest financials
-      const { data: financials } = await supabase
+      const { data: financials } = await (supabase as any)
         .from('school_financials')
         .select('*')
         .eq('school_id', school.id)
@@ -185,7 +185,7 @@ export async function getAuthorizerPortfolio(authorizerId: string): Promise<Auth
         .single();
 
       // Get compliance summary
-      const { data: complianceItems } = await supabase
+      const { data: complianceItems } = await (supabase as any)
         .from('compliance_items')
         .select('status, due_date')
         .eq('school_id', school.id);
@@ -194,10 +194,10 @@ export async function getAuthorizerPortfolio(authorizerId: string): Promise<Auth
       const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
       const complianceIssues = complianceItems?.filter(
-        (item) => item.status === 'non_compliant' || item.status === 'expired'
+        (item: any) => item.status === 'non_compliant' || item.status === 'expired'
       ).length ?? 0;
 
-      const complianceDue = complianceItems?.filter((item) => {
+      const complianceDue = complianceItems?.filter((item: any) => {
         if (!item.due_date) return false;
         const dueDate = new Date(item.due_date);
         return dueDate <= thirtyDaysFromNow && item.status === 'pending';
@@ -297,7 +297,7 @@ export async function getSchoolMetricsHistory(
 ): Promise<SchoolMetricsHistory[]> {
   const supabase = createAdminSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('school_metrics_history')
     .select('*')
     .eq('school_id', schoolId)
@@ -321,7 +321,7 @@ export async function upsertSchoolMetrics(
 ): Promise<SchoolMetricsHistory | null> {
   const supabase = createAdminSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('school_metrics_history')
     .upsert(metrics, {
       onConflict: 'school_id,school_year,snapshot_type',
@@ -350,7 +350,7 @@ export async function getSchoolFinancials(
 ): Promise<SchoolFinancials[]> {
   const supabase = createAdminSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('school_financials')
     .select('*')
     .eq('school_id', schoolId)
@@ -372,7 +372,7 @@ export async function getSchoolFinancials(
 export async function getLatestFinancials(schoolId: string): Promise<SchoolFinancials | null> {
   const supabase = createAdminSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('school_financials')
     .select('*')
     .eq('school_id', schoolId)
@@ -400,7 +400,7 @@ export async function getLatestFinancials(schoolId: string): Promise<SchoolFinan
 export async function getComplianceItems(schoolId: string): Promise<ComplianceItem[]> {
   const supabase = createAdminSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('compliance_items')
     .select('*')
     .eq('school_id', schoolId)
@@ -475,7 +475,7 @@ export async function updateComplianceStatus(
     updates.completed_date = completedDate;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('compliance_items')
     .update(updates)
     .eq('id', itemId)
@@ -500,7 +500,7 @@ export async function updateComplianceStatus(
 export async function getBoardMembers(schoolId: string): Promise<BoardMember[]> {
   const supabase = createAdminSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('board_members')
     .select('*')
     .eq('school_id', schoolId)
@@ -524,7 +524,7 @@ export async function getBoardMeetings(
 ): Promise<BoardMeeting[]> {
   const supabase = createAdminSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('board_meetings')
     .select('*')
     .eq('school_id', schoolId)
@@ -549,7 +549,7 @@ export async function getBoardMeetings(
 export async function getAuthorizerMembership(userId: string): Promise<AuthorizerMembership | null> {
   const supabase = createAdminSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('authorizer_memberships')
     .select('*')
     .eq('user_id', userId)
@@ -577,7 +577,7 @@ export async function inviteAuthorizerUser(
 ): Promise<AuthorizerMembership | null> {
   const supabase = createAdminSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('authorizer_memberships')
     .insert({
       authorizer_id: authorizerId,
@@ -612,7 +612,7 @@ export async function logAuthorizerAccess(
 ): Promise<void> {
   const supabase = createAdminSupabaseClient();
 
-  await supabase.from('authorizer_access_logs').insert({
+  await (supabase as any).from('authorizer_access_logs').insert({
     authorizer_id: authorizerId,
     user_id: userId,
     school_id: schoolId,
