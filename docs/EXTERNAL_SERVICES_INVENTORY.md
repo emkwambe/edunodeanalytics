@@ -110,7 +110,21 @@ This document lists all external services, APIs, and subscriptions used by EduNo
 
 ---
 
-## 4. Data Warehouse
+## 4. Data Transformation & Warehouse
+
+### dbt (Data Build Tool)
+| Variable | Description |
+|----------|-------------|
+| N/A | dbt Core runs locally |
+
+- **Pricing**: 🟢 Free (dbt Core is open source)
+- **dbt Cloud**: $100/month (Team), $500/month (Enterprise) - optional
+- **Website**: https://getdbt.com
+- **Required**: ⚪ Optional (for BigQuery transformations)
+- **Used For**: SQL-based data transformations, data modeling, testing
+- **Location**: `/dbt/` directory in codebase
+
+---
 
 ### Google BigQuery
 | Variable | Description |
