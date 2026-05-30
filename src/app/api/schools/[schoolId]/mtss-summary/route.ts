@@ -83,6 +83,31 @@ function getAcademicYearStart(): Date {
 export async function GET(_request: NextRequest, { params }: RiskRouteParams) {
   const { schoolId } = await params;
 
+  // Demo mode: Return sample data for demo schools
+  const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
+  if (isDemoMode && (schoolId.includes('demo') || schoolId.includes('academy-charter') || schoolId.includes('charter'))) {
+    const demoResponse: MtssSummaryResponse = {
+      students_identified: 47,
+      students_flagged_no_intervention: 3,
+      response_rate: 0.936,
+      avg_time_to_action_days: 2.4,
+      avg_dosage_compliance: 0.82,
+      improvement_rate: 0.64,
+      students_improved: 30,
+      students_maintained: 12,
+      students_worsened: 5,
+      total_active_interventions: 52,
+      top_strategies: [
+        { strategy_name: 'Academic Tutoring', student_count: 28, improvement_rate: 0.71 },
+        { strategy_name: 'Social-Emotional Learning', student_count: 15, improvement_rate: 0.67 },
+        { strategy_name: 'Attendance Support', student_count: 12, improvement_rate: 0.58 },
+      ],
+      period: getCurrentAcademicYear(),
+      last_updated: new Date().toISOString(),
+    };
+    return NextResponse.json(demoResponse);
+  }
+
   // Authenticate and authorize
   const authResult = await authenticateSchoolRequest({ schoolId });
   if (authResult instanceof NextResponse) return authResult;
