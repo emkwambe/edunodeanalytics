@@ -49,6 +49,9 @@ export type FeatureKey =
   | 'mtss_management'
   | 'advanced_analytics'
   | 'white_label_colors'
+  | 'risk_escalation_alerts'
+  | 'weekly_digest'
+  | 'sync_failure_alerts'
   // Enterprise Features
   | 'white_label_logo'
   | 'network_benchmarking'
@@ -56,7 +59,8 @@ export type FeatureKey =
   | 'custom_integrations'
   | 'api_access'
   | 'sso_configuration'
-  | 'dedicated_support';
+  | 'dedicated_support'
+  | 'parent_notifications';
 
 export interface FeatureDefinition {
   key: FeatureKey;
@@ -202,6 +206,30 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
     upgradeMessage: 'Upgrade to Professional to customize your school branding',
     category: 'customization',
   },
+  risk_escalation_alerts: {
+    key: 'risk_escalation_alerts',
+    name: 'Risk Escalation Alerts',
+    description: 'Automated email alerts when students escalate to higher risk levels',
+    tier: 'pro',
+    upgradeMessage: 'Upgrade to Professional to receive automated risk escalation alerts',
+    category: 'intervention',
+  },
+  weekly_digest: {
+    key: 'weekly_digest',
+    name: 'Weekly Digest',
+    description: 'Automated weekly summary emails for school leaders',
+    tier: 'pro',
+    upgradeMessage: 'Upgrade to Professional to receive weekly performance digests',
+    category: 'analytics',
+  },
+  sync_failure_alerts: {
+    key: 'sync_failure_alerts',
+    name: 'Sync Failure Alerts',
+    description: 'Immediate notifications when data integrations fail',
+    tier: 'pro',
+    upgradeMessage: 'Upgrade to Professional to receive sync failure notifications',
+    category: 'compliance',
+  },
 
   // === ENTERPRISE FEATURES ===
   white_label_logo: {
@@ -259,6 +287,14 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
     tier: 'enterprise',
     upgradeMessage: 'Upgrade to Enterprise for dedicated support',
     category: 'network',
+  },
+  parent_notifications: {
+    key: 'parent_notifications',
+    name: 'Parent Notifications',
+    description: 'Automated parent/guardian communications for risk changes and interventions',
+    tier: 'enterprise',
+    upgradeMessage: 'Upgrade to Enterprise for automated parent communication features',
+    category: 'intervention',
   },
 };
 
