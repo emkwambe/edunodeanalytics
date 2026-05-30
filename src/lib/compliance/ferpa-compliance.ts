@@ -121,7 +121,7 @@ export class FerpaComplianceManager {
   async initialize(): Promise<void> {
     const supabase = await createServerSupabaseClient();
 
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('directory_opt_outs')
       .select('student_id')
       .eq('school_id', this.schoolId)
@@ -231,7 +231,7 @@ export class FerpaComplianceManager {
     const supabase = await createServerSupabaseClient();
 
     // Check if teacher is assigned to student's homeroom or classes
-    const { data: student } = await supabase
+    const { data: student } = await (supabase as any)
       .from('students')
       .select('homeroom_teacher')
       .eq('id', studentId)
@@ -240,7 +240,7 @@ export class FerpaComplianceManager {
     if (!student) return false;
 
     // Check homeroom assignment
-    const { data: user } = await supabase
+    const { data: user } = await (supabase as any)
       .from('users')
       .select('first_name, last_name')
       .eq('id', userId)
@@ -254,16 +254,16 @@ export class FerpaComplianceManager {
     }
 
     // Check section enrollments
-    const { data: enrollments } = await supabase
+    const { data: enrollments } = await (supabase as any)
       .from('section_enrollments')
       .select('section_id')
       .eq('student_id', studentId);
 
     if (!enrollments) return false;
 
-    const sectionIds = enrollments.map((e) => e.section_id);
+    const sectionIds = enrollments.map((e: any) => e.section_id);
 
-    const { data: sections } = await supabase
+    const { data: sections } = await (supabase as any)
       .from('sections')
       .select('teacher_id')
       .in('id', sectionIds)
@@ -279,7 +279,7 @@ export class FerpaComplianceManager {
     const supabase = await createServerSupabaseClient();
 
     // Check if user is assigned to student's interventions
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('interventions')
       .select('id')
       .eq('student_id', studentId)
@@ -335,7 +335,7 @@ export class FerpaComplianceManager {
   private async hasIepAccess(userId: string, studentId: string): Promise<boolean> {
     const supabase = await createServerSupabaseClient();
 
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('iep_team_members')
       .select('id')
       .eq('student_id', studentId)
@@ -385,7 +385,7 @@ export class FerpaComplianceManager {
   ): Promise<string> {
     const supabase = await createServerSupabaseClient();
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('amendment_requests')
       .insert({
         school_id: this.schoolId,
@@ -440,7 +440,7 @@ export class FerpaComplianceManager {
     const supabase = await createServerSupabaseClient();
 
     // Get the request details
-    const { data: request } = await supabase
+    const { data: request } = await (supabase as any)
       .from('amendment_requests')
       .select('*')
       .eq('id', requestId)
@@ -451,7 +451,7 @@ export class FerpaComplianceManager {
     }
 
     // Update request status
-    await supabase
+    await (supabase as any)
       .from('amendment_requests')
       .update({
         status: decision,
@@ -463,7 +463,7 @@ export class FerpaComplianceManager {
 
     // If approved, update the student record
     if (decision === 'approved') {
-      await supabase
+      await (supabase as any)
         .from('students')
         .update({
           [request.field_to_amend]: request.requested_value,
@@ -501,7 +501,7 @@ export class FerpaComplianceManager {
   async recordOptOut(studentId: string, optOut: boolean, recordedBy: string): Promise<void> {
     const supabase = await createServerSupabaseClient();
 
-    await supabase
+    await (supabase as any)
       .from('directory_opt_outs')
       .upsert({
         school_id: this.schoolId,
@@ -543,7 +543,7 @@ export class FerpaComplianceManager {
   async getPendingAmendmentRequests(): Promise<AmendmentRequest[]> {
     const supabase = await createServerSupabaseClient();
 
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('amendment_requests')
       .select('*')
       .eq('school_id', this.schoolId)
@@ -552,7 +552,7 @@ export class FerpaComplianceManager {
 
     if (!data) return [];
 
-    return data.map((r) => ({
+    return data.map((r: any) => ({
       id: r.id,
       studentId: r.student_id,
       requestedBy: r.requested_by,
