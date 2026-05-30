@@ -504,7 +504,7 @@ export class EvidenceLogger {
     });
 
     // Store report for future reference
-    await supabase.from('compliance_reports').insert({
+    await (supabase as any).from('compliance_reports').insert({
       school_id: this.schoolId,
       report_type: reportType,
       period_start: startDate.toISOString(),
