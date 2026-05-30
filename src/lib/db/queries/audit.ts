@@ -1,6 +1,20 @@
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
 import { headers } from 'next/headers';
-import type { AuditLogInsert, Json } from '@/lib/database.types';
+import type { Json } from '@/lib/database.types';
+
+// AuditLogInsert type - defined locally as table may not be in generated types
+type AuditLogInsert = {
+  school_id: string | null;
+  user_id: string | null;
+  action: string;
+  resource_type: string;
+  resource_id?: string | null;
+  old_values?: Json | null;
+  new_values?: Json | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  metadata?: Json | null;
+};
 
 /**
  * Audit Logging
@@ -65,12 +79,12 @@ export async function logAuditEvent(options: AuditLogOptions): Promise<void> {
     resource_id: options.resourceId || null,
     old_values: (options.oldValues as Json) || null,
     new_values: (options.newValues as Json) || null,
-    ip_address: ipAddress as unknown,
+    ip_address: ipAddress,
     user_agent: userAgent,
     metadata: (options.metadata as Json) || null,
   };
 
-  const { error } = await supabase.from('audit_logs').insert(auditLog);
+  const { error } = await (supabase as any).from('audit_logs').insert(auditLog);
 
   if (error) {
     // Don't throw - audit logging should never break the main flow
