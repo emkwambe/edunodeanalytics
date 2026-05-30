@@ -297,7 +297,7 @@ export class DataIntegrationPipeline {
     const supabase = createAdminSupabaseClient();
 
     // Store issues for review
-    await supabase.from('data_quality_issues').insert(
+    await (supabase as any).from('data_quality_issues').insert(
       issues.map((issue) => ({
         school_id: this.config.schoolId,
         record_id: issue.recordId,
