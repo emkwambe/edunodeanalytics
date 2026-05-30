@@ -17,7 +17,9 @@ import type {
   BoardMember,
   BoardMeeting,
 } from '../types/authorizer';
-import type { School } from '@/lib/database.types';
+import type { Database } from '@/lib/database.types';
+
+type School = Database['public']['Tables']['schools']['Row'];
 
 // ==============================================
 // AUTHORIZER QUERIES
