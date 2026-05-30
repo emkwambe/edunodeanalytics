@@ -9,12 +9,57 @@ import { authenticateSchoolRequest, type RiskRouteParams } from '../_shared/auth
 
 export async function GET(request: NextRequest, { params }: RiskRouteParams) {
   const { schoolId } = await params;
+  const searchParams = request.nextUrl.searchParams;
+  const weeks = Math.min(12, Math.max(1, parseInt(searchParams.get('weeks') || '8', 10)));
+
+  // Demo mode: Return sample data for demo schools
+  const isDemoMode = process.env.NODE_ENV !== 'production' || process.env.EDUNODE_DEMO_MODE === 'true';
+  if (isDemoMode && (schoolId.includes('demo') || schoolId.includes('academy-charter') || schoolId.includes('charter'))) {
+    // Generate realistic weekly trend data
+    const weeklyTrend = [];
+    const now = new Date();
+    for (let i = weeks - 1; i >= 0; i--) {
+      const weekDate = new Date(now);
+      weekDate.setDate(weekDate.getDate() - (i * 7));
+      weekDate.setDate(weekDate.getDate() - ((weekDate.getDay() + 6) % 7)); // Get Monday
+
+      // Simulate gradual improvement over time
+      const improvementFactor = 1 - (i * 0.02);
+      weeklyTrend.push({
+        weekStart: weekDate.toISOString().split('T')[0],
+        on_track: Math.round(320 * improvementFactor + Math.random() * 10),
+        watch: Math.round(85 - (i * 2) + Math.random() * 5),
+        at_risk: Math.round(52 - (i * 1.5) + Math.random() * 3),
+        critical: Math.round(30 - (i * 0.5) + Math.random() * 2),
+        total: 487,
+      });
+    }
+
+    return NextResponse.json({
+      distribution: {
+        on_track: 320,
+        watch: 85,
+        at_risk: 52,
+        critical: 30,
+        total: 487,
+      },
+      byGrade: [
+        { grade: 0, on_track: 35, watch: 8, at_risk: 5, critical: 2 },
+        { grade: 1, on_track: 38, watch: 10, at_risk: 6, critical: 3 },
+        { grade: 2, on_track: 42, watch: 12, at_risk: 7, critical: 4 },
+        { grade: 3, on_track: 45, watch: 11, at_risk: 8, critical: 5 },
+        { grade: 4, on_track: 48, watch: 14, at_risk: 9, critical: 6 },
+        { grade: 5, on_track: 52, watch: 15, at_risk: 8, critical: 5 },
+        { grade: 6, on_track: 60, watch: 15, at_risk: 9, critical: 5 },
+      ],
+      weeklyTrend,
+    });
+  }
+
   const authResult = await authenticateSchoolRequest({ schoolId });
   if (authResult instanceof NextResponse) return authResult;
 
   const { adminSupabase } = authResult;
-  const searchParams = request.nextUrl.searchParams;
-  const weeks = Math.min(12, Math.max(1, parseInt(searchParams.get('weeks') || '8', 10)));
 
   try {
     // 1. Current distribution from current_risk_scores view
