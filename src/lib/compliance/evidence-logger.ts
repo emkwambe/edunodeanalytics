@@ -153,7 +153,7 @@ export class EvidenceLogger {
       retention_until: retentionUntil.toISOString(),
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('compliance_events')
       .insert(record)
       .select('id')
@@ -350,7 +350,7 @@ export class EvidenceLogger {
       recorded_by: consent.recordedBy,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('consent_records')
       .insert(record)
       .select('id')
@@ -390,7 +390,7 @@ export class EvidenceLogger {
   async getConsentStatus(studentId: string): Promise<ConsentRecord[]> {
     const supabase = await createServerSupabaseClient();
 
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('consent_records')
       .select('*')
       .eq('student_id', studentId)
@@ -399,7 +399,7 @@ export class EvidenceLogger {
 
     if (!data) return [];
 
-    return data.map((c) => ({
+    return data.map((c: any) => ({
       id: c.id,
       studentId: c.student_id,
       guardianName: c.guardian_name,
@@ -425,7 +425,7 @@ export class EvidenceLogger {
     const supabase = await createServerSupabaseClient();
 
     // Fetch events for the period
-    const { data: events } = await supabase
+    const { data: events } = await (supabase as any)
       .from('compliance_events')
       .select('*')
       .eq('school_id', this.schoolId)
@@ -433,7 +433,7 @@ export class EvidenceLogger {
       .lte('created_at', endDate.toISOString())
       .order('created_at', { ascending: false });
 
-    const complianceEvents: ComplianceEvent[] = (events || []).map((e) => ({
+    const complianceEvents: ComplianceEvent[] = (events || []).map((e: any) => ({
       id: e.id,
       schoolId: e.school_id,
       userId: e.user_id,
@@ -525,7 +525,7 @@ export class EvidenceLogger {
   ): Promise<DataAccessRecord[]> {
     const supabase = await createServerSupabaseClient();
 
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('compliance_events')
       .select(`
         *,
@@ -539,7 +539,7 @@ export class EvidenceLogger {
 
     if (!data) return [];
 
-    return data.map((e) => ({
+    return data.map((e: any) => ({
       userId: e.user_id || 'system',
       userName: e.user ? `${(e.user as { first_name: string; last_name: string }).first_name} ${(e.user as { first_name: string; last_name: string }).last_name}` : 'System',
       userRole: 'Unknown',
@@ -560,7 +560,7 @@ export class EvidenceLogger {
     const now = new Date();
 
     // Delete events past retention period
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('compliance_events')
       .delete()
       .eq('school_id', this.schoolId)
@@ -583,7 +583,7 @@ export class EvidenceLogger {
     const supabase = await createServerSupabaseClient();
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-    const { data: events } = await supabase
+    const { data: events } = await (supabase as any)
       .from('compliance_events')
       .select('event_type, user_id, data_classification')
       .eq('school_id', this.schoolId)
