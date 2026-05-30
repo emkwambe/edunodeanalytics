@@ -456,7 +456,7 @@ export function getRecommendedAction(
           'No action required from your end',
           'EduNode engineering is investigating',
           'You will be notified when the issue is resolved',
-          'If urgent, contact support@edunode.io',
+          'If urgent, contact support@edunode.app',
         ],
         actor: 'edunode',
         estimatedResolutionTime: '2-24 hours',
@@ -517,7 +517,7 @@ export function getRecommendedAction(
         description: 'An unclassified error occurred. Please contact EduNode support.',
         steps: [
           'Note the error details and correlation ID',
-          'Contact support@edunode.io',
+          'Contact support@edunode.app',
           'Include the correlation ID in your message',
         ],
         actor: 'edunode',
@@ -543,7 +543,7 @@ function getVendorSupportUrl(vendorName: string): string {
     'iReady': 'https://www.curriculumassociates.com/support',
     'Renaissance STAR': 'https://help.renaissance.com',
   };
-  return urls[vendorName] || 'https://support.edunode.io';
+  return urls[vendorName] || 'https://support.edunode.app';
 }
 
 /**

@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
     stats.schoolsAffected = schoolIds.size;
 
     // Send email notifications
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.edunode.io';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.edunode.app';
 
     for (const [ownerId, ownerData] of interventionsByOwner) {
       try {

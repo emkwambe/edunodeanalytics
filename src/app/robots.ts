@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://edunode.io';
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://edunode.app';
 
 export default function robots(): MetadataRoute.Robots {
   return {

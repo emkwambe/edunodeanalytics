@@ -202,8 +202,8 @@ export default function ContactPage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-slate-600">
                   <Mail className="w-5 h-5 text-slate-400" />
-                  <a href="mailto:enterprise@edunode.io" className="hover:text-blue-600">
-                    enterprise@edunode.io
+                  <a href="mailto:enterprise@edunode.app" className="hover:text-blue-600">
+                    enterprise@edunode.app
                   </a>
                 </div>
                 <div className="flex items-center gap-3 text-slate-600">

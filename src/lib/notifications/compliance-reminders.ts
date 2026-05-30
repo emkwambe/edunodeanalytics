@@ -404,7 +404,7 @@ export async function sendComplianceEmail(
     ${priorityBanner}
     <p>${htmlMessage}</p>
     <p style="margin-top: 24px;">
-      <a href="https://app.edunode.io/settings/compliance?item=${reminder.compliance_item_id}" class="button">
+      <a href="https://app.edunode.app/settings/compliance?item=${reminder.compliance_item_id}" class="button">
         View Compliance Item
       </a>
     </p>

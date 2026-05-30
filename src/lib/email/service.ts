@@ -26,7 +26,7 @@ import { captureException } from '@/lib/monitoring/sentry';
 
 // Configuration
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'EduNode Analytics <noreply@edunode.io>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'EduNode Analytics <noreply@edunode.app>';
 const IS_EMAIL_ENABLED = !!RESEND_API_KEY;
 
 // Rate limiting
@@ -281,8 +281,8 @@ export function wrapEmailTemplate(content: string, schoolName?: string): string 
       <div class="footer">
         <p>&copy; ${new Date().getFullYear()} EduNode Analytics. All rights reserved.</p>
         <p>
-          <a href="https://edunode.io/help" style="color: #6366f1;">Help Center</a> |
-          <a href="https://edunode.io/privacy" style="color: #6366f1;">Privacy Policy</a>
+          <a href="https://edunode.app/help" style="color: #6366f1;">Help Center</a> |
+          <a href="https://edunode.app/privacy" style="color: #6366f1;">Privacy Policy</a>
         </p>
       </div>
     </div>

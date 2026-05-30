@@ -263,7 +263,7 @@ export default function CareersPage() {
             tell us how you&apos;d contribute to our mission.
           </p>
           <Button size="lg" variant="gradient" asChild>
-            <Link href="mailto:careers@edunode.io">
+            <Link href="mailto:careers@edunode.app">
               Send Your Resume
               <ArrowRight className="w-5 h-5 ml-2" />
             </Link>

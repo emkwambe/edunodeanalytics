@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
         });
 
         // Send email to recipients
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.edunode.io';
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.edunode.app';
         const reportUrl = `${baseUrl}/${school.slug}/dashboard/reports?id=${generated.id}`;
 
         for (const recipient of report.recipients) {

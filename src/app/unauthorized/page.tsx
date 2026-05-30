@@ -97,7 +97,7 @@ export default function UnauthorizedPage() {
         {/* Help Text */}
         <p className="text-center text-slate-500 text-sm mt-6">
           Need help? Contact your school administrator or{' '}
-          <a href="mailto:support@edunode.io" className="text-cyan-400 hover:underline">
+          <a href="mailto:support@edunode.app" className="text-cyan-400 hover:underline">
             EduNode Support
           </a>
         </p>

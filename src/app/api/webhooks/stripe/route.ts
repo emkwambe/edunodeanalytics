@@ -389,7 +389,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
     : undefined;
 
   // Send email notification to school contact
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.edunode.io';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.edunode.app';
   const updatePaymentUrl = `${baseUrl}/${school.slug}/settings/billing`;
 
   // Get school admin email - in production, query users table for school admins
