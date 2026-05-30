@@ -1,5 +1,63 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import type { Intervention, InterventionInsert, InterventionUpdate } from '@/lib/database.types';
+
+// Types defined locally as they may not be in generated types
+type Intervention = {
+  id: string;
+  school_id: string;
+  student_id: string;
+  type: string;
+  status: string;
+  priority?: string | null;
+  title?: string | null;
+  description?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  target_end_date?: string | null;
+  actual_end_date?: string | null;
+  goal?: string | null;
+  success_criteria?: string | null;
+  baseline_value?: number | null;
+  target_value?: number | null;
+  current_value?: number | null;
+  progress_notes?: any;
+  outcome?: any;
+  outcome_summary?: string | null;
+  was_successful?: boolean | null;
+  is_stale?: boolean | null;
+  created_by?: string | null;
+  created_by_user_id?: string | null;
+  assigned_to_user_id?: string | null;
+  metadata?: any;
+  created_at: string;
+  updated_at: string;
+};
+
+type InterventionInsert = {
+  school_id: string;
+  student_id: string;
+  type: string;
+  title?: string | null;
+  description?: string | null;
+  status?: string | null;
+  priority?: string | null;
+  start_date?: string | null;
+  target_end_date?: string | null;
+  actual_end_date?: string | null;
+  goal?: string | null;
+  success_criteria?: string | null;
+  baseline_value?: number | null;
+  target_value?: number | null;
+  current_value?: number | null;
+  progress_notes?: any;
+  outcome_summary?: string | null;
+  was_successful?: boolean | null;
+  is_stale?: boolean | null;
+  created_by_user_id?: string | null;
+  assigned_to_user_id?: string | null;
+  metadata?: any;
+};
+
+type InterventionUpdate = Partial<Intervention>;
 
 /**
  * Intervention Queries
@@ -358,7 +416,7 @@ export async function getInterventionById(id: string): Promise<InterventionWithS
 
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('interventions')
     .select(`
       *,
@@ -393,7 +451,7 @@ export async function getInterventionsForStudent(studentId: string): Promise<Int
 
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('interventions')
     .select('*')
     .eq('student_id', studentId)
@@ -558,7 +616,7 @@ export async function createIntervention(
 
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('interventions')
     .insert(intervention)
     .select()
@@ -593,7 +651,7 @@ export async function updateIntervention(
 
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('interventions')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
@@ -633,7 +691,7 @@ export async function addProgressNote(
   const supabase = await createServerSupabaseClient();
 
   // First, get current notes
-  const { data: current, error: fetchError } = await supabase
+  const { data: current, error: fetchError } = await (supabase as any)
     .from('interventions')
     .select('progress_notes')
     .eq('id', id)
@@ -648,7 +706,7 @@ export async function addProgressNote(
   const updatedNotes = [...currentNotes, note];
 
   // Update with new notes array
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('interventions')
     .update({
       progress_notes: updatedNotes as unknown as Intervention['progress_notes'],
@@ -690,7 +748,7 @@ export async function completeIntervention(
 
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('interventions')
     .update({
       status: 'completed',
@@ -777,7 +835,7 @@ export async function getInterventionStats(schoolId: string): Promise<Interventi
   const supabase = await createServerSupabaseClient();
 
   // Get all interventions for the school
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('interventions')
     .select('type, status, was_successful, start_date, actual_end_date')
     .eq('school_id', schoolId);

@@ -1,5 +1,39 @@
-import type { Student, Intervention } from '@/lib/database.types';
 import { getAnonymizer, type AnonymizationLevel, type StudentPII } from '@/lib/privacy';
+
+// Define types locally for flexibility with different query sources
+type Student = {
+  id: string;
+  sis_student_id?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  grade_level?: number | null;
+  homeroom_teacher?: string | null;
+  attendance_rate?: number | null;
+  risk_level?: string | null;
+  risk_score?: number | null;
+  has_iep?: boolean | null;
+  has_504_plan?: boolean | null;
+  is_english_learner?: boolean | null;
+  growth_percentile?: number | null;
+  proficiency_level?: string | number | null;
+  enrolled_at?: string | null;
+  is_active?: boolean | null;
+};
+
+type Intervention = {
+  id: string;
+  student_id: string;
+  type: string;
+  title?: string | null;
+  status: string;
+  priority?: string | null;
+  start_date?: string | null;
+  target_end_date?: string | null;
+  actual_end_date?: string | null;
+  goal?: string | null;
+  was_successful?: boolean | null;
+  created_at: string;
+};
 
 export interface CSVColumn<T> {
   header: string;
