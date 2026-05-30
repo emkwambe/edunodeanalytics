@@ -1,10 +1,32 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import type {
-  DashboardConfig,
-  DashboardConfigInsert,
-  DashboardConfigUpdate,
-  Json,
-} from '@/lib/database.types';
+import type { Json } from '@/lib/database.types';
+
+// Types defined locally as they may not be in generated types
+type DashboardConfig = {
+  id: string;
+  school_id: string;
+  user_id?: string | null;
+  name: string;
+  slug?: string;
+  description?: string | null;
+  layout?: Json;
+  widgets?: Json;
+  layout_config?: Json;
+  widget_configs?: Json;
+  filters?: Json;
+  refresh_interval_seconds?: number;
+  is_default: boolean;
+  is_shared: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type DashboardConfigInsert = Partial<DashboardConfig> & {
+  school_id: string;
+  name: string;
+};
+
+type DashboardConfigUpdate = Partial<DashboardConfig>;
 
 /**
  * Dashboard Configuration Queries
@@ -20,7 +42,7 @@ export async function getSchoolDashboards(
 ): Promise<DashboardConfig[]> {
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('dashboard_configs')
     .select('*')
     .eq('school_id', schoolId)
@@ -45,7 +67,7 @@ export async function getUserDashboards(
 ): Promise<DashboardConfig[]> {
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('dashboard_configs')
     .select('*')
     .eq('school_id', schoolId)
@@ -69,7 +91,7 @@ export async function getDashboardBySlug(
 ): Promise<DashboardConfig | null> {
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('dashboard_configs')
     .select('*')
     .eq('school_id', schoolId)
@@ -93,7 +115,7 @@ export async function getDefaultDashboard(
 ): Promise<DashboardConfig | null> {
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('dashboard_configs')
     .select('*')
     .eq('school_id', schoolId)
@@ -125,7 +147,7 @@ export async function createDashboard(
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('dashboard_configs')
     .insert({
       ...dashboard,
@@ -151,7 +173,7 @@ export async function updateDashboard(
 ): Promise<DashboardConfig | null> {
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('dashboard_configs')
     .update({
       ...updates,
@@ -195,7 +217,7 @@ export async function updateDashboardWidgets(
 export async function deleteDashboard(id: string): Promise<boolean> {
   const supabase = await createServerSupabaseClient();
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('dashboard_configs')
     .delete()
     .eq('id', id);
@@ -218,14 +240,14 @@ export async function setDefaultDashboard(
   const supabase = await createServerSupabaseClient();
 
   // Unset existing default
-  await supabase
+  await (supabase as any)
     .from('dashboard_configs')
     .update({ is_default: false })
     .eq('school_id', schoolId)
     .eq('is_default', true);
 
   // Set new default
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('dashboard_configs')
     .update({ is_default: true })
     .eq('id', dashboardId);
@@ -249,7 +271,7 @@ export async function cloneDashboard(
   const supabase = await createServerSupabaseClient();
 
   // Get original dashboard
-  const { data: original, error: fetchError } = await supabase
+  const { data: original, error: fetchError } = await (supabase as any)
     .from('dashboard_configs')
     .select('*')
     .eq('id', id)
@@ -261,7 +283,7 @@ export async function cloneDashboard(
   }
 
   // Create clone
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('dashboard_configs')
     .insert({
       school_id: original.school_id,
