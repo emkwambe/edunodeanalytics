@@ -19,7 +19,10 @@
 
 import { DataSourceRegistry, type DataSourceAdapter, type SyncResult } from '../sources/registry';
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
-import type { Student as _Student, StudentInsert } from '@/lib/database.types';
+import type { Database } from '@/lib/database.types';
+
+type _Student = Database['public']['Tables']['students']['Row'];
+type StudentInsert = Database['public']['Tables']['students']['Insert'];
 import { withRetry, logToDeadLetter } from '@/lib/data/retry';
 import { addBreadcrumb, captureException } from '@/lib/monitoring/sentry';
 
