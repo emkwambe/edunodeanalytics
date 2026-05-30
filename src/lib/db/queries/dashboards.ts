@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { Json } from '@/lib/database.types';
+import { generateSlug } from '@/lib/utils/slug';
 
 // Types defined locally as they may not be in generated types
 type DashboardConfig = {
@@ -139,13 +140,8 @@ export async function createDashboard(
 ): Promise<DashboardConfig | null> {
   const supabase = await createServerSupabaseClient();
 
-  // Generate slug from name if not provided
-  const slug =
-    dashboard.slug ||
-    dashboard.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+  // Generate slug from name if not provided (using robust slugify)
+  const slug = dashboard.slug || generateSlug(dashboard.name);
 
   const { data, error } = await (supabase as any)
     .from('dashboard_configs')
