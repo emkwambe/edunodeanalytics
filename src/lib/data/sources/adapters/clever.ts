@@ -120,7 +120,7 @@ async function performLiveSync(
       const studentData = transformCleverStudent(cleverStudent, schoolId);
 
       // Upsert student record
-      const { data: existing } = await supabase
+      const { data: existing } = await (supabase as any)
         .from('students')
         .select('id')
         .eq('school_id', schoolId)
@@ -129,7 +129,7 @@ async function performLiveSync(
 
       if (existing) {
         // Update existing
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('students')
           .update({
             ...studentData,

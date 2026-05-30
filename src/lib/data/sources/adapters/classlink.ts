@@ -101,7 +101,7 @@ async function performLiveSync(
       const studentData = transformOneRosterStudent(oneRosterStudent, schoolId);
 
       // Upsert student record
-      const { data: existing } = await supabase
+      const { data: existing } = await (supabase as any)
         .from('students')
         .select('id')
         .eq('school_id', schoolId)
@@ -109,7 +109,7 @@ async function performLiveSync(
         .single();
 
       if (existing) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('students')
           .update({
             ...studentData,

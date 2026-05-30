@@ -241,7 +241,7 @@ export class DataIntegrationPipeline {
     const supabase = createAdminSupabaseClient();
 
     // Check for data quality issues
-    const { data: students } = await supabase
+    const { data: students } = await (supabase as any)
       .from('students')
       .select('id, first_name, last_name, grade_level, attendance_rate')
       .eq('school_id', this.config.schoolId)

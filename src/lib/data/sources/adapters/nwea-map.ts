@@ -98,7 +98,7 @@ async function performLiveSync(
 
     for (const assessment of studentAssessments) {
       // Find student by SIS ID
-      const { data: student } = await supabase
+      const { data: student } = await (supabase as any)
         .from('students')
         .select('id')
         .eq('school_id', schoolId)
@@ -116,7 +116,7 @@ async function performLiveSync(
       }
 
       // Update student with assessment scores
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('students')
         .update({
           reading_scores: assessment.readingScores,

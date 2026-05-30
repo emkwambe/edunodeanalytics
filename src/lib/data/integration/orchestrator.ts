@@ -78,7 +78,7 @@ export class DataConnectorOrchestrator {
     const supabase = createAdminSupabaseClient();
     const statuses: ConnectorStatus[] = [];
 
-    const { data: dataSources } = await supabase
+    const { data: dataSources } = await (supabase as any)
       .from('school_data_sources')
       .select('*')
       .eq('school_id', this.config.schoolId)
@@ -150,7 +150,7 @@ export class DataConnectorOrchestrator {
     const supabase = createAdminSupabaseClient();
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const { data: syncHistory } = await supabase
+    const { data: syncHistory } = await (supabase as any)
       .from('sync_history')
       .select('status')
       .eq('data_source_id', dataSourceId)
@@ -158,7 +158,7 @@ export class DataConnectorOrchestrator {
 
     if (!syncHistory || syncHistory.length === 0) return 100;
 
-    const successCount = syncHistory.filter((s) => s.status === 'completed').length;
+    const successCount = syncHistory.filter((s: any) => s.status === 'completed').length;
     return Math.round((successCount / syncHistory.length) * 100);
   }
 
