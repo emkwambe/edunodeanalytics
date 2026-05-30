@@ -6,6 +6,7 @@
  */
 
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
+import { sendEmail, wrapEmailTemplate, IS_EMAIL_ENABLED } from '@/lib/email/service';
 
 export type ReminderType = 'email' | 'in_app' | 'both';
 export type ReminderPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -377,23 +378,60 @@ export async function createComplianceNotification(
 }
 
 /**
- * Send email notification (placeholder - integrate with email provider)
+ * Send email notification via Resend
  */
 export async function sendComplianceEmail(
   reminder: ScheduledReminder
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  // In production, integrate with Resend, SendGrid, or other email provider
-  console.log('[Compliance] Sending email:', {
-    to: reminder.recipients,
+  if (reminder.recipients.length === 0) {
+    console.log('[Compliance] No recipients for reminder:', reminder.id);
+    return { success: false, error: 'No recipients specified' };
+  }
+
+  // Convert markdown-style message to HTML
+  const htmlMessage = reminder.message
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+
+  const priorityBanner = reminder.priority === 'urgent'
+    ? '<div class="alert-error"><strong>URGENT:</strong> This item requires immediate attention.</div>'
+    : reminder.priority === 'high'
+      ? '<div class="alert-warning"><strong>Action Required:</strong> Please address this item soon.</div>'
+      : '';
+
+  const emailContent = `
+    ${priorityBanner}
+    <p>${htmlMessage}</p>
+    <p style="margin-top: 24px;">
+      <a href="https://app.edunode.io/settings/compliance?item=${reminder.compliance_item_id}" class="button">
+        View Compliance Item
+      </a>
+    </p>
+  `;
+
+  const result = await sendEmail({
+    to: reminder.recipients.map(email => ({ email })),
     subject: reminder.subject,
-    priority: reminder.priority,
+    html: wrapEmailTemplate(emailContent),
+    tags: {
+      type: 'compliance_reminder',
+      priority: reminder.priority,
+      school_id: reminder.school_id,
+    },
   });
 
-  // Simulate sending
-  return {
-    success: true,
-    messageId: `msg-${Date.now()}`,
-  };
+  if (result.success) {
+    console.log('[Compliance] Email sent:', {
+      to: reminder.recipients,
+      subject: reminder.subject,
+      messageId: result.messageId,
+    });
+  } else {
+    console.error('[Compliance] Email failed:', result.error);
+  }
+
+  return result;
 }
 
 /**
