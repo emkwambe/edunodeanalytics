@@ -619,7 +619,7 @@ export const SCHOOL_SEEDS: Record<string, SchoolSeedConfig> = {
     { primary: '#6366f1', secondary: '#06b6d4', accent: '#10b981' },
     'pro',
     42424,
-    { hasSis: true, hasLms: true, hasAssessment: false } // Standard: SIS + LMS
+    { hasSis: true, hasLms: true, hasAssessment: true } // Full integration: SIS + LMS + Assessments
   ),
 };
 
