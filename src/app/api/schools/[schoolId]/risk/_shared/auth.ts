@@ -71,8 +71,10 @@ export async function authenticateSchoolRequest(
   const { schoolId: _originalId, ..._ } = { schoolId, _: null };
   // Use resolvedSchoolId from here on
   Object.assign(params, { schoolId: resolvedSchoolId });
-  // DEMO MODE: bypass Clerk auth and membership check
-  if (process.env.DEMO_MODE === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+  // DEMO MODE: bypass Clerk auth and membership check (development only)
+  const isDemoMode = process.env.NODE_ENV !== 'production' &&
+    (process.env.DEMO_MODE === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true');
+  if (isDemoMode) {
     const supabase = await createServerSupabaseClient();
     const adminSupabase = createAdminSupabaseClient();
     return {
