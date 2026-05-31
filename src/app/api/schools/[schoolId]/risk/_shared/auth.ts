@@ -50,22 +50,22 @@ export async function authenticateSchoolRequest(
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let resolvedSchoolId = schoolId;
   if (!uuidRegex.test(schoolId)) {
-    // Looks like a slug — try to resolve it
-    // Demo/seed mode: resolve from seed data first
-    const { getSchoolSeed } = await import('@/lib/data/seed-data');
-    const seed = getSchoolSeed(schoolId);
-    if (seed) {
-      resolvedSchoolId = seed.id;
+    // Looks like a slug — try database lookup first (preferred), then seed data
+    const school = await getSchoolBySlug(schoolId);
+    if (school) {
+      resolvedSchoolId = school.id;
     } else {
-      // Try database slug lookup
-      const school = await getSchoolBySlug(schoolId);
-      if (!school) {
+      // Fallback to seed data for demo schools
+      const { getSchoolSeed } = await import('@/lib/data/seed-data');
+      const seed = getSchoolSeed(schoolId);
+      if (seed) {
+        resolvedSchoolId = seed.id;
+      } else {
         return NextResponse.json(
           { error: 'School not found' },
           { status: 404 }
         );
       }
-      resolvedSchoolId = school.id;
     }
   }
   const { schoolId: _originalId, ..._ } = { schoolId, _: null };
