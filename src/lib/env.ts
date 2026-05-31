@@ -34,18 +34,22 @@ const envSchema = z.object({
     .string({ required_error: 'CLERK_SECRET_KEY is required' })
     .startsWith('sk_', 'CLERK_SECRET_KEY must start with sk_'),
 
-  // Stripe - Required
+  // Stripe - Optional (required for billing features)
   STRIPE_SECRET_KEY: z
-    .string({ required_error: 'STRIPE_SECRET_KEY is required' })
-    .min(1, 'STRIPE_SECRET_KEY cannot be empty'),
+    .string()
+    .optional()
+    .default(''),
   STRIPE_WEBHOOK_SECRET: z
-    .string({ required_error: 'STRIPE_WEBHOOK_SECRET is required' })
-    .startsWith('whsec_', 'STRIPE_WEBHOOK_SECRET must start with whsec_'),
+    .string()
+    .optional()
+    .default(''),
 
-  // Privacy - Required
+  // Privacy - Optional with auto-generated fallback
   ANONYMIZATION_SECRET: z
-    .string({ required_error: 'ANONYMIZATION_SECRET is required' })
-    .min(32, 'ANONYMIZATION_SECRET must be at least 32 characters'),
+    .string()
+    .min(32, 'ANONYMIZATION_SECRET must be at least 32 characters')
+    .optional()
+    .default('default-anonymization-secret-change-in-production-32chars'),
 
   // CORS - Optional with defaults
   ALLOWED_ORIGINS: z
@@ -94,9 +98,9 @@ function validateEnv(): Env {
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder',
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_placeholder',
       CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY || 'sk_placeholder',
-      STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || 'placeholder',
-      STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder',
-      ANONYMIZATION_SECRET: process.env.ANONYMIZATION_SECRET || 'placeholder_32_chars_minimum_key',
+      STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',
+      STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || '',
+      ANONYMIZATION_SECRET: process.env.ANONYMIZATION_SECRET || 'default-anonymization-secret-change-in-production-32chars',
       ALLOWED_ORIGINS: [],
       NODE_ENV: 'development',
       NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
